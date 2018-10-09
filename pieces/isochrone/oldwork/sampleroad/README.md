@@ -1,0 +1,1 @@
+Gets road geometry and runs Distance API queries on those, instead of a precomputed grid.

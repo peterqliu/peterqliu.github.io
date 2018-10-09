@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.js'></script>
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <script src='mapbox-sdk.js'></script>
+    <script src="concaveman-bundle.js"></script>
+    <script src="https://unpkg.com/supercluster@2.3.0/dist/supercluster.min.js"></script>
+
+    <script src='https://unpkg.com/cheap-ruler@2.4.1/cheap-ruler.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var client = new MapboxClient(mapboxgl.accessToken);
+
+var map = new mapboxgl.Map({
+    hash: true,
+    container: 'map', // container id
+    style: 'mapbox://styles/mapbox/dark-v9', //stylesheet location
+    center: [-74.50, 40], // starting position
+    zoom: 9 // starting zoom
+});
+
+map.on('load', function(){
+
+    map.addSource('traffic', {
+            type: 'vector',
+            url: 'mapbox://mapbox.mapbox-traffic-v1'
+        });
+    map.addLayer({
+        'id':'highlighted_road', 
+        'type': 'line', 
+        'source':{
+            "type": "geojson",
+            "data": {
+              "type": "FeatureCollection",
+              "features": []
+            }
+        },
+        'paint':{
+            'line-color':'teal', 
+            'line-opacity':0.5
+        }
+    })
+    .addLayer({
+        'id':'trafficlines', 
+        'type': 'line', 
+        'source':'traffic',
+        'source-layer': 'traffic',
+        'paint':{
+            'line-color':'brown', 
+            'line-opacity':1
+        }
+    })
+    .addLayer({
+        'id':'trafficnodes', 
+        'type': 'circle', 
+        'source':'traffic',
+        'source-layer': 'traffic',
+        'paint':{
+            'circle-color':'brown'
+        }
+    })
+    .addLayer({
+            'id':'nodes', 
+            'type': 'circle', 
+            'source':{
+                "type": "geojson",
+                "data": {
+                  "type": "FeatureCollection",
+                  "features": []
+                }
+            },
+            'paint':{
+                'circle-radius':2,
+                'circle-color':'teal',
+                'circle-opacity':0.5
+            }
+        })
+    .addLayer({
+            'id':'clusters', 
+            'type': 'circle', 
+            'source':{
+                "type": "geojson",
+                "data": {
+                  "type": "FeatureCollection",
+                  "features": []
+                }
+            },
+            'paint':{
+                'circle-radius':3,
+                'circle-color':'lime'
+            }
+        })
+    .addLayer({
+        'id':'tin', 
+        'type': 'line', 
+        'source':{
+            "type": "geojson",
+            "data": {
+              "type": "FeatureCollection",
+              "features": []
+            }
+        },
+        'paint':{
+            'line-color':'lime'
+        }
+    })
+
+})
+
+var ruler = cheapRuler(map.getCenter().lat, 'miles');
+
+
+function lineIntoPoints(line, interval){
+    var lineCoords = line.geometry.coordinates;
+    var payload = [];
+    var distance = ruler.lineDistance(lineCoords);
+    //console.log(lineCoords)
+    for (var d=0;d<distance; d+=interval){
+        payload.push(ruler.along(lineCoords, d))
+    }
+
+    return payload.map(function(point){return turf.point(point)})
+}
+
+function gimmeRoad(type, radius){
+    var pointHopper = [];
+    var filter = ['in', 'class'].concat(type);
+    var results = map.querySourceFeatures('traffic', {'sourceLayer':'traffic', })
+
+    console.log(results.length, ' roads')
+
+    results.forEach(function(road){
+        var points = (turf.explode(road.geometry).features)
+        pointHopper = pointHopper.concat(points)
+    })
+    console.log(pointHopper.length, ' interpolated nodes')
+    console.log(pointHopper)
+    pointHopper = turf.featureCollection(pointHopper);
+
+    results = turf.featureCollection(results);
+
+    // map.setFilter('trafficlines',filter)
+    // map.setFilter('trafficnodes',filter)
+
+    var index = supercluster({
+        radius: radius,
+        maxZoom: 12
+    });
+
+    index.load(pointHopper.features);
+
+    var cluster = turf.featureCollection(index.getClusters([-180, -85, 180, 85], 12));
+    console.log('simplified to ', cluster.features.length)
+    map.getSource('clusters').setData(cluster);
+
+
+    //pointsToIsochrone(map.getCenter(), cluster, 120, 1800)
+
+
+    var tin = turf.tin(cluster);
+    //console.log(tin)
+    //map.getSource('tin').setData(tin);
+
+}
+
+function pointsToIsochrone(origin, points, timeInterval, maxTime){
+    var client = new MapboxClient(mapboxgl.accessToken);
+
+    var pts = points.features.map(function(pt){ return pt.geometry.coordinates});
+
+
+    var outstandingRequests = 0;
+    var travelTimes = {};
+
+    batchRequests([origin.lng, origin.lat], pts)
+
+
+    function batchRequests(origin, coords){
+
+        outstandingRequests = Math.ceil(coords.length/99);
+
+        for (var c = 0; c < coords.length; c+=99){
+            var batch = coords.slice(c,c+99);
+            batch.unshift(origin);
+            makeRequest(origin, batch)
+        }
+    }
+
+    function makeRequest(origin, coords){
+
+        client.getDistances(coords, {profile:'driving'}, function(err, resp){
+
+            var durations = resp.durations[0];
+
+            for (var i=0; i<durations.length; i++){
+                travelTimes[coords[i]] = durations[i]
+            }
+            outstandingRequests--;
+
+            if (outstandingRequests===0) polygonize(travelTimes)    
+        })
+    }
+
+    function polygonize(times){
+        console.log(times)
+        var times = Object.keys(times).map(function(coord){
+            triplet = toNumbers(coord.split(','));
+            triplet.push(times[coord]);
+            return triplet
+        })
+
+        var hulls = [];
+        for (var t = 1; t<maxTime/timeInterval; t++){
+            var currentCutoff = t*timeInterval;
+
+            var subset = times.filter(function(item){return item[2] <= currentCutoff});
+
+            var hull = concaveman(subset);
+            hull.push(hull[hull.length-1]);
+            hulls.push(hull)
+        }
+        console.log(hulls)
+        hulls = turf.featureCollection(hulls.map(function(hull){
+            return turf.polygon([hull])
+        }))
+        console.log(hulls)
+
+        map.addLayer({
+            'id': 'hulls',
+            'type': 'fill',
+            'source': {
+                "type": "geojson",
+                "data": hulls
+            },
+            'paint':{
+                'fill-color': 'pink',
+                'fill-opacity': 0.1
+            }
+        })
+    }
+
+
+    function objectToArray(object){
+
+        var keys = Object.keys(object);
+
+        var commaDelimitedNums = keys.map(function(coords){
+            var commaDelimited = coords.split(',');
+            
+            commaDelimited = toNumbers(commaDelimited)
+            return commaDelimited
+        });
+
+        return commaDelimitedNums
+    }
+
+    function toNumbers(strings){
+        return strings.map(
+            function(string){ 
+                return parseFloat(string)
+            })
+    }
+}
+</script>
+</body>
+</html>

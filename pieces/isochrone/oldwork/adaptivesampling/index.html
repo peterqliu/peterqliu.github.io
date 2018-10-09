@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.js'></script>
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <script src='mapbox-sdk.js'></script>
+    <script src="concaveman-bundle.js"></script>
+    <script src='https://unpkg.com/cheap-ruler@2.4.1/cheap-ruler.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<script>
+
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var client = new MapboxClient(mapboxgl.accessToken);
+
+var map = new mapboxgl.Map({
+    hash: true,
+    container: 'map', // container id
+    style: 'mapbox://styles/mapbox/light-v9', //stylesheet location
+    center: [-74.50, 40], // starting position
+    zoom: 9 // starting zoom
+});
+
+var mono = [
+    [0, 'lime'],
+    [1400, 'navy']
+]
+
+var rainbow = [
+
+      [0, 'red'],
+
+      [200, 'orange'],
+
+      [400, 'yellow'],
+      [600, 'green'],
+      [800, 'blue'],
+      [1200, 'indigo'],
+      [1600, 'violet'],
+
+
+    ]
+var ddsStyle =
+ {
+    "property": "time",
+    "type": 'exponential',
+    "stops": rainbow
+  }
+
+map.on('load', function(){
+    map
+    // .addLayer({
+    //     'id': 'quads',
+    //     'type':'fill',
+    //     'source': {
+    //         "type": "geojson",
+    //         "data": {
+    //           "type": "FeatureCollection",
+    //           "features": []
+    //         }
+    //     },
+    //     'paint':{
+    //         'fill-opacity':0.2
+    //     }
+    // })
+    .addLayer({
+        'id':'middles',
+        'type':'circle',
+        'source': {
+            "type": "geojson",
+            "data": {
+              "type": "FeatureCollection",
+              "features": []
+            }
+        },
+        'paint':{
+            'circle-color':ddsStyle,
+            'circle-opacity': 1
+        }
+    })
+    .addLayer({
+        'id': 'final',
+        'type':'circle',
+        'source': {
+            "type": "geojson",
+            "data": {
+              "type": "FeatureCollection",
+              "features": []
+            }
+        },
+        'paint':{
+            'circle-color': ddsStyle,
+            'circle-opacity':1,
+            'circle-radius': 5
+
+        }
+    })
+
+    .addLayer({
+        'id':'point',
+        'type':'symbol',
+        'source': {
+            "type": "geojson",
+            "data": {
+              "type": "FeatureCollection",
+              "features": []
+            }
+        },
+        'layout':{
+            'text-field':'{time}',
+            //'text-size':10
+        }
+    })
+    var c = map.getCenter();
+    isochrone([c.lng, c.lat], 0.7)
+})
+
+
+
+function isochrone(startingPosition, threshold){
+
+    var ruler = cheapRuler(startingPosition[1], 'miles');
+
+    var outstandingRequests = 0;
+    var iterationsSoFar = 1;
+    var maxIterations = 1;
+
+    var rawCoords;
+    buildGrid(startingPosition, threshold);
+
+    function buildGrid(startingPosition, threshold){
+
+        travelTimes = {};
+
+        //build the pointSet grid
+        var radius = Math.pow(5, Math.pow(2, 0.5))
+        var gridDistance = 0.2
+        var southWest = turf.destination(turf.point((startingPosition)), radius, 225, 'kilometers')
+        var northEast = turf.destination(turf.point((startingPosition)), radius, 45, 'kilometers')
+
+        var minMaxBounds = [southWest.geometry.coordinates[0],southWest.geometry.coordinates[1],
+        northEast.geometry.coordinates[0],northEast.geometry.coordinates[1]]
+
+        var pointSet = turf.pointGrid(minMaxBounds, gridDistance, 'kilometers');
+        rawCoords = pointSet.features.map(function(ft){return ft.geometry.coordinates});
+
+        //map.getSource('middles').setData(coordsToGeojson(rawCoords))
+
+        startingPosition = rawCoords[Math.floor(rawCoords.length/2)];
+
+
+        var toCheck  = [];
+
+        //iterate through quadrants
+        var edgeLength = Math.pow(rawCoords.length,0.5);
+
+        for (var d = 0; d<rawCoords.length - edgeLength; d++){
+
+            if ((d+1)%edgeLength !== 0){
+
+                var north = d+1;
+                var east = d+edgeLength;
+                var northeast = east+1;
+
+                toCheck.push([rawCoords[d],rawCoords[north],rawCoords[northeast],rawCoords[east]]);
+            }
+        }
+
+        batchRequests(startingPosition, rawCoords, threshold, toCheck)
+
+    }
+
+
+
+    function batchRequests(origin, coords, threshold, toCheck){
+        console.log('travel times collected ', Object.keys(travelTimes).length, 'about to get ', coords.length, ' more')
+
+        outstandingRequests = Math.ceil(coords.length/99);
+
+        for (var c = 0; c < coords.length; c+=99){
+            var batch = coords.slice(c,c+99);
+            batch.unshift(origin);
+            makeRequest(origin, batch, threshold, toCheck)
+        }
+    }
+
+    // make API call, stows results in travelTimes, signals when all callbacks received
+    function makeRequest(origin, coords, threshold, toCheck){
+
+        client.getDistances(coords, {profile:'driving'}, function(err, resp){
+
+            var durations = resp.durations[0];
+
+            for (var i=0; i<durations.length; i++){
+                travelTimes[coords[i]] = durations[i]
+            }
+            outstandingRequests--;
+
+            if (outstandingRequests===0) parseResults(origin, threshold, toCheck)    
+        })
+    }
+
+    //iterates through quadrants
+    function parseResults(origin, threshold, toCheck){
+        var currentQuadsToCheck = [];
+        var nextPass = {};
+
+        if (iterationsSoFar>=maxIterations) {
+            console.log('done')
+            finalRender()
+            return
+        }
+        iterationsSoFar++
+
+        // check all the new quads generated in the last iteration
+        for (var q=0; q<toCheck.length; q++){
+
+            var quad = [];
+
+            var times = toCheck[q].map(function(index){
+                return travelTimes[index]
+            })
+
+
+            //if this quadrant doesn't cross the threshold, sharpen it
+            if (parseQuadrant(times) < threshold) {
+                // convert to times
+                var quad = toCheck[q].map(function(coord){return turf.point(coord)})
+                sharpenQuadrant(quad, currentQuadsToCheck, nextPass)
+            }
+
+        }
+
+        var geojson = coordsToGeojson(nextPass);
+
+        batchRequests(origin, nextPass, threshold, currentQuadsToCheck)
+    }
+
+    function parseQuadrant(quad){
+
+        var max = Math.max.apply(null, quad);
+        var min = Math.min.apply(null, quad);
+
+        var result = max-min< 30 ? 1 : min/max
+        return 0//min/max//result
+    }
+
+    var totalGeojson = turf.featureCollection([])
+
+    // given a set of four coordinates, add five more coords to make a 4 new subquadrants 
+    function sharpenQuadrant(quad, tocheck, nextPass) {
+
+        //calculate midpoint between points
+        function midpoint(a,b){
+
+            var pt1 = quad[a].geometry.coordinates;
+            var pt2 = quad[b].geometry.coordinates;
+            
+            var avg = [0.5*(pt1[0]+pt2[0]),0.5*(pt1[1]+pt2[1])];
+
+            return avg
+        }
+
+        var left = midpoint(0,1);
+        var top = midpoint(1,2);
+        var right = midpoint(2,3);
+        var bottom = midpoint(0,3);
+        var center = midpoint(0,2);
+
+        var pointSet = [center, left, top, right, bottom]
+
+        var prevLength = Object.keys(nextPass).length;
+        // add points to queue for next query
+
+        //console.log(nextPass[right])
+        pointSet.forEach(function(position){
+            nextPass[position] = true;
+            totalGeojson.features.push(turf.point(position))
+        })
+
+        // add quadrants to queue for checking in the next round
+        var ll = [quad[0].geometry.coordinates, left, center, bottom];
+        var ul = [quad[1].geometry.coordinates, top, center, left];
+        var ur = [quad[2].geometry.coordinates, right, center, top];
+        var lr = [quad[3].geometry.coordinates, bottom, center, right];
+
+        tocheck.push(ll, ul, ur, lr)
+
+    }
+
+    function finalRender(){
+        var hullIncrements = 15;
+
+        var sideLength = Math.pow(rawCoords.length, 0.5)
+
+        var hopper = []
+        for (var r = 0; r<rawCoords.length; r++){
+
+            //interpolate columns
+            if (r%sideLength !== sideLength-1) {
+                var interpolatedPoints = interpolate([rawCoords[r], rawCoords[r+1]], [travelTimes[rawCoords[r]],travelTimes[rawCoords[r+1]]], hullIncrements);
+                interpolatedPoints.forEach(
+                    function(pt){
+                        var currentTimeCutoff = hopper[pt[0]]
+                        if (currentTimeCutoff) currentTimeCutoff.push(pt[1])
+                        else currentTimeCutoff = [pt[1]]
+                    }
+                )
+            }
+
+            // interpolate rows
+            if(r<rawCoords.length-sideLength){
+                var interpolatedPoints = interpolate([rawCoords[r], rawCoords[r+sideLength]], [travelTimes[rawCoords[r]],travelTimes[rawCoords[r+sideLength]]], hullIncrements);
+                interpolatedPoints.forEach(
+                    function(pt){
+                        var currentTimeCutoff = hopper[pt[0]]
+                        if (currentTimeCutoff) hopper[pt[0]].push(pt[1])
+                        else hopper[pt[0]] = [pt[1]]
+                    }
+                )
+            }
+        }
+
+        var hulls = [];
+
+        for (var h=0; h<hopper.length; h++){
+            if (hopper[h]){
+                var previousHull = h === 0 ? [] : hulls[hulls.length-1][1];
+                var hull = concaveman(hopper[h],1, 0.011);
+                hull.push(hull[hull.length-1]);
+                hulls.push([h,hull])
+            }
+        }
+        console.log(hulls)
+        hulls = hulls.map(function(item){
+            return turf.polygon([item[1]], {time:item[0]})
+        })
+
+        hulls.reverse();
+        console.log(hulls)
+        hulls = turf.featureCollection(hulls)
+
+        map.addLayer({
+            'id': 'hull',
+            'type': 'fill',
+            'source':{
+                "type": "geojson",
+                "data": hulls
+            },
+            'paint':{
+                'fill-color': ddsStyle,
+                'fill-opacity': 1
+            }
+        }, 'water')
+
+        var keys = objectToArray(travelTimes);
+        var finalGeojson = turf.featureCollection(keys.map(function(key){return turf.point(key, {time: travelTimes[key]})}));
+
+        //map.getSource('point').setData(finalGeojson)
+        //map.getSource('middles').setData(hopper)
+
+
+
+        console.log(finalGeojson, 'final geojson')
+    }
+
+    function interpolate(coords, times, interval){
+
+        var distance = ruler.distance(coords[0],coords[1]);
+
+        var minTime = Math.min(times[0], times[1])
+        var maxTime = Math.max(times[0], times[1])
+
+        var startTime = Math.ceil(minTime/interval)*interval;
+
+        var payload = [];
+
+        for (var s = startTime; s < maxTime; s += interval){
+            var percentage = (s-minTime)/(maxTime-minTime);
+            var adjusted = minTime === times[0] ? percentage : 1-percentage;
+            var interpolatedLocation = ruler.along(coords, adjusted * distance);
+
+            payload.push([s, interpolatedLocation])
+        }
+
+        return payload
+    }
+
+    interpolate([[77,0],[10,0]], [0,100], 15)
+    function objectToArray(object){
+
+        var keys = Object.keys(object);
+
+        var commaDelimitedNums = keys.map(function(coords){
+            var commaDelimited = coords.split(',');
+            
+            commaDelimited = toNumbers(commaDelimited)
+            return commaDelimited
+        });
+
+        return commaDelimitedNums
+    }
+
+    function toNumbers(strings){
+        return strings.map(
+            function(string){ 
+                return parseFloat(string)
+            })
+    }
+
+    function coordsToGeojson(coords){
+        coords = coords.map(function(coord){return turf.point(coord)})
+        return turf.featureCollection(coords)
+    }
+
+}
+
+    
+map.on('click', function(e){
+    var coords = map.unproject(e.point);
+    coords = [coords.lng, coords.lat]
+
+    isochrone(coords, 0.7)
+})
+
+function roundTo(m,n){return Math.round(m/n)*n}
+
+
+map.on('mousemove', function(e){
+    var ft = map.queryRenderedFeatures(e.point)//.map(function(pt){return JSON.stringify(pt.geometry.coordinates)})
+    //if (ft.length>0) console.log(ft.map(function(each){return each.geometry.coordinates}))
+})
+
+</script>
+
+</body>
+</html>

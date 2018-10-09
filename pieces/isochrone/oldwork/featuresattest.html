@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.8.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.8.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<style>
+#features {
+    position:absolute;
+    top:0;
+    right:0;
+    bottom:0;
+    width:300px;
+    overflow:auto;
+    background:rgba(255, 255, 255, 1);
+}
+
+#marker {
+  width:20px;
+  height:20px;
+  margin-left:-10px;
+  margin-top:-10px;
+  position:absolute;
+  background:white;
+  border-radius:10px;
+}
+
+#marker:active {
+
+}
+</style>
+<div id='map'></div>
+<pre id='features'></pre>
+<div id='marker' draggable='true'></div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+mapboxgl.util.getJSON('./dark.json', function (err, style) {
+
+  window.map = new mapboxgl.Map({
+    container: 'map',
+    style: style,
+    center: [37.8, -96],
+    zoom: 3
+  });
+
+  var markerPosition = new mapboxgl.LatLng(37.76, -122.44);
+  var marker = document.querySelectorAll('#marker')[0];
+
+  function trackMarker(){
+    var projectX = map.project(markerPosition).x;
+    var projectY = map.project(markerPosition).y;
+
+    marker.style["-webkit-transform"] = 
+      "translateX("+projectX+"px) translateY("+projectY+"px)"
+  }
+
+  marker//.addEventListener('dragstart', function(){console.log('dragging')})
+    .addEventListener('dragend', function(e){
+      console.log(e)
+      //var unprojected = map.unproject([e.pageX, e.pageY])
+      markerPosition = map.unproject([e.pageX+10, e.pageY-10])
+      trackMarker()
+    })
+
+  map.on('click', function(e) {
+    var startTime= Date.now()
+      map.featuresAt(e.point, {radius: 15000}, function(err, features) {
+        //if (features.length>0){console.log(Date.now()-startTime)}
+          if (err) throw err;
+          console.log(features.length)
+          document.getElementById('features').innerHTML = JSON.stringify(features, null, 2);
+      })
+  })
+  .on('move', function(e){
+    trackMarker()
+  })
+
+})
+
+</script>
+
+</body>
+</html>

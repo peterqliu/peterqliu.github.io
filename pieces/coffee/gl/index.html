@@ -1,0 +1,617 @@
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Your nearest cup of coffee</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v1.3.0/turf.min.js'></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.39.1/mapbox-gl.js'></script>
+
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.39.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0; }
+  path {pointer-events:none}
+
+    #map { position:absolute; top:52; bottom:0; left:0px; right:0px; }
+    #sidebar{
+        width:250px;
+        background:white;
+        position:absolute;
+        overflow:scroll;
+        height:100%;
+    }
+    .marker-title span{color:#00704A;font-weight:bold;}
+    #topbar{
+        line-height:2em;
+    }
+    #findme{display:none;background:#00704A}
+    #quantity, strong {color:#00704A}
+
+
+    .blocker {color:#00704A; text-align: center}
+
+    .origin{
+    border-radius:50%;
+    background:white;
+    padding:2px;
+    border:2px solid green;
+    color:green;
+    }
+  #searchresults {height:0px; overflow:visible; display:none;}
+  input:focus + #searchresults, #searchresults:active {display:block;}
+  .result{background:white; width:160px; display:block; padding:10px; cursor:pointer;line-height:1.4em;}
+  .result:hover {color:#00704A;}
+</style>
+</head>
+<body>
+<div id='sidebar' class='keyline-right hidden'>
+    <fieldset class='pad1 keyline-bottom'>
+    <span class='small uppercase'>Search radius</span>
+    <input class='col12' type='range' value='0.5' min='0.25' max='0.75' step='0.05' onchange='state.radius = this.value; newSearch()'>
+    </fieldset>
+    <div><span id='quantit'></span> locations within <span id='radius'></span> miles of here</div>
+    <div id='results'></div>
+</div>
+
+<div id='map'></div>
+<div class='pin-top fill-white pad1 keyline-bottom quiet space'>
+
+    <div class='blocker strong large pad0'>
+        Downloading locations...
+    </div>
+    <div id='topbar' class='hidden'>
+        <img src='logo.svg' style='width:30px;margin-right:10px'>
+        <span id='quantity' class='strong'>0</span> locations within <span id='distance'>a half mile</span>
+        <div class='fr' style='line-height:2em'>
+            <span class='small uppercase'>Search radius</span>
+            <input class='' type='range' value='0.5' min='0.25' max='0.75' step='0.05' onchange='state.radius = this.value; newSearch()'>
+        </div>
+        <fieldset class="fr with-icon inline">
+            <span class="icon search" style='top:5px; left:5px'></span>
+            <input type="text" placeholder='Search' id='geocoder' class="round short" autocomplete="off" style='width:160px;margin-right:10px'>
+            <div id='searchresults'>
+            </div>
+        </fieldset>
+    </div>
+</div>
+
+<script>
+
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var map = new mapboxgl.Map({
+    hash: true,
+    container: 'map', // container id
+    style:'mapbox://styles/peterqliu/cj70wixnd065o2rqrz62okauu',
+    minZoom:13,
+    center: [-122.4018,37.7957], // starting position [lng, lat]
+    //minZoom: 12,
+    zoom: 15, // starting zoom,
+});
+
+var state = {
+    origin: [map.getCenter().lng, map.getCenter().lat],
+    radius: 0.5,
+    buffer: null,
+    green: '#00704A'
+}
+
+// add marker to map
+
+var el = document.createElement('div');
+el.classList = 'origin icon walk'
+el.innerHTML = ''
+state.marker = new mapboxgl.Marker(el)
+    .setLngLat(state.origin)
+    .addTo(map);
+
+var drag = d3.drag()
+    .on('start', function(){
+        state.buffer = turf.featurecollection([]);
+        newSearch('empty');
+    })
+
+    .on('drag', function(){
+
+        var newCoords= map.unproject([d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY-52])
+        state.origin = [newCoords.lng, newCoords.lat];
+        state.marker.setLngLat(state.origin);
+    })
+
+    .on('end', function(d,i){
+        //var newCoords= map.unproject([d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY])
+        //state.origin = [newCoords.lng, newCoords.lat];
+        // state.marker.setLngLat(state.origin);
+        
+        d3.select('#loader')
+        .classed('hidden', false)
+
+        map.panTo(state.origin)
+        newSearch();
+    });
+
+d3.select('.origin')
+    .call(drag);
+
+
+
+map.on('load', function(){
+
+    map.addSource('highlighted',{
+        'type':'geojson',
+        'data': turf.featurecollection([])            
+    })
+    .addSource('buffer',{
+        'type':'geojson',
+        'data': turf.featurecollection([])            
+    })
+    map
+    .addLayer({
+        'id': 'buffer-fill',
+        'type': 'fill',
+        'source':'buffer',
+        'paint':{
+            'fill-color':state.green,
+            'fill-opacity': 0.05,
+            'fill-outline-color': state.green
+        },
+        'paint.detail':{
+            'fill-opacity':0
+        }
+    })
+    .addLayer({
+        'id': 'buffer-border',
+        'type': 'line',
+        'source':'buffer',
+        'paint':{
+            'line-color':state.green,
+            'line-width':1,
+            'line-opacity':0.5
+        },
+        'paint.detail':{
+            'line-width':0
+        }
+    })
+    .addLayer({
+        'id': 'route',
+        'type': 'line',
+        'source':{
+            'type': 'geojson',
+            'data': turf.featurecollection([])
+        },
+        'paint':{
+            'line-color':state.green,
+            'line-width':0
+        },
+        'paint.detail':{
+            'line-width':3
+        }
+    })
+    .addLayer({
+        'id': 'shop',
+        'type': 'circle',
+        'source':{
+            'type': 'geojson',
+            'data': turf.featurecollection([])
+        },
+        'maxzoom':14,
+        'paint':{
+            'circle-radius':2,
+            'circle-color': 'white',
+            'circle-stroke-width':2,
+            'circle-stroke-color': state.green
+        }
+    })
+    .addLayer({
+        'id': 'highlighted-shop',
+        'type': 'circle',
+        'source':'highlighted',
+        'maxzoom':14,
+        'paint':{
+            'circle-radius':10,
+            'circle-color':state.green,
+        }
+    })
+
+    map.loadImage('pin.png', function(err,image){
+        map.addImage('pin', image)
+        map.addLayer({
+                'id': 'duration-label',
+                'type': 'symbol',
+                'source':'highlighted',
+                'layout':{
+                    'text-font':['Open Sans Semibold'],
+                    'text-allow-overlap': true,
+                    'icon-allow-overlap': true,
+                    'text-field':{
+                        'stops':[
+                            [13.99,'{time}'],
+                            [14,'{time} min']
+                        ]
+                    },
+                    'text-size':12,
+                    'text-offset':{
+                        'stops':[[13.99,[0,0]],[14,[0,0.75]]]
+                    },
+                    'icon-image': {
+                        'stops':[[13.99,'null'],[14,'pin']]
+                    },
+                    'icon-size':0.5
+                },
+                'paint':{
+                    'text-color':{
+                        'stops':[[13.99,"white"],[14,'black']]
+                    },
+                    'text-halo-color':'white',
+                    'text-halo-width':{
+                        'stops':[[13.99,0],[14,2]]
+                    }
+                }
+
+            })
+    })
+
+
+    // marker interactivity: clicks, mouseover popups
+    // Create a popup, but don't add it to the map yet.
+    var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset:{
+            bottom:[0,-25]
+        }
+    });
+
+    map
+        .on('click', function(e){
+            var ft = map.queryRenderedFeatures(e.point, {layers:['duration-label', 'highlighted-shop']})[0]
+
+            if (ft){
+                var coords = ft.geometry.coordinates;
+
+                getWalkingRoute(coords);
+            }
+            popup.remove();
+        })
+        .on('mouseenter', 'duration-label', function (feature) {
+            map.getCanvas().style.cursor = 'pointer';
+
+            feature = feature.features[0];
+
+            function mileConvert(miles){
+                if (miles<=0.25){
+                    return (miles*5280).toFixed(0)+' ft'
+                } else {
+                    return miles.toFixed(2) +' mi'
+                }
+            }
+
+            function checkPhone(phone){
+                if(phone!==null && phone!=='null'){
+                    return '<br>☎ '+phone
+                } else {
+                    return ''}
+            }
+
+            var popupContent = "Peter's Beanery<br>"+feature.properties.street+'<br>'+feature.properties.city+', '+feature.properties.subcountry+' '+feature.properties.country+checkPhone(feature.properties["phone"])+'<br><strong>Click for walking route</strong>'
+            
+            popup.setLngLat(feature.geometry.coordinates)
+                .setHTML(popupContent)
+                .addTo(map);
+        })
+        .on('mouseleave', 'duration-label', function () {
+            map.getCanvas().style.cursor = '';
+            popup.remove();
+        });    
+
+    d3.json('test.geojson', function(err, resp){
+
+        state.venues = resp;
+        d3.select('.blocker').remove();
+        d3.select('#topbar').classed('hidden', false);
+
+        map.getSource('shop')
+            .setData(resp);
+
+        newSearch();
+
+    })
+
+
+
+})
+
+function newSearch(empty){
+    updateBuffer(empty);
+    updateVenues(empty);
+    state.marker.setLngLat(state.origin);
+}
+
+function updateSidebar(){
+    
+    d3.selectAll('.result')
+        .remove();
+
+    d3.select('#quantity')
+        .text(state.results.features.length);
+
+    d3.select('#radius')
+        .text(state.radius);   
+
+
+    var distancePhrase;
+    switch (state.radius) {
+        case 0.50:
+            distancePhrase = 'a half mile'
+            break;
+        case 1.00:
+            distancePhrase = 'a mile'
+            break;
+        case 2.00:
+            distancePhrase = 'two miles'
+            break;
+        default:
+            distancePhrase = state.radius+' miles'
+            break;
+    }
+    console.log(distancePhrase)
+    d3.select('#distance').text(distancePhrase);
+        
+    var results = d3.select('#results')
+        .selectAll('.result')
+        .data(state.results.features)
+        .enter()
+        .append('div')
+        .attr('class', 'pad1 keyline-top result')
+        .on('click', function(d){
+            getWalkingRoute(d.geometry.coordinates)
+            console.log(d.geometry.coordinates)
+        })
+        
+    results
+        .append('img')
+        .attr('width', 30)
+        .attr('class', 'inline space-right1')
+        .attr('src', 'logo.svg');
+    results
+        .append('span')
+        .attr('class', 'small')
+        .text(function(d){
+            return d.properties.street
+        })
+}
+function getWalkingRoute(coords){
+    getDirections(coords, function(line){
+
+        line.coordinates.push(coords);
+        line.coordinates.unshift(state.origin);
+
+        map.getSource('route')
+            .setData(line);
+
+        map.setClasses(['detail'])
+        
+
+        //fit bounds
+        fitBounds(line.coordinates)
+        map.once('moveend', function(){
+            map.once('moveend', function(){
+                map.setClasses([])
+            })
+        })
+    })
+}
+
+function fitBounds(coords){
+    var bounds = coords.reduce(function(bounds, coord) {
+        return bounds.extend(coord);
+    }, new mapboxgl.LngLatBounds(coords[0], coords[0]));
+
+    map.fitBounds(bounds, {
+        padding: 60,
+        duration:500
+    });    
+}
+function updateVenues(empty){
+
+    var within = turf.featurecollection(state.venues.features.filter(function(shop){
+        if (turf.distance(shop, turf.point(state.origin), 'miles') <= state.radius) return true;
+    }));
+
+
+    if (empty){
+        map.getSource('highlighted')
+            .setData(turf.featurecollection([]))
+    }
+
+    else{
+        getDurations(within, function(resp){
+        
+            state.results = resp;
+            updateSidebar(empty);
+
+            map.getSource('highlighted')
+                .setData(state.results)
+        })
+    }
+
+}
+
+
+var currentPosition;
+var currentRadius =1;
+
+
+
+function getDirections(coord, cb){
+
+
+    var strung = state.origin+';'+coord;
+    var queryURL = 'https://api.mapbox.com/directions/v5/mapbox/walking/'+strung+'?geometries=geojson&access_token='+ mapboxgl.accessToken;
+    d3.json(queryURL, function(err, resp){
+        console.log(resp.routes[0].geometry)
+        cb(resp.routes[0].geometry)
+    })    
+}
+function getDurations(geojson, cb){
+    var coords = geojson.features.map(
+        function(item){
+            return item.geometry.coordinates
+        }
+    );
+    var queryURL = 'https://api.mapbox.com/directions-matrix/v1/mapbox/walking/'+state.origin+';'+coords.join(';')+'?sources=0&destinations=all&access_token='+ mapboxgl.accessToken
+    d3.json(queryURL, function(err, resp){
+
+        var durations = resp.durations[0]
+        for (var p = 1; p<durations.length; p++){
+            geojson.features[p-1].properties.time = Math.round(durations[p]/60)
+        }
+        cb(geojson)
+    })
+}
+
+function updateBuffer(empty){
+    state.buffer = pointBuffer(turf.point(state.origin), state.radius, 'miles', 30);
+
+    if (empty){
+        map.getSource('buffer')
+            .setData(turf.featurecollection([])) 
+    }
+
+    else{
+        map.getSource('buffer')
+            .setData(state.buffer); 
+        fitBounds(state.buffer.geometry.coordinates[0])
+    }
+
+}
+function pointBuffer (pt, radius, units, resolution) {
+  var ring = []
+  var resMultiple = 360/resolution;
+  for(var i  = 0; i < resolution; i++) {
+    var spoke = turf.destination(pt, radius, i*resMultiple, units);
+    ring.push(spoke.geometry.coordinates);
+  }
+  if((ring[0][0] !== ring[ring.length-1][0]) && (ring[0][1] != ring[ring.length-1][1])) {
+    ring.push([ring[0][0], ring[0][1]]);
+  }
+  return turf.polygon([ring])
+}
+// //geolocation
+// function getLocation() {
+//     if (navigator.geolocation) {
+//         navigator.geolocation.getCurrentPosition(showPosition);
+//     }
+// }
+
+// function showPosition(position) {
+//     $('#findme').show();
+//     currentPosition=[position.coords.latitude, position.coords.longitude];
+// }
+
+
+
+// $.get('test.geojson', function(data){
+//     $('.blocker').remove();
+//     $('#topbar').show();
+
+//     var fc = (data);
+//     var fc = JSON.parse(data);
+
+//     //find me functionality
+//     $('#findme').on('click', function(){
+//         marker.setLatLng(currentPosition);
+//         map.setView(currentPosition, 14);
+//         updateVenues();
+//     });
+
+//     //click-move functionality
+//     map.on('click',function(e){
+//         marker.setLatLng([e.latlng.lat, e.latlng.lng]);
+//         map.setView([e.latlng.lat, e.latlng.lng],14);
+//         updateVenues();
+//     });
+
+    //input search functionality
+    d3.select('#geocoder').on('keyup', function(e) {
+
+        var contents=document.querySelector('#geocoder').value;
+        var url='https://api.tiles.mapbox.com/v4/geocode/mapbox.places/'+contents+'.json?access_token='+ mapboxgl.accessToken;
+
+        d3.json(url, function(data){
+
+            d3.selectAll('.result').remove();
+
+            var data = data.features.map(function(result){
+                var place = result['place_name'];
+                var reg = new RegExp(contents,"gi");
+                result.place = place.replace(reg, function (match) {return "<strong>" + match + "</strong>"});
+                return result
+            });
+
+            d3.select('#searchresults')
+                .selectAll('.result')
+                .data(data)
+                .enter()
+                .append('div')
+                .attr('class', 'result keyline-bottom keyline-left keyline-right small')
+                .html(function(d){return d.place})
+                .on('click', function(d,i){
+                    state.origin = d.center;
+                    newSearch();
+                })
+        })
+    });
+
+//     function showMap(err, data) {
+//         map.setView([data.latlng[0], data.latlng[1]], 13);
+//         marker.setLatLng([data.latlng[0], data.latlng[1]]);
+//         updateVenues();
+//     }
+
+//     //mousewheel functionality (adjust radius)
+
+//     $('.leaflet-marker-draggable').on('mousewheel',function(event){
+//         var wheelDelta= event.originalEvent.wheelDeltaY;
+//         if (currentRadius-wheelDelta*0.001>=0.5 && currentRadius-wheelDelta*0.001<=2){
+//             currentRadius=currentRadius-wheelDelta*0.001;
+//             updateVenues();
+//             var distancePhrase;
+//             switch (parseFloat(currentRadius.toFixed(2))) {
+//                 case 0.50:
+//                     distancePhrase = 'a half mile'
+//                     break;
+//                 case 1.00:
+//                     distancePhrase = 'a mile'
+//                     break;
+//                 case 2.00:
+//                     distancePhrase = 'two miles'
+//                     break;
+//                 default:
+//                     distancePhrase = currentRadius.toFixed(2)+' miles'
+//                     break;
+//             }
+//             $('#distance').html(distancePhrase);
+//         }
+
+//         event.stopPropagation();
+//         return false;
+//     });
+
+//     // get position, get radius, draw buffer, find within, calculate distances, find nearest, add to map
+//     function updateVenues(){
+
+//         var within = turf.featurecollection(fc.features.filter(function(shop){
+//             if (turf.distance(shop, point, 'miles') <= currentRadius) return true;
+//         }));
+//         $('#milecount').html(within.features.length);
+
+
+
+
+
+</script>
+</body>
+</html>

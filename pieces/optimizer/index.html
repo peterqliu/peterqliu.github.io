@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Fooder</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://npmcdn.com/@turf/turf@4.0.0/turf.min.js'></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src='https://unpkg.com/cheap-ruler@2.5.0/cheap-ruler.js'></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { 
+            position:absolute; 
+            top:0; 
+            bottom:0; 
+            right:0px; 
+            left:0px;  
+            background:black;
+        }
+
+        .truck{
+            margin:-10px -10px;
+        }
+        .truck, .ping {
+            width:20px;
+            height:20px;
+            border:2px solid #fff;
+            border-radius:50%;
+            background:#3887be;
+            pointer-events: none;
+        }
+
+        .ping {
+            margin:-99999px;
+            border:0.025px solid #f9886c;
+            background:none;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        .ping.active{
+            margin:0px;
+            z-index:99;
+            transform:translateX(-50%) translateY(-50%) scale(6,6);
+            opacity:0;   
+            transition: all 0.75s ease-out;
+            transition-property: transform, opacity;        
+        }
+
+
+        canvas:active {
+            cursor:-webkit-grabbing;
+        }
+
+        .step{
+            padding:10px;
+            border-bottom:1px solid #ddd;
+            overflow:hidden;
+            max-height:200px;
+            text-align:left;
+            color:#666;
+        }
+
+        .step:first-child {
+            background:white;
+            color:black;
+            font-weight:bold;
+        }
+
+
+        .transient{
+            pointer-events: none;
+            margin-top:-30px;
+        }
+
+
+        #phone {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 250px;
+            height: 460px;
+            background: #fff;
+            border-radius: 25px;
+            z-index: 99;
+            font-family: sans-serif;
+            box-shadow: 0px 0px 15px #aaa;
+            transition: all 0.2s;
+        }
+
+        #phone.hide{
+            transform: translate(-200%);
+        }
+        #screen{
+            width: 90%;
+            height: 80%;
+            margin: 15% auto;
+            border-radius:8px;
+            overflow:hidden;
+            border:1px solid #ccc;
+            position:relative;
+        }
+
+        #queue {
+            background:#eee;
+            height:35%;
+            text-align:center;
+            overflow-y: scroll;
+        }
+
+        #queue:empty{
+            padding:30px 10px;
+
+        }
+        #queue:empty:after{
+            content: 'Click and drag from a restaurant to add a new order for delivery';
+            opacity:0.5;
+        }
+
+        .foodicon{
+            height:20px;
+            float:right;
+            font-size:0.5em;
+            color:#3887be;
+        }
+        .foodicon img{
+            width:20px;
+            display:inline;
+            float:right;
+            margin-left:2px;
+        }
+        #nav {
+            width:100%;
+            height:65%;
+            transition:all 0.5s;
+            border-top-left-radius: 7px;
+            border-top-right-radius: 7px;
+        }
+
+        #screen .mapboxgl-control-container{
+            display:none;
+        }
+
+        #carmarker{
+            z-index:99;
+            position:absolute;
+            width:50px;
+            height:50px;
+            border-radius:50%;
+            background:#3887be;
+            left:50%;
+            top:50%;
+            margin:-25px -25px;
+            transform: rotateX(60deg);
+            color: white;
+            text-align: center;
+            font-size: 3em;
+            line-height: 1.2em;
+            border:2px solid white;
+            box-shadow: 0px 10px 25px #666;
+        }
+
+        /*Modal stuff */
+
+        .dragger img{
+            position:absolute;
+        }
+        #cursor{
+            width:20px;
+            height:20px;
+            margin:18px;
+        }
+
+
+        .drag {
+            width: 60px;
+            height: 60px;
+            padding:10px;
+            position: relative;
+            overflow:visible;
+            left:30%;
+        }
+
+        .dragger{
+            position:relative;
+            animation: mymove 1.5s;
+            animation-iteration-count: infinite;
+            margin-top:-40px;
+        }
+        @keyframes mymove {
+            0% {transform: translateX(30%);opacity:0;}
+            20%{transform: translateX(30%);opacity:1; }
+            60% {transform: translateX(70%);}
+            80% {opacity:1;}
+            100% {transform: translateX(70%); opacity:0;}
+        }
+    </style>
+</head>
+<body>
+    <div id='phone'>
+        <div id='screen'>
+            <div id='queue' class='pin-bottom'></div>
+            <div id='nav'>
+                <div id='carmarker'>▲</div>
+            </div>
+        </div>
+    </div>
+
+<div id='map' class='contain'>
+    <div id='modal-content' class='animate modal modal-content active' style='background:rgba(0,0,0,0.75)'>
+            <div class='col5 modal-body fill-white contain pad4' style='margin-top:15%'>
+                <div class=' row3 clearfix'>
+                    <div class='prose prose-big center'>
+                        Click and drag from any restaurant to add a new order for delivery
+                    </div>
+                    <div style='border-radius:30px; border:2px solid #aaa; display:inline-block' class='drag  space-top2' >
+                        <img src='https://www.mapbox.com/bites/00359/icons/pngs/pizza.png' style='width:60px'>
+                    </div>
+                    <div class='dragger space-left2'>
+                        <img src='https://www.mapbox.com/bites/00359/icons/bubble-pizza.svg'>
+                        <img src = 'https://www.mapbox.com/bites/00359/icons/cursor.png' id='cursor'>
+                    </div>
+                </div>
+                <div class=''>
+
+                  <div class='button space-top4 col12' onclick='d3.select(".modal-content").classed("active", false)'>Start simulation</div>
+                </div>
+
+            </div>
+    </div>
+</div>
+<script>
+var state = {
+    loaded:{},
+    speedFactor: 50,
+    pause: true,
+    lastQueryTime: 0,
+    truckLocation:[-87.64439,41.89],
+    lastAtRestaurant:{
+        taco: 0,
+        pizza: 0,
+        noodles: 0
+    },
+    keepTrack:[],
+    currentSchedule: [],
+    currentRoute: null,
+    pointHopper: {},
+    dragLine: [],
+    ruler: cheapRuler(41.8949, 'meters'),
+
+    //update map line geometry
+    updateRoute: function(wholeRoute){
+        var payload;
+
+        //state.updateNext();
+        if (!wholeRoute) payload = nothing;
+
+        else{
+            var currentChunk = turf.lineSlice(
+                turf.point(state.truckLocation),
+                state.currentSchedule[0],
+                wholeRoute.geometry
+            )
+
+            var restOfLine = turf.lineSlice(
+                state.currentSchedule[0],
+                state.currentSchedule[state.currentSchedule.length-1],            
+                wholeRoute.geometry
+            );
+
+            restOfLine.properties.current = 'false';
+            currentChunk.properties.current = 'true';
+
+            payload = turf.featureCollection([restOfLine,currentChunk])
+        }
+
+        [map, driver]
+        .forEach(function(mapObject){
+            mapObject
+                .getSource('route')
+                .setData(payload)
+        })
+    },
+    //update queue display on phone
+    updateQueue: function(){
+
+        var queue = state.currentSchedule
+            .map(function(item){
+                return [item.properties.key, item.properties.type]
+            })
+
+
+        d3.selectAll('.step')
+            .remove();
+
+        d3.select('#queue')
+            .selectAll('.step')
+            .data(queue, function(d){return d})
+            .enter()
+            .append('div')
+            .classed('step', true)
+            .text(function(d){
+                if (d[1]) return 'Deliver '+ d[1]
+                else return 'Pick up '+ d[0] + ' order'
+            })
+            .append('div')
+            .classed('foodicon', true)
+            .text(function(d){
+                var arrow = d[1] ? '▼' : '▲'
+                return arrow
+            })
+            .append('img')
+            .attr('src', function(d){
+                var type = d[1] ? d[1] : d[0]
+                return 'https://www.mapbox.com/bites/00359/icons/pngs/'+type+'.png'
+            })
+    },
+
+    updatePickups: function(geojson){
+        [map, driver]
+        .forEach(function(mapObject){
+            mapObject
+                .getSource('pickups-symbol')
+                .setData(geojson)
+        })    
+    },
+    // update next marker
+    updateNext: function(){
+        var nextStop = state.currentSchedule[0] ? state.currentSchedule[0] : nothing;
+
+        if (nextStop.properties && nextStop.properties.restaurant){
+            console.log('rest')
+            restaurants.features.forEach(function(ft){
+                ft.properties.next = ft.properties.type === nextStop.properties.key
+                console.log(ft.properties.next)
+            })
+
+            map.getSource('restaurants')
+                .setData(restaurants)
+        }
+
+    },
+    reset: function(){
+        console.log('resetting')
+        state.pause = true;
+        state.currentSchedule = state.keepTrack = [];
+        state.pointHopper = {};
+
+        rests.forEach(function(rest){
+            state.pointHopper[rest.type] = turf.point(rest.coordinates, {key:rest.type})
+        })
+
+        //update the queue and route
+        state.updateQueue();
+
+        if (state.loaded.map && state.loaded.driver){
+
+            map.getSource('next')
+                .setData(nothing);
+
+            state.updatePickups(nothing);
+
+            state.updateRoute();
+
+        }
+    },
+    onMousedown: function(e){
+
+        if (state.currentSchedule.length>=11) return
+        var ft = map.queryRenderedFeatures(e.point, {layers:['restaurants']})[0]
+
+        if (!ft) return;
+        
+        //hide phone
+        d3.select('#phone')
+            .classed('hide', true)
+
+        // add transient marker to cursor
+        var marker = document.createElement('div');
+        marker.innerHTML = '<img src="https://www.mapbox.com/bites/00359/icons/bubble-'+ft.properties.type+'.svg">'
+        marker.classList = 'transient';
+        state.transientMarker = new mapboxgl.Marker(marker)
+        .setLngLat(ft.geometry.coordinates)
+        .addTo(map);
+
+        //set drag guides
+        map.getSource('dragHighlight')
+            .setData(ft)
+
+        state.dragLine[0] = ft.geometry.coordinates;
+        map.setClasses(['dragging']);
+
+        state.pause = true;
+        state.updateRoute();
+        d3.select('.ping')
+            .classed('active', false);
+
+        map.once('mouseup', function(e){
+            state.onMouseup(e, ft)
+        })
+    },
+    onMouseup: function(e, ft){
+        d3.select('#phone')
+            .classed('hide', false);
+        map.setClasses([])
+            .getSource('dragLine')
+            .setData(nothing)
+
+        d3.select('canvas')
+            .style('cursor', null);
+        state.newPickup(map.unproject(e.point), ft.properties.type);
+        state.transientMarker.remove();
+    }
+}
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var embed = window.location.href.indexOf('embed=true') !==-1;
+
+var map = new mapboxgl.Map({
+    hash: false,
+    scrollZoom: !embed,
+    container: 'map', // container id
+    style: 'mapbox://styles/peterqliu/cj5k2tj0d16ul2rmlwyw00gth', //stylesheet location
+    center: state.truckLocation, // starting position
+    zoom: 13 // starting zoom
+});
+
+if(embed) map.addControl(new mapboxgl.NavigationControl());
+
+
+var driver = new mapboxgl.Map({
+    container: 'nav', // container id
+    style: 'mapbox://styles/peterqliu/cj5k3b63b176l2snvd7n6by90', //stylesheet location
+    center: state.truckLocation,
+    pitch:60,
+    interactive: false,
+    zoom: 17 // starting zoom
+});
+
+
+
+var rests = [
+    {'type': 'taco', 
+        'icon': '', 
+        'coordinates': [-87.63239,41.87941]
+    },
+    {'type': 'pizza',
+    'icon': '', 
+    'coordinates': [
+            -87.65709,41.87903
+        ]
+    },
+    {'type': 'noodles',
+    'icon': '', 
+    'coordinates': [-87.635911,
+        41.898178]
+    },
+]
+
+var bbox = [          
+    [-87.6,41.867132002],          
+    [-87.61914253,41.90393796]
+]
+
+state.reset();
+var nothing = turf.featureCollection([]);
+var restaurants = turf.featureCollection(rests.map(function(rest){
+    return turf.point(rest.coordinates, rest)
+}))
+var pickups = turf.featureCollection([])
+
+driver.on('load', function(){
+
+    state.loaded.driver = true;
+    this.addSource('route',{
+        'data': nothing,
+        'type': 'geojson'
+    })
+    driver.addLayer({
+        'id': '3d-buildings',
+        'source': 'composite',
+        'source-layer': 'building',
+        'filter': ['==', 'extrude', 'true'],
+        'type': 'fill-extrusion',
+        'paint': {
+            'fill-extrusion-color': 'hsl(35, 28%, 70%)',
+            'fill-extrusion-height': {
+                'type': 'identity',
+                'property': 'height'
+            },
+            'fill-extrusion-base': {
+                'type': 'identity',
+                'property': 'min_height'
+            },
+            'fill-extrusion-opacity': .6
+        }
+    }, 'waterway-label')
+    .addLayer({
+        'id':'routeline',
+        'type':'line',
+        'source':'route',
+        'layout':{
+            'line-join':'round',
+            'line-cap':'round'
+        },
+        'paint':{
+            'line-color': '#3887be',
+            'line-width': {
+                base:1,
+                stops:[[12,12],[22,16]]
+            }
+        }
+    }, 'waterway-label')
+    .addLayer({
+        'id':'restaurants',
+        'type':'circle',
+        'source':{
+            'data': restaurants,
+            'type': 'geojson'
+        },
+        'paint':{
+            'circle-radius':{
+                'property': 'next',
+                'type': 'categorical',
+                'default': 25,
+                'stops':[
+                    [true, 27],
+                    [false, 25],
+                ]
+            },
+            'circle-color': 'white',
+            'circle-stroke-color': {
+                'property': 'next',
+                'type': 'categorical',
+                'default': '#ccc',
+                'stops':[
+                    [true, '#3887be'],
+                    [false, '#ccc'],
+                ]
+            },
+            'circle-stroke-width': {
+                'property': 'next',
+                'type': 'categorical',
+                'default': 2,
+                'stops':[
+                    [true, 3],
+                    [false, 2],
+                ]
+            }
+        },
+        'paint.dragging':{
+            'circle-stroke-width': 0
+        }
+    })
+    .addLayer({
+        'id':'restaurants-symbol',
+        'type':'symbol',
+        'source':{
+            'data': restaurants,
+            'type': 'geojson'
+        },
+        'layout':{
+            'icon-image':'{type}',
+            'icon-size':0.125
+        },
+        'paint':{
+            'text-color': '#3887be'
+        }
+    })
+    .addLayer({
+        'id':'pickups-symbol',
+        //'filter':['has', 'orderTime'],
+        'type':'symbol',
+        'source':{
+            'data': nothing,
+            'type': 'geojson'
+        },
+        'layout':{
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'icon-image':'bubble-{type}',
+            //'text-field': '{index}'
+        },
+        'paint':{
+            'text-translate':[-10,-30],
+            'icon-translate':[12,-15],
+            'text-color': '#3887be'
+        }
+    })
+})
+map.on('load', function(){
+
+    map.fitBounds(bbox)
+    state.loaded.map = true;
+
+    this.addSource('route',{
+        'data': nothing,
+        'type': 'geojson'
+    })
+    .addSource('next',{
+        'data': nothing,
+        'type': 'geojson'
+    })
+    this
+
+    .addLayer({
+        'id':'routearrows',
+        'type':'symbol',
+        'source':'route',
+        'filter':['==', 'current', 'true'],
+        'layout':{
+            'symbol-placement': 'line',
+            'text-field': '▶',
+            'text-size':{
+                base:1,
+                stops:[[12,24],[22,60]]
+            },
+            'symbol-spacing': {
+                base:1,
+                stops:[[12,30],[22,160]]
+            },
+            'text-keep-upright': false
+        },
+        'paint':{
+            'text-color': '#3887be',
+            'text-halo-color':'hsl(55, 11%, 96%)',
+            'text-halo-width':3
+        }
+    }, 'waterway-label')
+    .addLayer({
+        'id': 'blackout',
+        'type':'background',
+        'paint':{
+            'background-color': '#fff',
+            'background-opacity':0
+        },
+        'paint.dragging':{
+            'background-opacity':0.75
+        }
+    })
+    .addLayer({
+        'id':'dragLine',
+        'type':'line',
+        'source':{
+            'data': nothing,
+            'type': 'geojson'
+        },
+        'layout':{
+            'line-cap':'round'
+        },
+        'paint':{
+            'line-width':0,
+            'line-width-transition':{
+                'duration':0
+            }
+        },
+        'paint.dragging':{
+            'line-color':'#f9886c',
+            'line-opacity':1,
+            'line-width': 2,
+            'line-dasharray':[0,4],
+        }
+    })
+    // .addLayer({
+    //     'id':'dragArrowhead',
+    //     'type':'symbol',
+    //     'source':{
+    //         'data': nothing,
+    //         'type': 'geojson'
+    //     },
+    //     'layout':{
+    //         'text-cap':'round'
+    //     },
+    //     'paint':{
+    //         'text-opacity':0
+    //     },
+    //     'paint.dragging':{
+    //         'text-color':'#f9886c',
+    //         'text-opacity':1,
+    //         'text-field': '>',
+    //     }
+    // })
+    .addLayer({
+        'id':'routeline-inactive',
+        'type':'line',
+        'source':'route',
+        'filter':['==', 'current', 'false'],
+        'layout':{
+            'line-cap':'round'
+        },
+        'paint':{
+            'line-color':'#3887be',
+            'line-opacity':0.8,
+            'line-width': {
+                base:1,
+                stops:[[12,3],[22,12]]
+            },
+            'line-dasharray':[0,2],
+        }
+    }, 'waterway-label')
+    .addLayer({
+        'id':'routeline-active',
+        'type':'line',
+        'source':'route',
+        'filter':['==', 'current', 'true'],
+        'layout':{
+            'line-join':'round',
+            'line-cap':'round'
+        },
+        'paint':{
+            'line-color':{
+                'property': 'current',
+                'type': 'categorical',
+                'stops':[
+                    ['true', '#3887be'],
+                    ['false', '#aaa']
+                ]
+            },
+            'line-width': {
+                base:1,
+                stops:[[12,3],[22,12]]
+            }
+        }
+    }, 'waterway-label')
+    .addLayer({
+        'id':'restaurants',
+        'type':'circle',
+        'source':{
+            'data': restaurants,
+            'type': 'geojson'
+        },
+        'paint':{
+            'circle-radius':{
+                'property': 'next',
+                'type': 'categorical',
+                'default': 25,
+                'stops':[
+                    [true, 27],
+                    [false, 25],
+                ]
+            },
+            'circle-color': 'white',
+            'circle-stroke-color': {
+                'property': 'next',
+                'type': 'categorical',
+                'default': '#ccc',
+                'stops':[
+                    [true, '#3887be'],
+                    [false, '#ccc'],
+                ]
+            },
+            'circle-stroke-width': {
+                'property': 'next',
+                'type': 'categorical',
+                'default': 2,
+                'stops':[
+                    [true, 3],
+                    [false, 2],
+                ]
+            }
+        },
+        'paint.dragging':{
+            'circle-stroke-width': 0
+        }
+    })
+    .addLayer({
+        'id':'dragHighlight',
+        'type':'circle',
+        'source':{
+            'data': nothing,
+            'type': 'geojson'
+        },
+        'paint':{
+            'circle-radius':25,
+            'circle-opacity':0
+        },
+        'paint.dragging':{
+            'circle-stroke-width':3,
+            'circle-stroke-color': '#f9886c'
+        }
+    })
+
+    .addLayer({
+        'id':'restaurants-symbol',
+        'type':'symbol',
+        'source':{
+            'data': restaurants,
+            'type': 'geojson'
+        },
+        'layout':{
+            'icon-image':'{type}',
+            'text-font':['icomoon Regular'],
+            'icon-size':0.125
+        },
+        'paint':{
+            'text-color': '#3887be'
+        }
+    })
+    .addLayer({
+        'id':'pickups-symbol',
+        //'filter':['has', 'orderTime'],
+        'type':'symbol',
+        'source':{
+            'data': nothing,
+            'type': 'geojson'
+        },
+        'layout':{
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'icon-image':'bubble-{type}',
+            //'text-field': '{index}'
+        },
+        'paint':{
+            'text-translate':[-10,-30],
+            'icon-translate':[12,-15],
+            'text-color': '#3887be'
+        }
+    })
+
+    
+    var marker = document.createElement('div');
+    marker.classList = 'truck';
+
+    state.truckMarker = new mapboxgl.Marker(marker)
+        .setLngLat(state.truckLocation)
+        .addTo(map);
+
+    state.pingMarker = document.createElement('div');
+    state.pingMarker.innerHTML = '<div class="ping"></div>';
+
+    state.pingMarker =  new mapboxgl.Marker(state.pingMarker)
+        .setLngLat(state.truckLocation)
+        .addTo(map);   
+    map
+    .on('mousemove', function(e){
+        var ft = map.queryRenderedFeatures(e.point, {layers:['restaurants']})[0]
+        if (ft) map.dragPan.disable();
+        else map.dragPan.enable()   
+
+        if (e.originalEvent.which === 1){
+            var pt = [map.unproject(e.point).lng, map.unproject(e.point).lat];
+            state.transientMarker
+                .setLngLat(pt);
+
+            state.dragLine[1] = pt;
+            map.getSource('dragLine')
+            .setData(turf.lineString(state.dragLine))
+        } 
+    })
+    .on('mousedown', function(e){
+        state.onMousedown(e)
+    })
+})
+
+function randomPoint(){
+
+    var pt = turf.random('points', 1,{bbox:bbox}).features[0].geometry.coordinates
+    var randomNumber = parseFloat((Math.random()*100).toFixed(0))%3;
+    var randomType = rests[randomNumber].type;
+
+    state.newPickup({lng:pt[0], lat:pt[1]}, randomType)
+};
+
+state.newPickup = function (coords, type){
+
+    //state.pingMarker._element.classList ='ping mapboxgl-marker';
+
+    d3.select('.ping')
+        .classed('active', false)
+    var pt = addPoint(coords, type);
+    state.pointHopper[pt.properties.key] = pt;
+
+    pickups.features.push(pt);
+
+    state.pingMarker
+        .setLngLat(pt.geometry.coordinates)
+
+    d3.select('.ping')
+        .classed('active', true)
+
+    console.log(assembleQueryURL());
+
+    d3.json(assembleQueryURL(), function(err, resp){
+
+        state.currentRoute = resp.trips[0];
+        state.pause = false;
+
+        // draw the line except the last step (no need for round trip)
+        var lastStep = resp.trips[0].legs[resp.trips[0].legs.length-1].steps[0].intersections[0].location
+        var slicedLine = turf.lineSlice(
+            turf.point(state.currentRoute.geometry.coordinates[0]),
+            lastStep, 
+            state.currentRoute.geometry
+        )
+
+        state.currentRoute.geometry = slicedLine;
+
+        state.lastQueryTime = Date.now();
+        var timeSoFar = Date.now();
+
+        state.currentSchedule = [];
+
+        for(var i =1; i<resp.waypoints.length; i++){
+
+            var legTime = resp.trips[0].legs[i].duration;
+            timeSoFar += legTime*1000/state.speedFactor;
+
+
+            // snap pickups to the road grid, and edit entries accordingly
+            state.keepTrack[i].geometry.coordinates = resp.waypoints[i].location;
+
+            var waypointIndex = resp.waypoints[i]['waypoint_index'];
+            state.currentSchedule[waypointIndex] = state.keepTrack[i];
+
+        }
+
+        state.currentSchedule.shift();
+
+        state.updatePickups(
+            turf.featureCollection(
+                state.currentSchedule.map(
+                    function(ft, index){
+                        ft.properties.index = index;
+                        return ft
+                    }
+                )
+            )
+        )
+        var nextDestination = state.pointHopper[state.currentSchedule[0].properties.key];
+        nextDestination.properties.restaurant = !nextDestination.properties.orderTime
+
+        tick();
+        state.updateQueue();
+        state.updateRoute(slicedLine); 
+
+    })
+}
+
+function addPoint(coords, type){
+
+    var point = turf.point(
+        [coords.lng, coords.lat],
+        {
+            type: type, 
+            orderTime: Date.now(), 
+            key: Math.random()
+        }
+    )
+    return point
+}
+
+
+function tick(){
+    if (!state.pause){
+        moveTruck()
+        requestAnimationFrame(tick)
+    }
+}
+
+function moveTruck(){
+
+    // update truck position
+    var timeElapsed = (Date.now()-state.lastQueryTime)/(1000/state.speedFactor);
+    var timeRatio = timeElapsed/state.currentRoute.duration
+    var progressDistance = state.currentRoute.distance * timeRatio;
+    var newSpot = state.ruler.along(state.currentRoute.geometry.geometry.coordinates, progressDistance);
+
+    var bearing = state.ruler.bearing(state.truckLocation, newSpot)
+    state.truckLocation = newSpot;
+
+    state.truckMarker
+        .setLngLat(state.truckLocation);
+
+    driver.setCenter(state.truckLocation)
+        .easeTo({bearing:bearing, duration:200})
+
+    //check if truck has reached the next waypoint
+    var currentStep = state.currentSchedule[0];
+
+    if(currentStep && state.ruler.distance(state.truckLocation, currentStep.geometry.coordinates)<10){
+
+        var key = currentStep.properties.key;
+        state.currentSchedule.shift();
+
+        //update route line
+        var slicedLine = turf.lineSliceAlong(
+            state.currentRoute.geometry,
+            progressDistance/1000,
+            Infinity,
+            'kilometers'
+        )
+
+        pickups = turf.featureCollection(
+            state.currentSchedule.filter(function(spot){
+                return spot.properties.key !== key
+            })
+
+        )
+
+        // if this location is a dropoff, remove it from the hopper and update map markers
+        if (typeof key === 'number') {
+            delete state.pointHopper[currentStep.properties.key];
+
+            pickups = turf.featureCollection(
+                objectToArray(state.pointHopper)
+                    .filter(function(pt){
+                        return typeof pt.properties.key === 'number'
+                    })
+            )
+
+            state.updatePickups(pickups)
+
+        }
+
+        //if it's a restaurant, update the arrival time
+        else state.lastAtRestaurant[key] = Date.now();
+
+
+        //if no more deliveries, pause;
+
+        if (state.currentSchedule.length === 0) {
+            state.pause = true;
+            map.getSource('next')
+                .setData(nothing)
+
+            state.updateRoute()
+        }
+
+        else {
+            state.updateRoute(slicedLine);
+
+            var nextDestination = state.pointHopper[state.currentSchedule[0].properties.key]
+            nextDestination.properties.restaurant = !nextDestination.properties.orderTime
+
+            map.getSource('next')
+                .setData(nextDestination);
+        }
+
+        state.updateQueue()
+
+    }
+
+}
+
+
+
+function assembleQueryURL(){
+
+    var coordinates = [state.truckLocation];
+    var distributions = [];
+    state.keepTrack = [state.truckLocation];
+
+    rests.forEach(function(rest, index){
+
+        var restJobs = objectToArray(state.pointHopper)
+        .filter(function(job){
+            return job.properties.type === rest.type;
+        })
+
+        // if there are actually orders from this restaurant
+        if (restJobs.length > 0){
+
+            var needToPickUp = restJobs.filter(function(d,i){
+                return d.properties.orderTime > state.lastAtRestaurant[rest.type]
+            }).length>0;
+
+            if (needToPickUp) {
+                var restaurantIndex = coordinates.length;
+                coordinates.push(rest.coordinates);
+                // push the restaurant itself into the array
+                state.keepTrack.push(state.pointHopper[rest.type]);
+            }
+
+
+            restJobs.forEach(function(d,i){
+
+                //add pickup to list
+                state.keepTrack.push(d);
+                coordinates.push(d.geometry.coordinates);
+
+                // if order not yet picked up, add a reroute
+                if (needToPickUp && d.properties.orderTime>state.lastAtRestaurant[rest.type]){
+                    distributions.push(restaurantIndex+','+(coordinates.length-1))
+                }
+            })
+        }
+
+    });
+
+    return ('https://api.mapbox.com/optimized-trips/v1/mapbox/driving/'+coordinates.join(';')+'?distributions='+distributions.join(';')+'&overview=full&steps=true&geometries=geojson&source=first&access_token='+mapboxgl.accessToken)    
+
+}
+
+function objectToArray(obj){
+
+    var keys = Object.keys(obj);
+    var payload = keys.map(function(key){
+        return obj[key]
+    })
+
+    return payload
+}
+
+window.addEventListener('blur', function(){state.reset()})
+</script>
+<img src='https://www.mapbox.com/bites/00359/icons/bubble-noodles.svg'>
+<img src='https://www.mapbox.com/bites/00359/icons/bubble-taco.svg'>
+
+</body>
+</html>

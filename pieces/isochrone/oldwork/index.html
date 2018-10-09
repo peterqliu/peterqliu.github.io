@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Travel time</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.tiles.mapbox.com/mapbox.js/v2.2.1/mapbox.js'></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
+<script src='jquery.js'></script>
+<script src='hull.js'></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-hash/v0.2.1/leaflet-hash.js'></script>
+
+<link href='https://api.tiles.mapbox.com/mapbox.js/v2.2.1/mapbox.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0;}
+  .leaflet-container {background:black;}
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+  .css-icon {color:white; border-radius:10px; text-align:center; overflow:hidden;}
+  .css-icon div {width:10px; height:10px;background:black;}
+  path {
+    stroke-dashoffse: 10000; 
+    stroke-dasharray:10000; 
+    stroke-width:1;
+    -webkit-transition:stroke-dashoffset 160s linear
+  }
+
+  .isochrone {z-index:-99;}
+</style>
+</head>
+<body>
+<div id='map'></div>
+<script>
+	function reverseCoords(coords) {return [coords[1],coords[0]]}
+	L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+
+	var colorScheme = ["#F221E0", "#DA2AD5", "#C22FC9", "#AC31BD", "#9632B0", "#8231A2", "#6E2F94", "#5C2C86", "#4B2877", "#3B2368", "#2C1E59", "#1F194A"]
+	var altColor = ['#6c054c','#a04a9a','#9b81bd','#5d64b1','#a7d8f5','#a1e2c0','#d2dc20', '#e09d00','#e86300','#e91800','#910003'].reverse();
+	
+
+	var map = L.mapbox.map('map', 'peterqliu.0c5651df') //
+	    .setView([41.87723,-87.65800], 13);
+
+	var hash = L.hash(map);
+
+	var pointsPerMinute = [];
+	var positionsPerSecond = [];
+	var cutoffs=[1,3,5,8];
+
+	var origin =[map.getCenter().lat, map.getCenter().lng]
+
+	var marker= L.marker(origin, {draggable:true})
+		.addTo(map);
+	marker.on('dragend',function(){
+		var startLocation = marker.getLatLng()
+		drawRoutes([startLocation.lat, startLocation.lng], cutoffs)
+	});
+
+	map.addEventListener('contextmenu', function(event) {
+		console.log(event.latlng)
+	}, false);
+function drawRoutes(center, cutoffs){
+	var queryCount =0;
+	pointsPerMinute = [];
+
+	//clear the existing stuff
+	$('path').remove()
+
+	map.setView(center,13)
+	function makeRadialPattern(center, rings){
+		var radius = 2;
+		var marksPerRing = 1.5*rings;
+		var pattern = [];
+
+		//iterate through rings
+		for (var i=0; i<3; i++ ){
+			var angle = i*130;
+
+			//iterate through points on ring
+			for (var j=0; j<marksPerRing; j++){
+				pattern.push(turf.destination(turf.point(reverseCoords(center)), radius, angle, 'kilometers'))
+				angle+=360/(marksPerRing)
+			}
+			radius=radius*2.5;
+			marksPerRing=marksPerRing+3
+		}
+		return pattern
+	}
+
+	function getIndex(arr, object) {
+		return arr.map(JSON.stringify).indexOf(JSON.stringify(object));
+	}
+
+	var grid=turf.featurecollection(makeRadialPattern(center, Math.max.apply(null, cutoffs)*0.5))
+
+	//batch up to 12 queries into one HTTP call, via an ABACADAE waypoint format
+	function batchRequests(origin, destinations) {
+		if (destinations.length<=12){
+			var coordChain='';
+			destinations.forEach(function(destination,index){
+				coordChain= coordChain+(origin[0]+','+origin[1]+';'+destination[0]+','+destination[1])
+				if (index!==destinations.length-1) coordChain=coordChain+';'
+			})
+
+			var queryURL = ('https://api.tiles.mapbox.com/v4/directions/mapbox.driving/'+coordChain+'.json?access_token='+L.mapbox.accessToken)
+
+			$.get(queryURL, function(data, error){
+				console.log(queryURL)
+				var distanceSoFar=0;
+				var direction = 'to'
+				data.routes[0].steps.forEach(function(step,index){
+					distanceSoFar+=step.distance
+					if (step.maneuver.type ==='waypoint'){
+						//capture only route segments going away from origin
+						if (direction ==='to') {
+							console.log(distanceSoFar+'m to '+step.maneuver.location.coordinates)
+						}
+						//flip direction
+						direction = direction === 'to' ? 'fro': 'to'
+					}
+				})
+			})
+		}
+	}
+	//console.log(grid.features.slice(0,12).map(function(point){return point.geometry.coordinates}))
+	batchRequests(reverseCoords(center), grid.features.slice(0,12).map(
+		function(point){return point.geometry.coordinates})
+	)
+	//grid.features = [grid.features[0]]
+
+
+	var positionsPerSecond = [];
+
+
+	var startTime = Date.now()
+
+	grid.features.forEach(function(feature){
+		//L.marker(reverseCoords(feature.geometry.coordinates)).addTo(map)
+		var geojsonOrigin = reverseCoords(center);
+		var destinationCoords=(feature.geometry.coordinates)
+
+		queryURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.driving/'+geojsonOrigin+';'+destinationCoords+'.json?access_token='+L.mapbox.accessToken;
+		//console.log(queryURL)
+
+		$.get(queryURL, function(data, error){
+			// iterate through route options
+			data.routes.forEach(function(route){
+
+				var duration = 0;
+				var prevEndIndex = 0;
+
+				var timeDist = []
+
+				// create an array (timeDist) of the distance and duration of each turn
+				for (var k=1; k<route.steps.length; k++){
+					var prevStep = route.steps[k-1]
+					timeDist.push({
+						distance: prevStep.distance,
+						duration: prevStep.duration,
+					})
+				}
+				var rawDistances=[]
+
+				// rawDistance will be a long list of distances traveled each and every second
+				timeDist.forEach(function(item){
+
+					var perSecond = item.distance/item.duration
+					for (var i=0; i<item.duration; i++){
+						rawDistances.push(perSecond)
+					}
+				})
+
+				var wholeRoute = turf.linestring(route.geometry.coordinates);
+
+				rawDistances.forEach(function(distance,index){
+					var currentMinute = Math.floor(index/60);
+					//console.log(index)
+					if (!positionsPerSecond[currentMinute] && index%60 === 0) {
+						//console.log('new entry is '+currentMinute+' minutes')
+						positionsPerSecond[currentMinute] =[];
+					}
+					var accumDistance = rawDistances.slice(0,index+1)
+						.reduce(function add(a, b) {
+    						return a + b;
+						}, 0);
+					var newPosition = turf.along(wholeRoute, accumDistance/1000, 'kilometers');
+					positionsPerSecond[currentMinute].push(newPosition)
+				})
+
+
+				var breakpoints=[0];
+				var junctureDistance = 0;
+
+				//breakpoints will be an array of distances traveled during each whole minute
+				for (var j=0; j<rawDistances.length/60; j++) {
+
+					//chunk rawDistances into whole-minute aggregates (junctureDistance), and then push them in
+					junctureDistance +=
+				      rawDistances
+				        .slice(j*60,(j+1)*60)
+				        .reduce(function(prev,current){return prev+current})
+
+					breakpoints.push(junctureDistance);
+
+
+				}
+
+
+
+				for (var k=0;k<breakpoints.length-1;k++){
+
+					// get the segment of the trip between two breakpoints
+					var minuteSegment = turf.lineSlice(turf.along(wholeRoute, breakpoints[k]/1000,'kilometers'), turf.along(wholeRoute, breakpoints[k+1]/1000,'kilometers'),wholeRoute);
+
+					// drop less useful points for simplification
+					//minuteSegment= turf.simplify(minuteSegment,10,false)
+
+					L.polyline(minuteSegment.geometry.coordinates.map(
+						function(thing){
+							return reverseCoords(thing)
+						}),{
+						    "color": altColor[k],
+						    "opacity":1
+					}).addTo(map)
+
+				}
+			})
+		queryCount++
+		if (queryCount=== grid.features.length) {
+			console.log('directions query complete at '+(Date.now()-startTime))
+			drawHull()}
+		})
+	})
+
+	function drawHull(){
+		console.log('drawing hull at '+(Date.now()-startTime))
+		function removeDupes(array) {
+		  array = array.map(function(element){return JSON.stringify(element)})
+		  array.forEach(function(element){
+		    var lastIndex = array.lastIndexOf(element);
+		    if (array.indexOf(element) !== lastIndex) {
+		      array.splice(lastIndex,1)
+		    }
+		  })
+		  return array = array.map(function(element){return JSON.parse(element)})
+		}
+		var accumulation=[]
+
+		// draw concave hull for each minute-cutoff requested
+		for (var k=0;k<=Math.max.apply(null, cutoffs); k++) {
+			//strip geojson points into raw latlng pairs
+			var latlngPairs = positionsPerSecond[k]
+				.map(function(point){return point.geometry.coordinates});
+
+			accumulation= accumulation.concat(latlngPairs)
+
+			if (cutoffs.indexOf(k+1)!==-1){
+				//get hull and flip coordinates in anticipation of polygon draw
+				var concaveHull = hull(accumulation)
+					.map(function(point){return reverseCoords(point)})
+
+				//concaveHull.push(concaveHull[0])
+
+				//smoothify contours
+				//concaveHull=turf.bezier(turf.linestring(concaveHull),10000,0.5).geometry.coordinates;
+				
+				L.polygon(concaveHull,{color:altColor[k], width:0, opacity:1, className:'isochrone'}).addTo(map)
+			}
+		}
+
+		console.log('finished hull at '+(Date.now()-startTime))
+	}
+}
+
+	drawRoutes(origin,cutoffs)
+</script>
+</body>
+</html>

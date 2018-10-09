@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.0/mapbox-gl.css' rel='stylesheet' />
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; left:0;right:300px; }
+        input,textarea{display:block;}
+        .sidebar{width:300px;}
+        .featuresat{
+            background:white;
+            display:none;
+        }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<div class='pin-topright margin2 pad1 fill-white keyline-left sidebar'>
+    Travel time (min)
+    <input type='text' class='threshold col3 fr' value='1' placeholder='Travel time'/>
+    <textarea rows='10' class='geojsonoutput col12 hidden' style='height:1500px' placeholder='GeoJSON output' class='micro'></textarea>
+</div>
+<div class='pad1 featuresat light z100'>
+    ss
+</div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var map = new mapboxgl.Map({
+    hash: true,
+    container: 'map', // container id
+    style: 'mapbox://styles/mapbox/light-v8', //stylesheet location
+    center: [-122.43357135073379, 37.75846], // starting position
+    zoom: 14 // starting zoom
+});
+
+map.on('load', function(){
+    map.addSource('buffercontent', {
+        "type": "geojson",
+        "data": {
+          "type": "FeatureCollection",
+          "features": []
+        }
+    })
+    .addSource('reachable', {
+        "type": "geojson",
+        "data": {
+          "type": "FeatureCollection",
+          "features": []
+        }
+    })
+    .addSource('nearestnode', {
+        "type": "geojson",
+        "data": {
+          "type": "FeatureCollection",
+          "features": []
+        }
+    });
+
+    map.addLayer({
+        "id": "allroutes",
+        "type": "line",
+        "source": "buffercontent",
+        "layout": {
+            "line-cap": "round",
+            "line-join": "round"
+        },
+        "paint": {
+            "line-width":{
+                "base": 1.5,
+                "stops": [[6,1],[20,16]]
+            },
+            "line-opacity":1,
+            "line-color":'#cccccc',
+            "line-offset":{"base": 1.5,"stops": [[6,1],[20,12]]}
+        }
+    },'admin-2-boundaries')
+    .addLayer({
+        "interactive":true,
+        "id": "reachable",
+        "type": "line",
+        "source": "reachable",
+        "layout": {
+            "line-cap": "round",
+            "line-join": "round"
+        },
+        "paint": {
+            "line-width":{
+                "base": 1.5,
+                "stops": [[6,2],[20,8]]
+            },
+            "line-opacity":1,
+            "line-color":{
+                'property': 'weight',
+                'stops':[[0, 'lime'], [60, 'blue']]
+            },
+            "line-offset":{"base": 1.5,"stops": [[6,1],[20,12]]}
+
+        }
+    },'admin-2-boundaries')
+    .addLayer({
+        "id": "reachable_direction",
+        "type": "symbol",
+        "source": "reachable",
+        "layout": {
+            "text-field":'{weight}',
+            "text-keep-upright":false,
+            "text-rotation-alignment": "map",
+            "symbol-placement": "line",
+            "symbol-spacing": 1,
+            "text-allow-overlap":true,
+            "text-size":{
+                "base": 1.5,
+                "stops": [[6,16],[20,50]]
+            }
+        },
+        "paint": {
+            "text-color":"green",
+            "text-opacity": 1
+        }
+    },'admin-2-boundaries')
+    .addLayer({
+        "id": "nearestnode",
+        "type": "circle",
+        "source": "nearestnode",
+        "layout": {},
+        "paint": {
+            "circle-color":"red"
+        }
+    })
+})
+.on('mousemove', function(e){
+    map.queryRenderedFeatures(e.point, {radius: 5}, function (err, features) {
+        if (err) throw err;
+        if (features.length>0){
+            var seconds = features[0].properties.weight;
+            document.querySelector('.featuresat').innerHTML =
+            Math.floor(seconds/60)+ 'm '+parseInt(seconds%60)+'s'
+            document.querySelector('.featuresat').style.display='inline-block'
+        }
+        else document.querySelector('.featuresat').style.display='none'
+
+    });
+    document.querySelector('.featuresat').style.transform='translateX('+(e.point.x+10)+'px) translateY('+(e.point.y-60)+'px)'
+
+})
+</script>
+<script src='bundle.js'></script>
+<script src='app.js'></script>
+
+</body>
+</html>

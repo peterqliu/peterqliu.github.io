@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Travel time</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.tiles.mapbox.com/mapbox.js/v2.2.1/mapbox.js'></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
+<script src='jquery.js'></script>
+<link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+
+<script src='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-hash/v0.2.1/leaflet-hash.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox.js/v2.2.1/mapbox.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0; }
+    .leaflet-container {background:black;}
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+  .css-icon {color:white; border-radius:10px; text-align:center; overflow:visible;}
+  .css-icon div {width:10px; height:10px;background:none; display:none;}
+  .electric {
+    color:steelblue;
+  }
+  path {
+    stroke-dashoffse: 10000; 
+    stroke-dasharray:10000; 
+    stroke-width:2;
+    -webkit-transition:stroke-dashoffset 160s linear
+  }
+
+  .loader:not(.hidden) + #map{
+    opacity:0.5;
+    transition:opacity 0.5s;
+  }
+
+  #sidebar {
+    height:96%;
+    width:300px;
+    top:2%;
+    bottom:2%;
+    right:1%;
+    position:absolute;
+    display:none;
+  }
+</style>
+</head>
+<body>
+<img src='loader.gif' class='z100 pin-top center loader hidden' style='margin-top:20%'>
+<div id='map'></div>
+<div id='population' class='pin-bottomleft fill-white z100 pad1 hidden'><span id='number' class='electric strong'></span> people live within 4 minutes of here</div>
+
+<div id='sidebar' class='pad2 fill-white margin1 z100'>
+  <div class='quiet uppercase small'>Travel speed</div>
+  <div class='rounded-toggle inline col12 space-bottom1'>
+    <input id='pizza' type='radio' name='rtoggle' value='pizza' checked='checked'>
+    <label class='col4 center' for='pizza'>Driving</label>
+    <input id='penny' type='radio' name='rtoggle' value='penny'>
+    <label class='col4 center' for='penny'>Cycling</label>
+    <input id='charlotte' type='radio' name='rtoggle' value='charlotte'>
+    <label class='col4 center' for='charlotte'>Walking</label>
+  </div>
+  <div class='quiet uppercase small'>Thresholds (minutes)</div>
+  <div class='quiet uppercase small'>Traversable Area</div>
+  <div class='quiet uppercase small'>Est. Population (2010 Census)</div>
+
+</div>
+<script>
+
+</script>
+<script src='bundle.js'></script>
+</body>
+</html>

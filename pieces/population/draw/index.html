@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Population inspector</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="https://npmcdn.com/cheap-ruler@1.3.0/cheap-ruler.js" charset="utf-8"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.34.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.34.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='odometer.js'></script>
+    <link href='odometer.css' rel='stylesheet'></link>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+        #counter {position:absolute; color:#55e9ff;}
+        .mapboxgl-popup-tip, .mapboxgl-popup-content {
+          display:none;
+        }
+        #pop{
+          font-size:3em;
+        }
+
+        #draw{
+          background:#55e9ff;
+          width:100px;
+          height:100px;
+          color:black;
+          text-align:center;
+          border-radius:50%;
+          padding-top:40px;
+          margin:20px;
+          cursor:pointer;
+        }
+
+        #draw:hover{
+          background: lime;
+        }
+
+        .mapboxgl-canvas.drawing{
+          cursor:crosshair;
+          border:1px solid #55e9ff;
+        }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<div id='counter' class='pad2'>
+  <h1><span id='pop' class='odometer'></span></h1>
+  people live in this area
+</div>
+
+<div class='pin-topright p6 m12' onclick='draw()' id='draw'>Draw</div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v9',
+    zoom: 14,
+    minZoom: 12,
+    center: [-122.447303, 37.753574]
+});
+
+var lnglat = map.getCenter();
+var emptyGeojson = turf.featurecollection([]);
+
+map.on('load', function () {
+
+    map
+    //.setPaintProperty('outgeojson', 'fill-color', '#abcdef')
+    .addSource('circle', {
+      type: 'geojson',
+      data: emptyGeojson
+    })
+    .addSource('selectedBlocks', {
+      type: 'geojson',
+      data: emptyGeojson
+    })
+    .addSource('drawn', {
+      type: 'geojson',
+      data: emptyGeojson
+    });
+    map
+    .addLayer({
+      'id': 'outgeojson', 
+      'type': 'fill-extrusion', 
+      'filter':['>', 'pkm2', 1],
+      'source':{
+        'type':'vector',
+        'url':'mapbox://peterqliu.d0vin3el'
+      },
+      'source-layer': 'outgeojson',
+      'paint':{
+        'fill-extrusion-opacity':0,
+        'fill-extrusion-color':{
+          "property": "pkm2",
+          "stops": [[0, '#333'], [250000, 'white']]
+        },
+        "fill-extrusion-height": {
+          "property": "pkm2",
+          "stops": [[0, 0], [250000, 000]]
+        }
+      }, 
+      'paint.draw':{
+        'fill-extrusion-opacity':0
+      }
+    }, 'sand')
+    
+    .addLayer({
+      'id':'drawn_polygon', 
+      'type':'line',
+      'source':'drawn',
+      'paint':{
+        'line-color':'steelblue',
+        'line-width':4,
+        'line-dasharray':[0,2],
+        'line-opacity':0
+      },
+      'paint.draw':{
+        'line-opacity':1
+      },
+      'layout':{
+        'line-cap':'round'
+      }
+    })
+    // .addLayer({
+    //   'id':'drawn_fill', 
+    //   'type':'fill',
+    //   'source':'drawn',
+    //   'paint':{
+    //     'fill-color':'rgba(255,255,255,0.2)'
+    //   }
+    // })
+
+    .addLayer({
+        "id": "block_extrusions",
+        "type": "fill-extrusion",
+        "source": "selectedBlocks",
+        "layout": {
+        },
+        "paint": {
+            "fill-extrusion-color": {
+              "property": "density",
+              "stops": [[0,'#160e23'],[14500,'#00617f'], [1450000,'#55e9ff']]
+            },
+            "fill-extrusion-height": {
+              "property": "density",
+              "stops": [[0, 0], [250000, 5000]]
+            },
+            'fill-extrusion-opacity':1
+        },
+        'paint.draw':{
+            'fill-extrusion-opacity':0
+        }
+    });
+
+
+});
+
+  function updateBlocks(shape){
+
+    //calculate extent of shape
+    var shapeExtent = turf.extent(shape);
+    var nw = map.project([shapeExtent[0],shapeExtent[3]]);
+    var se = map.project([shapeExtent[2],shapeExtent[1]]);
+    nw = [nw.x, nw.y];
+    se = [se.x, se.y];
+
+    //get blocks within the shape's extent
+    var geometryOutput = map.queryRenderedFeatures([nw,se],{ layers: ['outgeojson'] });
+
+    var intersectedBlocks = [];
+    var totalPop = 0;
+
+    var ruler = cheapRuler(lnglat.lat, 'meters');
+    geometryOutput.forEach(function(poly){
+      var density = poly.properties.pkm2;
+      try {
+
+        var poly = turf.polygon(poly.geometry.coordinates);
+        poly.properties.bbox = turf.extent(poly);
+
+        //calculate intersect only if it collides at all
+        var intersect = turf.intersect(poly, shape)
+        intersect.properties.density = density;
+
+        //if there is an intersect,
+        if (intersect !== undefined) {
+          // add intersected geometry to featurecollection
+          intersectedBlocks.push(intersect)
+
+          //add intersected population to the total
+          var blockPop = ruler.area(poly.geometry.coordinates)*density;
+          totalPop+= blockPop
+        }
+      } 
+
+      catch(e) {return}
+    });
+
+    // update population and radius count
+    document.querySelector('#pop').innerHTML = parseInt(totalPop);
+
+    return turf.featurecollection(intersectedBlocks)
+
+  }
+function draw(){
+  map.setClasses(['draw']);
+  map.getSource('drawn').setData(emptyGeojson);
+  document.querySelector('canvas').classList = 'mapboxgl-canvas drawing'
+
+  map.easeTo({bearing:0, pitch:0})
+  map.dragPan.disable();
+  map.dragRotate.disable();
+  map.scrollZoom.disable();
+  //map.getSource('selectedBlocks').setData(emptyGeojson);
+
+  var pts= [];
+  map.once('mousedown', function(e){
+    pts.push(lngLatArray(e.lngLat))
+
+    map.on('mousemove', addPoint)
+
+    map.once('mouseup', function(){
+      map.setClasses([]);
+      document.querySelector('canvas').classList = 'mapboxgl-canvas'
+
+      map.off('mousemove', addPoint);
+      map.dragPan.enable();
+      map.dragRotate.enable();
+      map.scrollZoom.enable();
+
+      pts.push(pts[0]);
+
+      var polygon =
+      {
+        type: 'Polygon',
+        coordinates:[pts]
+      };
+      
+      var blocks = updateBlocks(polygon);
+      var zoom = map.getZoom();
+
+      var extrudeStyle = {
+        "property": "density",
+        "stops": [
+          [{value: 0}, 0],
+          [{value: 250000}, 5000]
+        ]
+      }
+
+      map.setPaintProperty('block_extrusions', 'fill-extrusion-height', extrudeStyle);
+
+      map.getSource('selectedBlocks').setData(blocks);
+      map.easeTo({zoom:zoom-0.01, duration:500, pitch:40})
+
+    })
+  })
+
+  function addPoint(e){
+    
+    var pt= lngLatArray(e.lngLat);
+    var dist = turf.distance(turf.point(pts[0]), turf.point(pt), 'kilometers')
+    if (dist>0.1) pts.unshift(pt)
+
+    map.getSource('drawn')
+    .setData(
+      {type: 'LineString',
+        coordinates:pts
+      }
+    )
+  }
+}
+
+function lngLatArray(obj){
+  return [obj.lng, obj.lat]
+}
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

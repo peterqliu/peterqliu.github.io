@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Earthquake</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src='quickselect.js'></script>
+    <script src='odometer.js'></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.19.1/mapbox-gl.js'></script>
+    <link href='odometer.css' rel='stylesheet'></link>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.19.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; background:#191a1a;}
+        #map { position:absolute; top:0; bottom:0; right:0; left:360px; }
+        .mapboxgl-ctrl.mapboxgl-ctrl-attrib { background-color:rgba(0,0,0,0.5); }
+        .mapboxgl-ctrl.mapboxgl-ctrl-attrib a { color:#fff; }
+
+        #sidebar {height:100%; left:0px; width:360px; color:white; overflow:scroll; overflow-x:hidden; background:#222;}
+        #sidebar::-webkit-scrollbar { width: 0 !important }
+        .mapboxgl-popup-content {padding:10px; background:rgba(0,0,0,0.75); color:#fff; pointer-events:none;}
+        .scroller{
+            position:absolute;
+            top:87px;
+            bottom:0px;
+            overflow:scroll;
+        }
+        .mapboxgl-popup-anchor-bottom {margin-top:-10px;}
+        .mapboxgl-popup-anchor-top {margin-top:10px;}
+        .mapboxgl-popup-anchor-left {margin-right:-10px;}
+        .mapboxgl-popup-anchor-right {margin-right:10px;}
+
+        .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {border-top-color:rgba(0,0,0,0.75); }
+        .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {border-bottom-color:rgba(0,0,0,0.75); }
+        .mapboxgl-popup-anchor-left .mapboxgl-popup-tip {border-right-color:rgba(0,0,0,0.75);}
+        .mapboxgl-popup-anchor-right .mapboxgl-popup-tip {border-left-color:rgba(0,0,0,0.75);}
+
+        .mapboxgl-ctrl-group {
+            -webkit-filter: invert(100%);
+        }
+        .mapboxgl-popup {pointer-events:none;}
+        h2.mag {
+            margin-right:10px;
+            color:steelblue;
+        }
+          #restore {
+            display: none;
+          }
+        .count {color:steelblue;
+            font-size: 2em;
+            line-height: 1.1em;
+            text-align:center;
+            padding-right:10px;
+        }
+        .entry {height:80px; width:360px; cursor:pointer; position:relative; opacity:0.8;}
+        .entry:hover {opacity:1;}
+        h2 {margin:10px 10px 10px 0px; padding-bottom:0px; padding-top:0px; line-height:1em;}
+        .translucent {opacity:0.75;}
+        .darkback {
+            background:rgba(0,0,0,0.7);
+        }
+        .code {
+            padding:2px 5px;
+        }
+
+        .loader {
+            background:rgba(0,0,0,0.7);
+            width:100%;
+            height:100%;
+            color:white;
+            position:absolute;
+            text-align: center;
+            line-height: 9em;
+            font-size:2em;
+            z-index:999;
+        }
+
+        @media (max-width: 600px) {
+          #sidebar {
+            display: none;
+          }
+
+          #map {
+            left:0px;
+          }
+        }
+    </style>
+</head>
+<body>
+<div class='loader'>Loading data...
+</div>
+<div id='sidebar' class=''>
+    <div class='pad2 clearfix'>
+        <div class='count strong col4 odometer' id='odometer'>0000</div> 
+        <div class='col8'>tremors detected worldwide over the past <select style='margin-left:6px'></select></div>
+    </div>
+    <div class='scroller'>
+        <div class='section latest col12'>
+            <div class='small strong uppercase faded pad2x pad1y heading fill-dark col12'>Latest</div>
+        </div>
+        <div class='section mag'>
+            <div class='small strong uppercase faded pad2x pad1y heading fill-dark'>Strongest</div>
+        </div>
+        <div class='section felt'>
+            <div class='small strong uppercase faded pad2x pad1y heading fill-dark'>Most reported</div>
+        </div>
+    </div>
+</div>
+
+<div id='map' class='clearfix'>
+<a class='pin-bottomleft z1 pad1' target='_blank' href='https://www.mapbox.com/'>
+  <img src='data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeD0iMCIgeT0iMCIgd2lkdGg9IjU5LjEiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCA1OS4xIDE4IiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDAgMCA1OS4xMTkgMTgiIHhtbDpzcGFjZT0icHJlc2VydmUiPjxwYXRoIGQ9Ik0xLjQgMEMwLjYgMC4xIDAgMC44IDAgMS41TDAgMTMuNEMwIDE0LjIgMC43IDE0LjggMS41IDE0LjhMMy4zIDE0LjhDNCAxNC44IDQuNyAxNC4yIDQuOCAxMy40TDQuOCA5LjEgNS41IDEwLjNDNiAxMS4yIDcuNSAxMS4yIDggMTAuM0w4LjggOS4xIDguOCAxMy40QzguOCAxNC4xIDkuNSAxNC44IDEwLjIgMTQuOEwxMiAxNC44QzEyLjggMTQuOCAxMy41IDE0LjIgMTMuNSAxMy40TDEzLjUgMTMuMkMxNC41IDE0LjMgMTUuOSAxNSAxNy42IDE1TDIxLjcgMTUgMjEuNyAxNi41QzIxLjcgMTcuMyAyMi4zIDE4IDIzLjEgMThMMjQuOSAxOEMyNS43IDE4IDI2LjQgMTcuMyAyNi40IDE2LjVMMjYuNCAxNUMyOC4xIDE1IDI5LjUgMTQuNCAzMC41IDEzLjNMMzAuNSAxMy41QzMwLjUgMTMuOSAzMC43IDE0LjMgMzEgMTQuNiAzMS4zIDE0LjkgMzEuNiAxNSAzMiAxNUwzNS4zIDE1QzM3LjQgMTUgMzkuMiAxNCA0MC4zIDEyLjMgNDEuMyAxMy45IDQzLjEgMTUgNDUuMSAxNSA0Ni4yIDE1IDQ3LjEgMTQuOCA0Ny45IDE0LjMgNDguMiAxNC42IDQ4LjcgMTQuOCA0OS4xIDE0LjhMNTEuMyAxNC44QzUxLjcgMTQuOCA1Mi4yIDE0LjYgNTIuNSAxNC4yTDUzLjQgMTIuOSA1NC4zIDE0LjJDNTQuNiAxNC42IDU1LjEgMTQuOCA1NS41IDE0LjhMNTcuNyAxNC44QzU4LjggMTQuOCA1OS41IDEzLjQgNTguOSAxMi41TDU2LjMgOC45IDU4LjcgNS41QzU5LjQgNC42IDU4LjYgMy4xIDU3LjUgMy4xTDU1LjMgMy4xQzU0LjkgMy4xIDU0LjQgMy40IDU0LjEgMy44TDUzLjQgNC44IDUyLjcgMy44QzUyLjQgMy40IDUxLjkgMy4xIDUxLjQgMy4xTDQ5LjMgMy4xQzQ4LjggMy4xIDQ4LjMgMy40IDQ4IDMuOCA0Ny4yIDMuMyA0Ni4yIDMgNDUuMSAzIDQzLjEgMyA0MS4zIDQuMSA0MC4yIDUuNyAzOS4yIDQgMzcuNCAzIDM1LjMgM0wzNS4zIDEuNUMzNS4zIDEuMSAzNS4xIDAuNyAzNC44IDAuNCAzNC42IDAuMiAzNC4yIDAgMzMuOCAwTDMyIDBDMzEuMyAwIDMwLjUgMC44IDMwLjUgMS41TDMwLjUgNC43QzI5LjUgMy42IDI4LjEgMyAyNi41IDNMMjMuMSAzQzIyLjQgMyAyMS43IDMuNyAyMS43IDQuNUwyMS43IDQuOEMyMC42IDMuNyAxOS4yIDMgMTcuNiAzIDE1LjkgMyAxNC41IDMuNyAxMy41IDQuOEwxMy41IDEuNUMxMy41IDAuNyAxMi44IDAgMTIgMEwxMC42IDBDOS42IDAgOC40IDAuNCA3LjggMS40TDYuOCAzLjEgNS44IDEuNEM1LjEgMC40IDMuOSAwIDIuOSAwTDEuNSAwIDEuNCAwek0xLjUgMS41TDIuOSAxLjVDMy42IDEuNSA0LjIgMS43IDQuNSAyLjJMNi44IDYuMSA5IDIuMkM5LjMgMS43IDkuOSAxLjUgMTAuNiAxLjVMMTIgMS41IDEyIDEzLjUgMTAuMiAxMy41IDEwLjIgMy42IDYuOCA5LjUgMy4zIDMuNiAzLjMgMTMuNSAxLjUgMTMuNSAxLjUgMS41ek0zMi4xIDEuNUwzMy44IDEuNSAzMy44IDQuNUMzNC40IDQuNSAzNC44IDQuNSAzNS4zIDQuNSAzNy44IDQuNSAzOS43IDYuNCAzOS43IDkgMzkuNyAxMS42IDM3LjggMTMuNSAzNS4zIDEzLjVMMzIuMSAxMy41IDMyLjEgMS41ek0xNy42IDQuNUMyMCA0LjUgMjEuOCA2LjQgMjEuOCA5TDIxLjggMTMuNSAxNy42IDEzLjVDMTUuMSAxMy41IDEzLjQgMTEuNiAxMy40IDkgMTMuNCA2LjQgMTUuMSA0LjUgMTcuNiA0LjV6TTQ1LjEgNC41QzQ3LjUgNC41IDQ5LjUgNi41IDQ5LjUgOSA0OS41IDExLjUgNDcuNSAxMy41IDQ1LjEgMTMuNSA0Mi43IDEzLjUgNDAuNyAxMS41IDQwLjcgOSA0MC43IDYuNSA0Mi43IDQuNSA0NS4xIDQuNXpNMjMuMSA0LjVMMjYuNSA0LjVDMjguOSA0LjUgMzAuOCA2LjQgMzAuOCA5IDMwLjggMTEuNiAyOC45IDEzLjUgMjYuNSAxMy41TDI0LjkgMTMuNSAyNC45IDE2LjUgMjMuMSAxNi41IDIzLjEgNC41ek00OS4zIDQuNUw1MS40IDQuNSA1My40IDcuMyA1NS4zIDQuNSA1Ny41IDQuNSA1NC41IDguOSA1Ny43IDEzLjUgNTUuNSAxMy41IDUzLjQgMTAuNCA1MS4yIDEzLjUgNDkuMSAxMy41IDUyLjMgOC45IDQ5LjMgNC41ek0xNy42IDYuMkMxNi4yIDYuMiAxNS4xIDcuNCAxNS4xIDkgMTUuMSAxMC42IDE2LjIgMTEuOCAxNy42IDExLjhMMjAgMTEuOCAyMCA5QzIwIDcuNCAxOSA2LjIgMTcuNiA2LjJ6TTQ1LjEgNi4yQzQzLjcgNi4yIDQyLjUgNy41IDQyLjUgOSA0Mi41IDEwLjUgNDMuNyAxMS44IDQ1LjEgMTEuOCA0Ni42IDExLjggNDcuNyAxMC41IDQ3LjcgOSA0Ny43IDcuNSA0Ni42IDYuMiA0NS4xIDYuMnpNMjQuOSA2LjNMMjQuOSAxMS44IDI2LjUgMTEuOEMyNy45IDExLjggMjkuMSAxMC41IDI5LjEgOSAyOS4xIDcuNSAyOC4xIDYuMyAyNi41IDYuM0wyNC45IDYuM3pNMzMuOCA2LjNMMzMuOCAxMS44IDM1LjMgMTEuOEMzNi45IDExLjggMzggMTAuNSAzOCA5IDM4IDcuNSAzNi44IDYuMyAzNS4zIDYuM0wzMy44IDYuM3pNMTcuNiA3LjdDMTguMSA3LjcgMTguNSA4LjEgMTguNSA5TDE4LjUgMTAuMyAxNy42IDEwLjNDMTcgMTAuMyAxNi42IDkuOSAxNi42IDkgMTYuNiA4LjEgMTcgNy43IDE3LjYgNy43ek0yNi40IDcuN0MyNy4yIDcuNyAyNy42IDguNCAyNy42IDkgMjcuNiA5LjkgMjYuOSAxMC4zIDI2LjQgMTAuM0wyNi40IDcuN3pNMzUuMSA3LjdDMzUuOCA3LjcgMzYuNSA4LjMgMzYuNSA5IDM2LjUgOS44IDM1LjkgMTAuMyAzNS4xIDEwLjNMMzUuMSA3Ljd6TTQ1LjEgNy43QzQ1LjcgNy43IDQ2LjIgOC4yIDQ2LjIgOSA0Ni4yIDkuOCA0NS43IDEwLjMgNDUuMSAxMC4zIDQ0LjUgMTAuMyA0NCA5LjggNDQgOSA0NCA4LjIgNDQuNSA3LjcgNDUuMSA3Ljd6IiBvcGFjaXR5PSIwLjMiLz48cGF0aCBkPSJtMS41IDEuNSAwIDEyIDEuOCAwIDAtOS45IDMuNSA1LjkgMy41LTUuOSAwIDkuOSAxLjggMCAwLTEyLTEuNCAwQzkuOSAxLjUgOS4zIDEuNyA5IDIuMkw2LjggNi4xIDQuNSAyLjJDNC4yIDEuNyAzLjYgMS41IDIuOSAxLjVMMS41IDEuNVptMzAuNiAwIDAgMTIgMy4zIDBjMi40IDAgNC40LTEuOSA0LjQtNC41IDAtMi42LTEuOS00LjUtNC40LTQuNS0wLjUgMC0wLjkgMC0xLjUgMGwwLTMtMS43IDB6TTE3LjYgNC41Yy0yLjQgMC00LjIgMS45LTQuMiA0LjUgMCAyLjYgMS44IDQuNSA0LjIgNC41bDQuMiAwTDIxLjggOWMwLTIuNi0xLjctNC41LTQuMi00LjV6bTI3LjYgMGMtMi40IDAtNC40IDItNC40IDQuNSAwIDIuNSAyIDQuNSA0LjQgNC41IDIuNCAwIDQuMy0yIDQuMy00LjUgMC0yLjUtMS45LTQuNS00LjMtNC41em0tMjIgMCAwIDEyIDEuOCAwIDAtMyAxLjYgMGMyLjQgMCA0LjMtMS45IDQuMy00LjUgMC0yLjYtMS45LTQuNS00LjMtNC41bC0zLjMgMHptMjYuMiAwIDMgNC40LTMuMiA0LjYgMi4xIDAgMi4yLTMuMSAyLjEgMy4xIDIuMiAwTDU0LjUgOC45IDU3LjUgNC41IDU1LjMgNC41IDUzLjQgNy4zIDUxLjQgNC41IDQ5LjMgNC41Wk0xNy42IDYuMkMxOSA2LjIgMjAgNy40IDIwIDlsMCAyLjgtMi40IDBjLTEuNCAwLTIuNC0xLjItMi40LTIuOCAwLTEuNiAxLTIuOCAyLjQtMi44em0yNy42IDBjMS40IDAgMi42IDEuMiAyLjYgMi44IDAgMS41LTEuMiAyLjgtMi42IDIuOEM0My43IDExLjggNDIuNSAxMC41IDQyLjUgOWMwLTEuNSAxLjItMi44IDIuNi0yLjh6bS0yMC4yIDAgMS42IDBjMS42IDAgMi42IDEuMyAyLjYgMi44IDAgMS41LTEuMSAyLjgtMi42IDIuOGwtMS42IDAgMC01LjV6bTkgMCAxLjUgMGMxLjUgMCAyLjYgMS4zIDIuNiAyLjggMCAxLjUtMSAyLjgtMi42IDIuOGwtMS41IDAgMC01LjV6IiBmaWxsPSIjZmZmIi8+PC9zdmc+' alt='Mapbox' />
+</a>
+    <div class='pad2 checkbox-pill pin-bottomright z100'>
+        <span id='restore' class='space-top1 button icon globe space-bottom1' onclick='restoreView(); d3.select(this).style("display","none")'>Restore view</span>
+
+        <input type='checkbox' id='sensor'>
+        <label for='sensor' class='button icon check fill-dark space-right1'>Global seismic network</label>
+        <img class='z100' style='border-radius:3px;' width='180' height='40' src='legend.png'>
+    </div>
+
+</div>
+
+<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<script>
+
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var ne = new mapboxgl.LngLat(-30, 90);
+var sw = new mapboxgl.LngLat(330, -90);
+var llb = new mapboxgl.LngLatBounds(sw, ne);
+
+var map = new mapboxgl.Map({
+    container: 'map', // container id
+    style: 'mapbox://styles/peterqliu/cioln49d3005lavm36kvbe8ul',
+    center: [180,30], // starting position
+    zoom: 1, // starting zoom
+    maxBounds: llb,
+    attributionControl: {
+        position: 'top-right'
+    }
+});
+
+//disable scrollzoom in iframe
+if (window.location.search.indexOf('embed') !== -1) {
+    map.scrollZoom.disable();
+    map.addControl(new mapboxgl.Navigation());
+}
+
+var popup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false
+});
+
+var blueColour = 'hsl(204, 40%, 50%)';
+
+//given a geojson feature, highlight it on the map and draw a popup
+function highlightFeature(feature){
+    var coords = feature.geometry.coordinates.map(function(num){
+        if (num>180) return num%180
+        else return num
+    });
+    var hovered = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+              "type": "Feature",
+              "properties": feature.properties,
+              "geometry": {type:'Point', coordinates: coords}
+            }
+        ]
+    }
+
+    // when hovering over tremors
+    if (!feature.layer || feature.layer.id === 'smalldot'){
+        map.getSource('hoveredquake').setData(hovered);
+
+        var reports = feature.properties.felt === 1 ? '1 report' : feature.properties.felt + ' reports'
+
+        coords[0] = coords[0]<0 ? coords[0]+360 : coords[0]
+        popup
+        .setLngLat(coords)
+            .setHTML('<h2 class="fl mag">'+feature.properties.mag.toFixed(1)+'</h2>'+feature.properties.place+'<br><span class="italic block translucent">'+feature.properties.depth+' km depth ('+ expressTime(feature.properties.time)[0]+' '+expressTime(feature.properties.time)[1]+' ago)</span>')
+            .addTo(map);
+    }
+
+    //when hovering over stations
+    else {}
+}
+
+function removePopup(){
+    popup.remove();
+}
+var ms = {'month':2678400000000, 'week':604800000, 'day':86400000};
+
+//Populate select dropdown
+d3.select('#sidebar select')
+    .selectAll('option')
+    .data(Object.keys(ms))
+    .enter()
+    .append('option')
+    .attr('value', function(d){return d})
+    .text(function(d){return d});
+
+
+var emptyGeojson = {
+  "type": "FeatureCollection",
+  "features": []
+};
+
+map.on('load', function(err, resp){
+
+    mapboxgl.util.getJSON('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson',function(err, res) {
+    var json = res
+
+    window.fullset = json;
+
+    d3.select('.loader').remove();
+
+    fullset.features = fullset.features.map(function(ft){
+        ft.properties.depth = ft.geometry.coordinates[2].toFixed(2);
+        ft.geometry.coordinates = ft.geometry.coordinates.slice(0,2);
+        return ft;
+    })
+    updateLists(fullset);
+
+
+    // get the 3 most recent quakes
+    quickselect(fullset.features,3, null, null, function(a,b){
+        return (b.properties.time-a.properties.time)
+    })
+
+    // isolate and sort the 3 most recent quakes
+    var lastThree = fullset.features.slice(0,3).sort(function(a,b){
+        return (b.properties.time-a.properties.time)
+    })
+
+    var entry = d3.select('.latest')
+        .selectAll('.entry')
+        .data(lastThree)
+        .enter()
+        .append('div')
+        .attr('class', 'entry clearfix')
+        .on('mouseenter', function(d){
+            highlightFeature(d)
+        })
+        .on('mouseleave', function(){
+            removePopup();
+        })
+        .on('click', function(d){
+            map.flyTo({center:d.geometry.coordinates, zoom:14, pitch:0})
+            d3.select('#restore').style('display', 'block')
+        });
+
+    entry
+        .attr('style', function(d){
+            var coords = d.geometry.coordinates[0]+','+d.geometry.coordinates[1]+',7'
+            return 'background-image:url(https://api.mapbox.com/v4/mapbox.satellite/'+coords+'/360x80@2x.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g)'
+        })
+
+    entry
+        .append('span')
+        .attr('class', 'darkback small code pin-topleft')
+        .html(function(d){return d.properties.place});
+
+    entry
+        .append('div')
+        .attr('class', 'fr center col2 pad2y pin-right darkback')
+        .html(function(d){return '<h2 style="margin:0px">'+expressTime(d.properties.time)[0]+'</h2><div class="translucent small">'+expressTime(d.properties.time)[1]+' ago</div>'})
+
+    // update total tremor count
+    document.querySelector('#odometer')
+        .innerHTML = fullset.features.length;
+
+    d3.select('select')
+        .on('change', function(){
+            var subset = {
+              "type": "FeatureCollection",
+              "features": []
+            }
+            var timeframe = this.value;
+            subset.features = fullset.features.filter(function(ft){
+                return ft.properties.time > Date.now() - ms[timeframe]
+            })
+
+            // update total tremor count
+            document.querySelector('#odometer')
+                .innerHTML = subset.features.length;
+
+            //update map rendering
+            map.getSource('quakes').setData(subset);
+
+            updateLists(subset)
+        })
+
+        // seismic checkbox functionality
+        d3.select('#sensor')
+            .on('click', function(){
+                if (this.checked) map.addClass("stations")
+                else map.removeClass("stations")
+            })
+
+        map.addSource('quakes', {
+            type: 'geojson',
+            data: json
+        })
+        map.addSource('hoveredquake', {
+            type: 'geojson',
+            data: emptyGeojson
+        })
+        .addLayer({
+            "id": "blur",
+            "type": "circle",
+            "source": "quakes",
+            "maxzoom":8,
+            "paint": {
+                "circle-color": blueColour,
+                "circle-opacity": {
+                    "base": 1.8,
+                    "stops": [
+                        [0, 0.1],
+                        [11, 0.6],
+                        [20, 1]
+                    ]
+                },
+                'circle-radius': {
+                    'property': 'mag',
+                    "base": 1.8,
+                    'stops': [
+                        [{zoom: 0,  value: 2}, 0.25],
+                        [{zoom: 0,  value: 8}, 32],
+                        [{zoom: 11, value: 2}, 2],
+                        [{zoom: 11, value: 8}, 2400],
+                        [{zoom: 20, value: 2}, 5],
+                        [{zoom: 20, value: 8}, 6000]
+                    ]
+                },
+                'circle-blur': {
+                    "base": 1.8,
+                    'property': 'mag',
+                    "stops": [
+                        [0, 1],
+                        [8, 0.6]
+                    ]
+                }
+            },
+            "paint.stations":{
+                "circle-color":"#666"
+            }
+        }, 'stations')
+        .addLayer({
+            "id": "highlighted_blur",
+            "type": "circle",
+            "source": "hoveredquake",
+            "maxzoom":8,
+            "layout": {
+            },
+            "paint": {
+                "circle-color": "orange",
+                "circle-opacity": 1,
+                'circle-radius': {
+                    'property': 'mag',
+                    "base": 1.8,
+                    'stops': [
+                        [{zoom: 0,  value: 2}, 0.25],
+                        [{zoom: 0,  value: 8}, 32],
+                        [{zoom: 11, value: 2}, 2],
+                        [{zoom: 11, value: 8}, 2400],
+                        [{zoom: 20, value: 2}, 5],
+                        [{zoom: 20, value: 8}, 6000]
+                    ]
+                },
+                'circle-blur': 0.8
+            }
+        }, 'stations')
+        .addLayer({
+            "id": "smalldot",
+            "type": "circle",
+            "source": "quakes",
+            "layout": {
+            },
+            "paint": {
+                "circle-color": 'white',
+                'circle-radius': {
+                    "base": 1.1,
+                    "stops": [
+                      [0, 0.6],
+                      [20, 10]
+                    ]
+                }
+            },
+            "paint.stations":{
+                "circle-color":"#ccc"
+            }
+        }, 'stations');
+
+        map.setPaintProperty('stations', 'text-opacity',1, 'stations');
+        var mouseRadius = 15;
+
+        map.on('mousemove', function(e) {
+
+            var targetLayer = map.getClasses().indexOf('stations')===-1 ? 'smalldot' : 'stations'
+            var feature = map.queryRenderedFeatures([[e.point.x-mouseRadius,e.point.y-mouseRadius],[e.point.x+mouseRadius,e.point.y+mouseRadius]], {layers:[targetLayer]})[0];
+
+            if (feature) map.getCanvas().style.cursor = 'pointer' ;
+            else {
+                map.getCanvas().style.cursor = 'pointer';
+                removePopup();
+                map.getSource('hoveredquake').setData(emptyGeojson);
+                return;
+            }
+
+            highlightFeature(feature)
+        })
+        .on('click', function(e){
+            var feature = map.queryRenderedFeatures([[e.point.x-mouseRadius,e.point.y-mouseRadius],[e.point.x+mouseRadius,e.point.y+mouseRadius]], {layers:['smalldot']})[0];
+            map.flyTo({center:feature.geometry.coordinates,zoom:12, pitch:0})
+            d3.select('#restore').style('display', 'block')
+    })
+})
+
+
+});
+
+
+
+function restoreView() {
+    map.flyTo({center:[0,0],zoom:0, pitch:0});
+}
+
+    //update 'strongest' and 'most reported' lists ('latest' stays the same)
+
+    function updateLists(subset){
+        var lists = [['mag','mag'], ['felt', 'felt it']];
+
+        d3.selectAll('.updatable')
+            .remove();
+        lists.forEach(function(list){
+
+            //get the top 3 by each metric
+            quickselect(subset.features,3, null, null, function(a,b){
+                return (b.properties[list[0]]-a.properties[list[0]])
+            })
+
+            //sort the top 3
+            var topThree = subset.features.slice(0,3).sort(function(a,b){
+                return (b.properties[list[0]]-a.properties[list[0]])
+            })
+
+
+            var entry = d3.select('.'+list)
+                .selectAll('.entry')
+                .data(topThree)
+                .enter()
+                .append('div')
+                .attr('class', 'entry pad1 clearfix updatable')
+                .on('mouseenter', function(d){
+                    highlightFeature(d)
+                })
+                .on('click', function(d){
+                    map.flyTo({center:d.geometry.coordinates, zoom:12, pitch:0})
+                    d3.select('#restore').style('display', 'block')
+                });
+
+            entry
+                .attr('style', function(d){
+                    var coords = d.geometry.coordinates[0]+','+d.geometry.coordinates[1]+',7'
+                    return 'background-image:url(https://api.mapbox.com/v4/mapbox.satellite/'+coords+'/360x80@2x.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g)'
+                })
+
+            entry
+                .append('span')
+                .attr('class', 'darkback small code pin-topleft')
+                .html(function(d){return d.properties.place});
+
+            entry
+                .append('div')
+                .attr('class', 'fr center col2 pad2y pin-right darkback')
+                .html(function(d,i){return '<h2 style="margin:0px">'+d.properties[list[0]]+'</h2><div class="translucent small">'+list[1]+'</div>'})
+        })
+    }
+
+    function expressTime(time){
+        var msElapsed = Date.now() - time;
+        if (msElapsed<60000*1.5) return [(msElapsed/1000).toFixed(0), 'sec']
+        if (msElapsed<3600000*1.5) return [(msElapsed/60000).toFixed(0), 'min']
+        if (msElapsed<86400000*1.5) return [(msElapsed/3600000).toFixed(0), 'hrs']
+        else return [(msElapsed/86400000).toFixed(0), 'days']
+    }
+</script>
+
+</body>
+</html>

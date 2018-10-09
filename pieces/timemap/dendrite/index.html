@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>dendro</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js'></script>
+    <script src='utilities.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <style>
+        body { margin:0; padding:0; }
+        #timeline {height:30px; width:100%; position:absolute; z-index: 100; border-bottom:0px solid #BACAD5; pointer-events:none;}
+        #map{height:500px; width:500px; position:absolute; z-index: 100; bottom:0;}
+        #dendrite{height:100%; width:100%; position:absolute;}
+    </style>
+</head>
+<body>
+
+<div id='map' class='map'></div>
+<div id='dendrite' class='map'></div>
+<div id='timeline' class='map'></div>
+<script src='maps.js'></script>
+
+<script>
+    
+
+
+
+    var center = turf.point(util.center(map));
+
+    var circle = [];
+    var destinations = 15;
+
+    var routes = [];
+
+    var branches = [];
+
+    var edgeList = {};
+    var trackList = {};
+
+    var edges = [];
+    var nodes = [];
+    
+    var state = {
+        metersPerSecond:10,
+        angleIncrement: 360/destinations,
+        lngPerSecond:1/50,
+        minGap: 5,
+        cb: 0,
+        straightElbows: false,
+        preserveBranchDirection: false,
+        mode: 'radial',
+        tuckGap: 10
+    }
+
+    state.timeline = [];
+
+    //draw 12 circles
+    for (var t = 0; t<60; t++){
+
+        var coords = [];
+        var currentTime = t*60;
+        var circleRes = 120
+        for (var b = 0; b<=circleRes; b++){
+            coords.push(dest([0,0], state.lngPerSecond*currentTime, b*360/circleRes));
+        }
+
+        var props = {klass:t%5}
+        state.timeline.push(turf.lineString(coords, props))
+
+    }
+
+
+    for (var c = 0; c<destinations; c++){
+        var angle = c * state.angleIncrement;
+
+        var pt = turf.destination(center, /*Math.pow(Math.random(),0.5)**/2, angle);
+
+        circle.push(pt)
+    }
+
+
+
+
+    map.on('load', function(){
+        map.addLayer({
+            'id': 'point',
+            'type': 'circle',
+            'source': {
+                'type': 'geojson',
+                'data': turf.featureCollection(circle)
+            }
+        })
+        .addLayer({
+            'id': 'route',
+            'type': 'line',
+            'source':{
+                'type': 'geojson',
+                'data': turf.featureCollection([])
+            },
+            'paint':{
+                'line-width':3,
+                'line-color': 'blue',
+                'line-opacity': 0.25,
+                'line-offset':1
+            }
+        })
+
+        function cullResults(collector, resp){
+
+            var legs = resp.routes[0].legs;
+
+            for (var p = 0; p<legs.length; p+=2){
+                var timeSoFar = 0;
+                var route = [];
+                var payload = legs[p].steps
+                    .map(function(step){
+                        route = route.concat(step.geometry.coordinates);
+
+                        var duration = Math.round(step.duration);
+                        var payload = {
+                            'start': timeSoFar,
+                            'end': timeSoFar+duration,
+                            'duration': duration,
+                            'name': step.name
+                        }
+
+                        var relevantKeys = ['instruction', 'location', 'modifier']
+
+                        relevantKeys.forEach(function(key){
+                            payload[key] = step.maneuver[key]
+                        })
+
+                        timeSoFar += duration;
+                        return payload
+                    });
+
+                collector.push(payload);
+                state.cb++
+                routes.push(turf.lineString(route))
+            }
+        }
+
+        function batchRequests(center, destinations){
+            
+            var batchQuantity = 12;
+
+
+            var coords = [];
+            for (var i = 0; i<destinations.length; i++){
+
+                if (i>0 && i%batchQuantity === 0){
+                    request(coords)
+                    coords = [];
+                }
+                coords.push(center, destinations[i]);
+
+            }
+
+            request(coords)
+            
+        }
+
+        function request(coords){
+            util.directions(coords, 'driving', function(resp){
+                cullResults(branches, resp);
+                if (state.cb === destinations) {
+                    map.getSource('route').setData(turf.featureCollection(routes))
+                    studyForks()
+                }
+            })
+        }
+
+        batchRequests(util.center(map), circle.map((pt)=>{return pt.geometry.coordinates}));
+
+    })
+
+
+
+    function studyForks(){
+
+        // add the next immediate descendants to each step, and determine min/max times of divergent edges from this edge
+        branches.forEach(function(track, index){
+
+            track.pop();
+            var parent = 'start';
+
+            track.forEach(function(step, stepIndex){
+
+                var name = buildName(step);
+
+                var newEntry = {
+                    instruction: step.instruction, 
+                    parent: parent, 
+                    children: {}, 
+                    right: 0, 
+                    left: 0, 
+                    width:1, 
+                    minTime:Infinity, 
+                    maxTime:0, 
+                    start: step.start, 
+                    end: step.end, 
+                    name: generateLabel(step),
+                    maxCurve: Infinity,
+                    elbows: {
+                        left:Infinity,
+                        right:Infinity
+                    },
+                    terminus: Infinity
+                }
+                
+                edgeList[name] = edgeList[name] || newEntry;
+
+                parent = name;
+                var nextStep = track[stepIndex+1];
+
+            })
+        })
+
+        var flipFlop = {
+            'left':'right',
+            'right':'left'
+        }
+
+        var signs = [0, 'left'];
+
+        var stepList = listKeysInReverse(edgeList);
+        stepList.push('start');
+        edgeList.start = {
+            parent: undefined, 
+            children: {}, 
+            right: 0, 
+            left: 0, 
+            width:1, 
+            minTime:Infinity, 
+            maxTime:0, 
+            currentTrackPosition: 0,
+            elbows: {
+                left:Infinity,
+                right:Infinity
+            },
+            terminus: Infinity
+        };
+
+
+
+        stepList.forEach(function(step){
+
+            var stepEntry = edgeList[step];
+            var parentEntry = edgeList[stepEntry.parent];
+
+            if (parentEntry) parentEntry.children[step] = true;
+            var childList = listKeysInReverse(stepEntry.children);
+
+            var childless = childList.length === 0;
+
+            // if this is a terminal edge of the branch
+            if (childless) stepEntry.nextFork = stepEntry.minTime = stepEntry.maxTime = stepEntry.terminus = stepEntry.end
+
+
+            // if this is not the terminal edge
+            else {
+
+                var firstLastTimes = [0, childList.length-1]
+                    .map(function(index){
+                        return parseFloat(childList[index].split('+')[0])
+                    })
+
+                // record shortest and longest child of this step    
+                stepEntry.maxTime = firstLastTimes[0];
+                //stepEntry.minTime = firstLastTimes[1];
+
+                childList.forEach(function(child, index){
+
+                    var childEntry = edgeList[child];
+                    var childDirection = state.preserveBranchDirection ? getDirection(childEntry, stepEntry) : flipDirections(childEntry, stepEntry);
+                    var straightAhead = index === 0;
+                    var overallChildPosition;
+
+                    stepEntry.width += childEntry.width;
+
+                    if (straightAhead) {
+
+                        overallChildPosition = 0;
+                        stepEntry.terminus = childEntry.terminus;
+                        stepEntry.elbows = childEntry.elbows;
+                        stepEntry.nextFork = childEntry.nextFork;
+
+                        // update current child positions on either side
+                        stepEntry.right += childEntry.right;
+                        stepEntry.left += childEntry.left;
+
+                        stepEntry.width --
+                    }
+
+                    // if this is a fork...
+                    else {
+
+                        childEntry.bezier = [childEntry.start, childEntry.nextFork]
+                        //record elbow position for child                       
+
+                        childEntry.maxCurve = stepEntry.elbows[childDirection]
+                        var childGroupPosition =  stepEntry[childDirection];
+                        var childEdgeOffset = 1 + childEntry[flipFlop[childDirection]];
+                        overallChildPosition = childGroupPosition + childEdgeOffset;
+
+                        stepEntry[childDirection] += childEntry.width;
+                        stepEntry.elbows[childDirection] = Math.min(stepEntry.elbows[childDirection], childEntry.end);
+
+                        stepEntry.minTime = childEntry.start
+                    }
+
+                    childEntry.relativePosition = overallChildPosition * signs.indexOf(childDirection);
+
+                })
+
+            }
+        })
+
+        stepList.reverse();
+
+        // determine absolute positions of each branch
+        stepList.forEach(function(step){
+
+            if (step === 'start') return;
+
+            var stepEntry = edgeList[step];
+            var parentEntry = edgeList[stepEntry.parent];
+            stepEntry.direction = getDirection(stepEntry, parentEntry)
+
+            var parentTrack = parentEntry.currentTrackPosition;
+            stepEntry.currentTrackPosition = parentTrack + stepEntry.relativePosition;
+
+
+            // record track positions
+            var t = trackList[stepEntry.currentTrackPosition];
+
+            if (!t) trackList[stepEntry.currentTrackPosition] = {min:stepEntry.start, max:stepEntry.terminus};
+
+    
+
+        })
+
+        function calculateTuckage(increment){
+
+            var adjustedAmount = 0;
+
+            for (var s=0; typeof trackList[s] === 'object'; s += increment){
+
+                trackList[s].adjustedTrack = s + adjustedAmount;
+                var current = trackList[s];
+                var next = trackList[s+increment];
+                
+                var tuckable = next && current.max < next.min || next && current.min> next.max
+                if (tuckable) adjustedAmount -= increment
+            }
+        }
+
+        calculateTuckage(1)
+        calculateTuckage(-1)
+
+        var foo = listKeysInReverse(trackList)
+            .map(function(str){return trackList[str].adjustedTrack})
+
+
+        state.compensation = Math.floor((foo[0]+foo[foo.length-1])/2);
+
+        state.angleIncrement = 360/(foo[foo.length-1]-foo[0]);
+
+        Object.keys(trackList)
+            .forEach(function(str){
+                trackList[str].adjustedTrack = trackList[str].adjustedTrack-state.compensation
+            })
+
+        stepList.forEach(function(step){
+
+            if (step === 'start') return;
+
+            var stepEntry = edgeList[step];
+            var parentEntry = edgeList[stepEntry.parent];
+
+            var start = [stepEntry.start*state.lngPerSecond, trackList[parentEntry.currentTrackPosition].adjustedTrack]
+            var end = [stepEntry.maxTime*state.lngPerSecond, trackList[stepEntry.currentTrackPosition].adjustedTrack];
+
+            if (stepEntry.parent === 'start') start[1] = 0
+            var edge = [start, end];
+
+
+
+
+            var segment = createEdge(edge, stepEntry);
+
+
+            if (!stepEntry.drawn){
+                edges.push(segment);
+                var pt = state.mode === 'radial' ? turf.point(convertToRadial(edge[0]), stepEntry) : turf.point(edge[0], stepEntry)
+                nodes.push(pt)
+            
+                if (stepEntry.bezier){
+
+                    var bezierSegment = createEdge(
+
+                        [
+                            [stepEntry.bezier[0]*state.lngPerSecond, trackList[parentEntry.currentTrackPosition].adjustedTrack],
+                            [stepEntry.bezier[1]*state.lngPerSecond, trackList[stepEntry.currentTrackPosition].adjustedTrack]
+                        ],
+                        stepEntry
+                    )
+                
+                    edges.push(bezierSegment);
+                    console.log(bezierSegment)
+
+                }
+            }
+
+            stepEntry.branchGeometry = segment.geometry;
+
+            stepEntry.drawn = true;
+
+        })
+
+
+
+
+        updateDendrogram()
+
+    }
+
+    function updateDendrogram(){
+        dendrite.getSource('nodes')
+            .setData(turf.featureCollection(nodes));
+
+        dendrite.getSource('routes')
+            .setData(turf.featureCollection(edges))
+    }
+
+
+    function listKeysInReverse(obj){
+        return Object.keys(obj)
+            .sort(function(a, b) {
+                return b.split('+')[0] - a.split('+')[0];
+            })
+    }
+
+
+    function buildName(step){
+        return step.start + '+' + step.instruction;
+    }
+
+    function createEdge([start, end], props, straight){
+
+        var line;
+        var deltaY = Math.abs(end[1] - start[1]);
+
+        if (props.parent === 'start' || deltaY === 0) line = [start, end]
+        else {
+
+            var curveAmount = Math.min(props.minTime, props.maxCurve, props.bezier[1]);
+            var endOfCurve = [curveAmount*state.lngPerSecond, end[1]];
+
+            line = state.straightElbows ? [start, endOfCurve] : util.sigmoid(start, endOfCurve, 30);
+            line.push(end);
+
+        } 
+
+        if (state.mode === 'radial'){
+            line = line
+                .map(function(pt){
+                    return convertToRadial(pt)
+                })
+        }
+
+        return turf.lineString(line, props)
+    }
+
+    function getDirection(child, parent){
+
+        var str = child.instruction
+        var direction = str.includes('left') || str.includes('north') || str.includes('west') ? 'left' : 'right'
+
+
+        return direction
+    }
+
+    function flipDirections(child, parent){
+
+        var direction = parent.left<parent.right ? 'left' : 'right'
+
+        return direction
+    }
+
+    function generateLabel(obj){
+
+        var payload = obj.name || '(Unnamed)';
+
+        return payload
+            .replace(' Street', ' St')
+            .replace(' Drive', ' Dr')
+            .replace(' Lane', ' Ln')
+            .replace(' Road', ' Rd')
+            .replace(' Avenue', ' Ave')
+            .replace(' Boulevard', ' Blvd')
+            .replace(' Place', ' Pl')
+            .replace(' Parkway', ' Pkwy')
+            .replace(' Freeway', ' Fwy')
+            .replace(' Highway', ' Hwy')
+            .replace(' Expressway', ' Expwy')
+    }
+
+    function convertToRadial(coords){
+        var pt = dest([0,0], coords[0], coords[1]*state.angleIncrement-90)
+        return pt
+    }
+
+    function dest(origin, radius, angle){
+        var x = radius * Math.cos(Math.PI*2*angle/360);
+        var y = radius * Math.sin(Math.PI*2*angle/360);
+
+        var desiredPixelPosition = [
+            x+dendrite._container.clientWidth/2,
+            y+dendrite._container.clientHeight/2
+        ]
+        var lngLat = dendrite.unproject(desiredPixelPosition);
+        return [lngLat.lng, lngLat.lat]
+    }
+</script>
+
+</body>
+</html>

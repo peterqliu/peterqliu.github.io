@@ -1,0 +1,513 @@
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Capital Bikeshare</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='turf.min.js'></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+<style>
+  body { margin:0; 
+    padding:0; 
+    -moz-perspective:1200px;
+    -moz-transform:translate3d(0,0,0); 
+    -webkit-perspective:1200;
+    -webkit-transform:translate3d(0,0,0); 
+    background:#f4f4f4;overflow:hidden;}
+    .tilted .leaflet-tile-container img {
+      pointer-events:none;
+  }
+  #maprotor{
+    -moz-transition:all 0.5s ease-out;
+    transition:all 0.5s ease-out;
+    position:absolute; 
+    top:-0%; 
+    bottom:0; 
+    width:100%; 
+    overflow:visible;}
+  #map { position:absolute; 
+    top:0; 
+    bottom:0; 
+    width:100%;  
+    overflow:visible; 
+    background:none;}
+  #maprotor.tilted {
+    -moz-transform:rotateX(60deg);
+    -webkit-transform:rotateX(60deg)
+  }
+  .leaflet-popup-content .marker-title{
+    font-weight:400;
+    color:#999;
+    line-height:1.3em;}
+  .marker-title span{
+    color:#00704A;
+    font-weight:bold;}
+  #milecount{
+    line-height:2em;
+    color:#00704A}
+  .space-left2 {
+    margin-left: 20px;}
+  .inactivestation {
+    pointer-events:none;
+  }
+  .tiltcontrols,
+  .tilted .mt,
+  .tilted path.leaflet-clickable,
+  .tilted .leaflet-control-container,
+  .tilted .leaflet-marker-draggable,
+  .tilted .bikeduration,
+  .tilted .station,
+  .tilted .inactivestation
+    {display:none;}
+  .tilted #map {cursor:col-resize;}
+  .modal.tilted .tiltcontrols {display:block;}
+  .elevmarker{
+    -moz-transform:rotateX(90deg);
+    -moz-transform-origin:0% 0%;
+    -moz-transform-style:preserve-3d;
+    -webkit-transform:rotateX(90deg);
+    -webkit-transform-origin:0% 0%;
+    transform-style:preserve-3d;
+    margin:6px;}
+  .tilted .elevations {
+    display:block}
+  path.leaflet-clickable {
+    stroke:#30a07A;
+    stroke-width:4px;
+    stroke-dashoffset: 10000; 
+    stroke-dasharray:10000; 
+    -moz-transition:stroke-dashoffset 4s;
+    -webkit-transition:stroke-dashoffset 4s;
+    pointer-events:none;}
+  .markerline {
+    width:4px; 
+    margin-left:-2px;
+    background:#30a07A;
+    height:0px; 
+    -moz-transition:height 0.2s ease-in;
+    transition:height 0.2s ease-in;}
+  .markercircle {
+    width:4px;
+    height:4px; 
+    border-radius:50%;
+    margin:-2px; 
+    background:#60d0aA;
+    -moz-transform:rotateX(90deg); 
+    -moz-transform-style:preserve-3d;
+    -webkit-transform:rotateX(90deg); 
+    -webkit-transform-style:preserve-3d;}
+  .bottomcap{background:#30a07A;}
+  .elevfigure {
+    -moz-transform:rotateX(180deg) translateX(-50%);
+    -webkit-transform:rotateX(180deg) translateX(-50%);
+    margin-top:10px; 
+    display:none; 
+    color:white;
+    background:purple; 
+    padding:0px 4px; 
+    border-radius:3px;}
+  .elevations {
+    opacity:0.5;
+    display:none;}
+  .elevations:hover {
+    opacity:1;}
+  .elevations:hover .elevfigure{
+    display:inline-block; 
+    width:120px; 
+    text-align:center;}
+  .elevations:hover .elevfigure:after{
+    content:'';
+    width: 0; 
+    height: 0; 
+    display:inline-block;
+      white-space: nowrap;
+    position:absolute;
+    top:20px;
+    left:45%;
+    text-align:center;
+    border-top: 5px solid purple;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;}
+  .elevations:hover .markerline,
+    .elevations:hover .bottomcap{
+      background:#551A8B;}
+  .elevations:hover .markercircle
+    {background:#cea2f7;}
+  .leaflet-marker-pane {
+    -moz-transform: translateZ(1px);
+    -webkit-transform: translateZ(1px);}
+  #map, 
+  #maprotor,
+  .leaflet-map-pane,
+  .leaflet-overlay-pane,
+  .leaflet-marker-pane,
+  .leaflet-marker-icon,
+  .leaflet-popup-pane
+    {-moz-transform-style:preserve-3d;
+      -webkit-transform-style:preserve-3d;
+      -moz-backface-visibility: hidden;
+      backface-visibility: hidden;
+      -webkit-backface-visibility:hidden; }
+.leaflet-overlay-pane {
+  -moz-transform: translateZ(1px);
+  -webkit-transform: translateZ(1px); 
+  pointer-events:none;}
+.leaflet-popup-pane {
+    -moz-transform:translateZ(10px);
+    -webkit-transform:translateZ(10px);
+}
+
+.bikeduration strong,
+.leaflet-popup-pane strong {
+  color:#30a07A;
+  display:block;
+  margin-bottom:2px;
+}
+.bikeduration {
+  background:white;
+  border:2px solid #30a07A;
+  color:#30a07A;
+  margin:-7px -19px;
+  width:50px;
+  text-align:center;
+  border-radius:10px;
+  font-weight:bold;
+  -moz-transform: translateZ(1px);
+  -webkit-transform: translateZ(1px); 
+}
+  .elevGraph {
+    fill: rgba(0, 0, 0, 0.1);
+    stroke: none;
+    stroke-width: 4px;
+  }
+
+  #title-block {
+    height: 60px;
+  }
+
+  #tooltip {
+    display:none;
+    position: absolute;
+    top:0;
+    left:0;
+  }
+
+  #searchresults {
+      width: 93%;
+      background: #FFF;
+  }
+  .marker-hover {
+    background: steelblue;
+    border-radius: 50%;
+    border: 2px solid white;
+    height: 20px;
+  }
+  .focus circle {
+  fill: steelblue;
+  stroke: white;
+  }
+
+  #geolocate { display: none; }
+</style>
+</head>
+<body>
+<div id='maprotor'>
+    <div id='map'></div>
+</div>
+<div class='pin-topleft pad1 modal'>
+    <div class='button icon mt' onclick="tiltMap()">View elevation profile</div>
+    <div class='button icon undo col12 tiltcontrols' onclick="restoreMap()">Edit route</div>
+</div>
+
+<script type='text/javascript' src='d3.js'></script>
+<script>
+L.mapbox.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+
+var map = L.mapbox.map('map', null,{ 
+    tileSize: 5120,
+    zoomControl: false,
+    minZoom: 13,
+    maxZoom: 16,})
+    .setView([38.95050194,-77.0497369], 13);
+var newLight = L.tileLayer('https://api.mapbox.com/styles/v1/peterqliu/cimmwtr1c0025b3klix9xjhh0/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g').addTo(map);
+var getPxBounds = map.getPixelBounds;
+map.getPixelBounds = function () {
+    var bounds = getPxBounds.call(this);
+    // ... extend the bounds
+    bounds.min.x=bounds.min.x-1000;
+    bounds.min.y=bounds.min.y-1000;
+    bounds.max.x=bounds.max.x+1000;
+    bounds.max.y=bounds.max.y+1000;
+    return bounds;
+};
+
+var isEmbed = location.search;
+isEmbed = isEmbed.slice(1);
+
+  new L.Control.Zoom({ position: 'topright' }).addTo(map);
+  map.scrollWheelZoom.disable();
+
+var person=L.mapbox.marker.icon({
+        "marker-color": "#30a07A",
+        "marker-symbol": "pitch",
+        "marker-size": "large"
+    })
+var startMarker = L.marker(new L.LatLng(38.9695527321,-77.1114063), {
+    icon: person,
+    draggable: true,
+    zIndexOffset:999
+});
+
+var endMarker = L.marker(new L.LatLng(38.93150546,-76.9998264), {
+    icon: L.mapbox.marker.icon({
+        "marker-color": "#30a07A",
+        "marker-symbol": "star",
+        "marker-size": "large"
+    }),
+    draggable: true,
+    zIndexOffset:999
+});
+startMarker.addTo(map);
+endMarker.addTo(map);
+
+
+var start,
+    destination,
+    nearestStart,
+    nearestEnd,
+    resampledRoute;
+var angle=0;
+var xdrag=0;
+var isDown=false;
+var xpos=0;
+
+//map rotation
+$('body').on('mousedown','#maprotor.tilted',
+  function(e){
+        xpos=e.pageX;
+        window.isDown = true;
+    })
+    .on('mousemove','#maprotor.tilted', function(e){
+      if(isDown){
+        xdrag =(xpos-e.pageX)/4;
+        $('#map').attr('style', '-webkit-transform:rotateZ('+(angle+xdrag)%360+'deg)');
+        $('.elevmarker').attr('style', '-webkit-transform:rotateX(90deg) rotateY('+(angle+xdrag)*(-1)%360+'deg)')
+      }
+    })
+  .on('mouseup','#maprotor.tilted',function(){
+    isDown=false;
+    angle = angle+xdrag;
+  });
+
+function tiltMap(){
+    map.fitBounds(map.featureLayer.setGeoJSON(turf.linestring(resampledRoute)).getBounds(),{
+      paddingTopLeft:[150,50],
+      paddingBottomRight:[150,50]
+    });
+    //rotate map
+    $('#maprotor, .modal').toggleClass('tilted');;
+
+    //disable panning
+    map.dragging.disable();
+}
+function restoreMap(){
+    $('#maprotor, .modal').toggleClass('tilted');
+
+    //enable panning
+    map
+    .setZoom(13)
+    .dragging.enable();
+    angle=0;
+    $('#map').attr('style', 'transition:all 0.25s');
+    $('.elevmarker').attr('style', '');
+    $('path').css('stroke-dashoffset',0);
+    $('.slider').val(0);
+}
+
+$.get('stations.geojson', function(data){
+    //test if data is JSON
+    if(typeof data == 'object') {
+        var fc = data;
+    } else {
+        var fc = JSON.parse(data);
+    }
+    var inactiveStation=
+      {"iconUrl": "station_inactive.svg",
+      "iconSize": [5, 5],
+      "className": "inactivestation"
+    };
+    fc.features
+      .forEach(function(n){
+        var coords=n.geometry.coordinates;
+        L.marker([coords[1], coords[0]], {icon:L.icon(inactiveStation)}).addTo(map);
+      });
+
+    // find nearest, add to map
+    function updateStations(){
+        $('path').remove();
+        $('.station, .bikeduration').not('.leaflet-marker-draggable').remove();
+        start = startMarker.getLatLng();
+        var startPoint = turf.point([start.lng, start.lat]);
+        destination=endMarker.getLatLng();
+        var endPoint=turf.point([destination.lng, destination.lat]);
+
+
+        var bikeIcon ={
+            "iconUrl": "station.svg",
+            "iconSize":[20,20],
+            "popupAnchor": [0, -15],
+            "className": "station"
+        };
+
+        nearestStart = turf.nearest(startPoint, fc);
+            nearestStart.properties["title"] = '<strong>Grab a bike at</strong>'+nearestStart.properties["name"]+'<br>Bikes: '+nearestStart.properties["nbBikes"]+' Empty Docks: '+nearestStart.properties["nbEmptyDocks"];
+            nearestStart.properties.icon = bikeIcon;
+
+        nearestEnd = turf.nearest(endPoint, fc);
+            nearestEnd.properties["marker-color"] = "C73E3E";
+            nearestEnd.properties["title"] = '<strong>Drop off your bike at</strong>'+nearestEnd.properties["name"]+'<br>Bikes: '+nearestEnd.properties["nbBikes"]+' Empty Docks: '+nearestEnd.properties["nbEmptyDocks"];
+            nearestStart.properties.icon = bikeIcon;
+
+
+        var end_station =
+            L.mapbox
+            .featureLayer()
+            .on('layeradd', function(e) {
+                var marker = e.layer,
+                feature = marker.feature;
+                marker.setIcon(L.icon(bikeIcon))
+            })
+            .setGeoJSON(nearestEnd)
+            .addTo(map)
+            .on('mouseover', function(e) {
+                e.layer.openPopup();
+            })
+            .on('mouseout', function(e) {
+                e.layer.closePopup();
+            });
+
+        var start_station =
+            L.mapbox
+            .featureLayer()
+            .on('layeradd', function(e) {
+                var marker = e.layer,
+                feature = marker.feature;
+                marker.setIcon(L.icon(bikeIcon));
+            })
+            .setGeoJSON(nearestStart)
+            .addTo(map)
+            .on('mouseover', function(e) {
+                e.layer.openPopup();
+            })
+            .on('mouseout', function(e) {
+                e.layer.closePopup();
+            });
+    }
+
+
+    startMarker
+        .on('drag', function(){updateStations()})
+        .on('dragend',function(){
+            getRouteInfo(nearestStart,nearestEnd)
+        });
+    endMarker
+        .on('drag', function(){updateStations()})
+        .on('dragend',function(){
+            getRouteInfo(nearestStart,nearestEnd)
+        });
+
+    updateStations();
+    getRouteInfo(nearestStart,nearestEnd);
+    map.setZoom(13);
+
+    var elevProfile = []
+    var queryPoints = []
+
+    function getRouteInfo ( origin, goal ) {
+        var startCoord = origin.geometry.coordinates.toString();
+        var endCoord = goal.geometry.coordinates.toString();
+        var directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.driving/'+ startCoord + ';' + endCoord +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+        //bike route
+        $.get(directionsURL, function(data){
+          var route = data.routes[0].geometry;
+          map.featureLayer.setGeoJSON(turf.linestring(route.coordinates));
+
+          //resample the line path to have regularly-spaced intervals for elevation query
+          var distance = data.routes[0].distance * 0.000621371192;
+          distance = distance.toFixed(2);
+                $('#routedist').text(distance);
+                var distance=data.routes[0].distance;
+                var sampleQuant= Math.min(distance/50,300);
+                var incrementDist=distance/sampleQuant;
+                resampledRoute= [];
+
+                for (var i=0;i<sampleQuant; i++){
+                    resampledRoute.push(turf.along(turf.linestring(route.coordinates),incrementDist*i*0.001,'kilometers')['geometry']['coordinates'])
+                }
+
+                map.fitBounds(map.featureLayer.setGeoJSON(turf.linestring(resampledRoute)).getBounds(),{
+                    paddingTopLeft:[150,50],
+                    paddingBottomRight:[150,50]
+                });
+                window.setTimeout(function(){$('path').css('stroke-dashoffset',0)},10);
+                //add duration label
+                var durationTime= Math.round(2.5*data.routes[0].duration/60);
+                var durationlabel=L.divIcon({className: '', html: '<div class="bikeduration">'+durationTime+' min</strong>'});
+
+                var middlepos=resampledRoute[Math.round(resampledRoute.length/2)];
+                L.marker([middlepos[1],middlepos[0]],{icon: durationlabel}).addTo(map);
+                //get surface deets
+                makeSurfaceCall(resampledRoute, incrementDist);
+
+
+        });
+        //route from origin to first bike station
+        directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.driving/'+ start.lng+','+start.lat + ';' + startCoord +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+
+        $.get(directionsURL, function(data){
+          var route = data.routes[0].geometry;
+          route= route.coordinates.map(function(n){return [n[1],n[0]]});
+          var walkTo=L.polyline(route, {color: 'red'}).addTo(map);
+        });
+
+        //route from second station to destination
+        directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.driving/'+ endCoord+ ';' + destination.lng+','+destination.lat +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+        $.get(directionsURL, function(data){
+          var route = data.routes[0].geometry;
+          route= route.coordinates.map(function(n){return [n[1],n[0]]});
+          var walkFrom=L.polyline(route, {color: 'red'}).addTo(map);
+        });
+    }
+
+    function makeSurfaceCall ( points, incrementDist) {
+        $('.elevations').remove();
+        var pointString = '';
+                points= points.map(function(n){return [parseFloat(n[0]).toFixed(6), parseFloat(n[1]).toFixed(6)]});
+        points.forEach(function(arr){
+            pointString = pointString + arr.toString() + ';';
+        })
+        pointString = pointString.slice(0, -1);
+
+        var surfaceURL = 'https://api.tiles.mapbox.com/v4/surface/mapbox.mapbox-terrain-v2.json?layer=contour&interpolate=true&fields=ele&points=' + pointString + '&access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA'
+            $.get(surfaceURL, function(data){
+              //create elevation profile
+              data.results.forEach(function(n,i){
+                var pointGrade='';
+                if (i>0 && i<data.results.length-1){
+                  prevPoint=data.results[i-1].ele;
+                  nextPoint=data.results[i+1].ele;
+
+                  pointGrade = '('+(100*0.5*((n.ele-prevPoint)+(nextPoint-n.ele))/incrementDist).toFixed(0)+'% grade)';
+                }
+                var myIcon=L.divIcon({className: 'elevations', html: '<div class="elevmarker"><div class="markercircle bottomcap"></div><div class="markerline" style="height:'+n.ele*2+'px">'+'</div><div class="markercircle"></div><div class="elevfigure"><strong>'+(n.ele*3.28).toFixed(0)+' ft </strong><span style="font-size:0.9em">'+ pointGrade+'</span></div>'});
+                L.marker([n.latlng.lat,n.latlng.lng],{icon: myIcon}).addTo(map)
+              })
+            })
+    }
+});
+
+</script>
+</body>
+</html>

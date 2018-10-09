@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>all roads</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='app.js'></script>
+    <script src='network.js'></script>
+
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script></script>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+
+    <style>
+        body { margin:0; padding:0; overflow:hidden;}
+        #map, #timemap { position:absolute; top:0; bottom:0; width:100%; overflow:hidden;}
+        #timemap {right:0; border-left:1px solid white;}
+
+        .node circle {
+          cursor: pointer;
+          stroke: #3182bd;
+          stroke-width: 1.5px;
+        }
+
+        .node text {
+          font: 10px sans-serif;
+          pointer-events: none;
+          text-anchor: middle;
+        }
+
+        line.link {
+          fill: none;
+          stroke: #9ecae1;
+          stroke-width: 1.5px;
+        }
+        .overlay {
+          fill: #fff;
+          pointer-events: all;
+        }
+
+        svg {
+            cursor:-webkit-grab;
+        }
+
+        svg:active{
+            cursor:-webkit-grabbing;
+        }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<div id='timemap' style='display:none'></div>
+
+    <script src='setup.js'></script>
+
+<script>
+
+    map
+        .on('click', function(e){
+            var click = [map.unproject(e.point).lng,map.unproject(e.point).lat];
+            var zoom = 12;
+            var pos = (map.unproject(e.point));
+
+            var [x,y,z] = cover.tiles(turf.point([pos.lng, pos.lat]).geometry,{min_zoom:zoom, max_zoom:zoom})[0];
+            
+            var streetsRoads = 'https://b.tiles.mapbox.com/v4/mapbox.mapbox-streets-v7/'+ z+'/'+x+'/'+y +'.vector.pbf?access_token=' + mapboxgl.accessToken;
+            var osrm = 'https://api.mapbox.com/directions/v5/mapbox/driving-traffic/tiles/'+ z+'/'+x+'/'+y +'.mvt?access_token=' + mapboxgl.accessToken
+
+
+            vt({
+                uri: osrm,
+            }, function (err, resp) {
+
+                if (err) throw err;
+
+                nodeList = {};
+                tree = {};
+
+                resp = turf.truncate(resp)
+                var bbox = turf.bbox(resp)
+                console.log(bbox)
+                var nodes = resp.features.filter(function(ft){
+                    return ft.properties.vt_layer === 'osmnodes'
+                })
+                map.getSource('allcircles')
+                    .setData(turf.featureCollection(nodes))
+
+                nodes.forEach(function(n){
+                    nodeList[n.geometry.coordinates] = {}
+                })
+
+                resp = turf.featureCollection(
+                    resp.features.filter(function(ft){
+                        return ft.properties.vt_layer === 'speeds'
+                    })
+                )
+
+                
+                map.getSource('tileedges')
+                    .setData(resp)
+                
+                //assemble nodeList object out of line segments
+
+                resp.features.forEach(function(ft){
+
+                    c = ft.geometry.coordinates
+                    if (!nodeList[c[0]]) return
+
+                    var delta = nodeList[c[1]] ? ft.properties.duration*1.1 : 'edge'
+                    nodeList[c[0]][c[1]] = {
+                        'delta': delta,
+                        'name': ft.properties.name
+                    }
+                })
+
+                var coords = turf.featureCollection(
+                    listCoordinates(nodeList)
+                        .map(function(pt){
+                            return turf.point(pt)
+                        })
+                );
+                console.log(coords)
+                var nearest = 
+                    turf.nearest(turf.point(click),coords).geometry.coordinates;
+
+
+                map.getSource('nearest')
+                    .setData(turf.point(nearest))
+
+
+                floodFill(nearest, currentThreshold, bbox)
+
+
+
+
+            })
+        })
+
+    function floodFill(originNode, threshold, bbox){
+
+        var startTime = Date.now();
+        traversed = turf.featureCollection([])
+        travelTimes = [];
+        travelTimes[originNode] = 0;
+        var candidates = {};
+        var newestOrigin = originNode;
+
+        var sides = ['left', 'bottom', 'right', 'top']
+
+        var id = 1;
+        var done = false;
+
+        tree[originNode] = {'fixed': true, 'name': 'start', 'index': id, 'children':[], 'delta':0}
+
+        while (!done){
+            stepper(originNode);
+        }
+
+        console.log('done in '+(Date.now()-startTime)/1000+'s', traversed.features.length+' edges')
+        map.getSource('progress')
+            .setData(traversed)
+
+
+        //define extent of the currently available vector data
+        // var corners = turf.envelope(resp).geometry.coordinates[0];
+        // window.currentEnvelope = {
+        //     minLng:corners[0][0],
+        //     maxLng:corners[2][0],
+        //     minLat:corners[0][1],
+        //     maxLat:corners[2][1]
+        // }
+
+        function stepper(){
+
+
+            // filter out dead ends. take this new origin, and examine all edges it can branch
+            if (nodeList[newestOrigin]) {
+
+                // time it took to reach the current origin
+                var travelTimeSoFar = travelTimes[newestOrigin]
+
+                //identify edges radiating from this origin
+                var newSteps = listCoordinates(nodeList[newestOrigin])
+
+                //for each origin, examine all the new edges. 
+                //identify the fastest edge of all, to access the new origin
+
+                newSteps.forEach(function(step){
+                    var delta = nodeList[newestOrigin][step].delta;
+                    if (delta ==='edge') {
+                        var side = bbox.indexOf(step[0])>-1 ? bbox.indexOf(step[0]) : bbox.indexOf(step[1])
+                        console.log(sides[side])
+                        return
+                    }
+
+                    var proposedTravelTime = delta + travelTimeSoFar;
+
+                    if (proposedTravelTime < threshold){
+                        var line = [newestOrigin, step]
+                        candidates[line] = [line, proposedTravelTime];
+                    }
+
+                })
+
+            }
+
+            var candidateArray = objectToArray(candidates);
+
+            //if there are candidates to consider, find the fastest
+            if (candidateArray.length>0) {
+
+                //identify fastest
+                var fastest = findFastest(candidateArray)
+
+                var endpoints = fastest[0]
+
+                var start = endpoints[0];
+                var end = endpoints[1];
+
+                newestOrigin = end;
+
+                // // write it to the graph
+                // var edge = nodeList[start][end];
+                // id++
+
+                // //add entry for child
+                // tree[end] = {"name":edge.name, "delta":10, "id":id};
+                
+                // if(!tree[start].children) tree[start].children = []
+
+                // //push child into parents' list of children
+                // tree[start].children.push({
+                //     'name': edge.name,
+                //     'index':id,
+                //     'delta': 10//fastest[1]
+                // })
+
+                //add line to traversed geojson
+                var line = turf.lineString(endpoints, {total: parseFloat(fastest[1].toFixed(0)), delta: nodeList[start][end].delta});
+                traversed.features.push(line);                        
+
+
+
+                //rule out the palindromic edge in nodeList and candidates
+                if (nodeList[end] && nodeList[end][start]) nodeList[end][start].delta = Infinity;
+                delete candidates[[endpoints[1], endpoints[0]]];
+
+                // remove edge from candidates and nodeList
+                delete candidates[endpoints]
+                delete nodeList[start][end]
+
+                travelTimes[end] = fastest[1]
+                
+
+            }
+
+            else done = true
+
+        }
+    
+    }
+
+    function findFastest(candidates){
+        var fastestEdge = ['foo', Infinity];
+
+        for (var c = 0; c<candidates.length; c++){
+
+            //if candidates beats current fastest entry, overwrite
+            if (candidates[c][1] < fastestEdge[1]) {
+                fastestEdge = candidates[c]
+            }
+        }
+        return fastestEdge
+    }
+
+    function stringToCoords(string){
+        return string.split(',')
+            .map(function(num){return parseFloat(num)})
+    }
+
+    function listCoordinates(obj){
+        return Object.keys(obj).map(function(str){return stringToCoords(str)})
+    }
+
+    function objectToArray(obj){
+        var keys = Object.keys(obj)
+
+        return keys.map(function(key){
+            return obj[key]
+        })
+    }
+
+
+
+    function makeForceGraph(tree){
+        console.log(JSON.stringify(objectToArray(tree)))
+        update(objectToArray(tree))
+    }
+
+
+    // function drawGraph(origin, tree){
+
+    //     var treeOrigin = [0,0];
+
+    //     var geojson = turf.featureCollection([])
+    //     var forks = [{
+    //         'location':origin, 
+    //         'forkLocation': treeOrigin, 
+    //         'bearing': 0, 
+    //         'totalAngle': 360,
+    //         'branches': tree[origin]
+    //     }];
+
+
+    //     function extendForks(){
+
+    //         var nextForks = [];
+    //         // iterate through all fork points
+    //         forks.forEach(function(d,i){
+
+    //             if (!d.branches) return
+    //             var branches = Object.keys(d.branches);
+    //             //console.log('fork branches are '+branches)
+    //             //iterate through branches in each fork
+    //             branches
+    //                 .forEach(function(endpoint,i){
+
+    //                     var branch = tree[d.location][endpoint];
+    //                     if (!branch) return
+
+    //                     var angleIncrement = d.totalAngle/branches.length;
+
+    //                     var multiplier = branch.length>1 ? i-0.5 : i
+    //                     var bearing = d.bearing+angleIncrement* multiplier;
+
+    //                     var ft = drawEdge(d.forkLocation, branch, bearing);
+    //                     geojson.features
+    //                         .push(ft)
+
+    //                     nextForks.push({
+    //                         'location': endpoint, 
+    //                         'forkLocation': ft.geometry.coordinates[1],
+    //                         'bearing': bearing, 
+    //                         'totalAngle':180,
+    //                         'branches': tree[endpoint]
+    //                     })
+    //                 })
+    //         })
+
+    //         forks = nextForks
+    //     }
+
+    //     for (var i =0; i<4; i++){
+    //         extendForks();
+    //     }
+    //     console.log(geojson)
+    //     timemap.getSource('branches').setData(geojson)
+    
+
+    //     function drawEdge(start, branch, heading){
+    //         var endpoint = turf.destination(start, branch.delta/1000, heading, 'kilometers').geometry.coordinates;
+    //         return turf.lineString([start, endpoint],{'name': branch.name})
+    //     }
+    // }
+</script>
+
+</body>
+</html>

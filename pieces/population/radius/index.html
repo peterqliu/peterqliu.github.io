@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Population inspector</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="https://npmcdn.com/cheap-ruler@1.3.0/cheap-ruler.js" charset="utf-8"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.34.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.34.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+        #counter {position:absolute; background:white;}
+        .mapboxgl-popup-tip, .mapboxgl-popup-content {
+          display:none;
+        }
+        #originmarker {width:20px;height:20px; border:2px solid #eee; background:green; border-radius:50%; margin:-11px; pointer-events:all; cursor:-webkit-grab;}
+        #originmarker:hover{background:steelblue;}
+        #originmarker:active{cursor:-webkit-grabbing;}
+        #originmarker:active + #radiuscircle {
+          background:rgba(0,160,0,0.25);
+        }
+        #radiuscircle {display:none; position:absolute; border:0px solid green; border-radius:50%; transform:translateX(-50%) translateY(50%)}
+        .mapboxgl-canvas-container.mapboxgl-interactive, .mapboxgl-ctrl-nav-compass {cursor:default;}
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<div id='counter' class='pad1'>
+  <h1><span id='pop'></span> people</h1>
+  within a <span id='radius'></span>-meter radius
+  <button onclick='draw()'>Draw</button>
+</div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/peterqliu/cj2jexmgj00332rqnqccvh07o',
+    zoom: 14,
+    minZoom: 12,
+    center: [-122.447303, 37.753574]
+});
+  var radius = 0.5;
+  var lnglat = map.getCenter();
+map.on('load', function () {
+
+    var emptyGeojson = turf.featurecollection([]);
+    map
+    .setPaintProperty('outgeojson', 'fill-color', '#abcdef')
+    .addSource('circle', {
+      type: 'geojson',
+      data: emptyGeojson
+    })
+    .addSource('selectedBlocks', {
+      type: 'geojson',
+      data: emptyGeojson
+    });
+    map
+
+    .addLayer({
+        "id": "circleradius",
+        "type": "line",
+        "source": "circle",
+        "layout": {
+        },
+        "paint": {
+            "line-color": "green",
+            "line-width":2
+        }
+    })
+    .addLayer({
+      "id": "selectedblocks",
+      "type": "fill",
+      "source": "selectedBlocks",
+      "layout": {
+      },
+      "paint": {
+          "fill-color": {
+            "property": "density",
+            "stops": [[0, '#f6f6f4'], [20000, '#090'],[250000, '#030']]
+          },
+          "fill-opacity": {
+            "property": "density",
+            "stops": [[0, 0], [0.0000000001, 0]]
+          }
+      }
+    },'road-motorway-case')
+    .addLayer({
+      'id':'drawn_polygon', 
+      'type':'line',
+      'source':{
+        'type':'geojson',
+        'data': emptyGeojson
+      },
+      'paint':{
+        'line-color':'green',
+        //'line-opacity':0.5,
+        'line-width':4,
+        'line-dasharray':[0,2]
+      },
+      'layout':{
+        'line-cap':'round'
+      }
+    })
+    .on('zoom', function(){
+      drawRadiusCircle()
+    })
+    .addLayer({
+        "id": "block_extrusions",
+        "type": "fill-extrusion",
+        "source": "selectedBlocks",
+        "layout": {
+        },
+        "paint": {
+            "fill-extrusion-color": {
+              "property": "density",
+              "stops": [[0, '#efe'], [25000, 'green']]
+            },
+            "fill-extrusion-height": {
+              "property": "density",
+              "stops": [[0, 0], [250000, 5000]]
+            },
+            //"line-opacity":0
+        }
+    });
+
+  var tooltip =
+    new mapboxgl.Popup({closeOnClick: false})
+      .setLngLat(map.getCenter())
+      .setHTML('origin')
+      .on('mousedown', function(){
+      })
+      .addTo(map);
+  d3.select('.mapboxgl-popup')
+    .append('div')
+    .attr('id', 'originmarker')
+  var radiusCircle = 
+  d3.select('.mapboxgl-popup')
+    .append('div')
+    .attr('id', 'radiuscircle')
+
+
+
+  drawRadiusCircle()
+
+  var drag = d3.behavior.drag();
+
+  drag
+    .on('dragstart', function(e){
+      map.getSource('selectedBlocks').setData(emptyGeojson);
+    })
+    .on('drag', function(e) {
+      lnglat = map.unproject([d3.event.sourceEvent.clientX, d3.event.sourceEvent.clientY])
+      tooltip.setLngLat(lnglat)
+
+      var blocks = updateBlocks(drawCircle([lnglat.lng, lnglat.lat], radius))
+      map.getSource('selectedBlocks')
+        .setData(blocks);
+    })
+    .on('dragend', function(){
+      //map.getSource('circle').setData(turf.featurecollection([]));
+      var blocks = updateBlocks(drawCircle([lnglat.lng, lnglat.lat], radius))
+      map.getSource('selectedBlocks')
+        .setData(blocks);
+    })
+    map.on('mousemove', function(e) {
+      var lnglat = (map.unproject(e.point));
+    })
+
+  d3.select('#originmarker')
+    .call(drag)
+    .on('mousewheel', function(){
+      radius = Math.min(Math.max(radius+(event.deltaY/100),0), 1);
+      drawRadiusCircle(lnglat)
+      requestAnimationFrame(function(){
+        var blocks = updateBlocks(drawCircle([lnglat.lng, lnglat.lat], radius))
+        map.getSource('selectedBlocks')
+          .setData(blocks);
+      })
+    })
+
+
+
+
+
+  function drawCircle(center,radius){
+    var pt = turf.point(center);
+    var circle = pointBuffer(pt, radius, 'kilometers', 22)
+    circle.properties.bbox = turf.extent(circle)
+    return circle
+  }
+
+
+
+  function drawRadiusCircle(){
+    var edgeX = turf.destination(turf.point([lnglat.lng, lnglat.lat]), radius, 90, 'kilometers');
+    var pixelRadius = (map.project(edgeX.geometry.coordinates).x-map.project(lnglat).x);
+
+    radiusCircle
+      .style({width: 2*pixelRadius+'px', height: 2*pixelRadius+'px'})
+  }
+
+  function pointBuffer (pt, radius, units, resolution) {
+    var ring = []
+    var resMultiple = 360/resolution;
+    for(var i  = 0; i < resolution; i++) {
+      var spoke = turf.destination(pt, radius, i*resMultiple, units);
+      ring.push(spoke.geometry.coordinates);
+    }
+    if((ring[0][0] !== ring[ring.length-1][0]) && (ring[0][1] != ring[ring.length-1][1])) {
+      ring.push([ring[0][0], ring[0][1]]);
+    }
+    return turf.polygon([ring])
+  }
+
+  var blocks = updateBlocks(drawCircle([lnglat.lng, lnglat.lat], radius))
+  map.getSource('selectedBlocks')
+    .setData(blocks);
+
+});
+
+  function updateBlocks(shape){
+
+    //calculate extent of shape
+    var shapeExtent = turf.extent(shape);
+    var nw = map.project([shapeExtent[0],shapeExtent[3]]);
+    var se = map.project([shapeExtent[2],shapeExtent[1]]);
+    nw = [nw.x, nw.y];
+    se = [se.x, se.y];
+
+    //get blocks within the shape's extent
+    var geometryOutput = map.queryRenderedFeatures([nw,se],{ layers: ['outgeojson'] });
+
+    var intersectedBlocks = [];
+    var totalPop = 0;
+
+    var ruler = cheapRuler(lnglat.lat, 'meters');
+    geometryOutput.forEach(function(poly){
+      var density = poly.properties.pkm2;
+      try {
+
+        var poly = turf.polygon(poly.geometry.coordinates);
+        poly.properties.bbox = turf.extent(poly);
+
+        //calculate intersect only if it collides at all
+        var intersect = turf.intersect(poly, shape)
+        intersect.properties.density = density;
+
+        //if there is an intersect,
+        if (intersect !== undefined) {
+          // add intersected geometry to featurecollection
+          intersectedBlocks.push(intersect)
+
+          //add intersected population to the total
+          var blockPop = ruler.area(poly.geometry.coordinates)*density;
+          totalPop+= blockPop
+        }
+      } 
+
+      catch(e) {return}
+    });
+
+    // update population and radius count
+    document.querySelector('#pop').innerHTML = parseInt(totalPop);
+    document.querySelector('#radius').innerHTML = parseInt(radius*1000);
+
+    return turf.featurecollection(intersectedBlocks)
+
+  }
+function draw(){
+  map.easeTo({bearing:0, pitch:0})
+  map.dragPan.disable();
+  map.dragRotate.disable();
+  map.scrollZoom.disable();
+
+  var pts= [];
+  map.once('mousedown', function(e){
+    pts.push(lngLatArray(e.lngLat))
+
+    map.on('mousemove', addPoint)
+
+    map.once('mouseup', function(){
+
+      map.off('mousemove', addPoint);
+      map.dragPan.enable();
+      map.dragRotate.enable();
+      map.scrollZoom.enable();
+
+      pts.push(pts[0]);
+
+      var polygon =
+      {
+        type: 'Polygon',
+        coordinates:[pts]
+      };
+      
+      var blocks = updateBlocks(polygon);
+      var zoom = map.getZoom();
+
+      var extrudeStyle = {
+        "property": "density",
+        "stops": [
+          [{zoom: zoom-0.01, value: 0}, 0],
+          [{zoom: zoom-0.01, value: 250000}, 5000],
+          [{zoom: zoom, value: 0}, 0],
+          [{zoom: zoom, value: 250000}, 0]
+        ]
+      }
+
+      map.setPaintProperty('block_extrusions', 'fill-extrusion-height', extrudeStyle);
+
+      map.getSource('selectedBlocks')
+        .setData(blocks);
+      //map.on('data', function(){console.log('data')})
+      map.easeTo({zoom:zoom-0.01, duration:500, pitch:60})
+      map.once('moveend', function(){
+        console.log('end')
+        map.setPaintProperty('block_extrusions', 'fill-extrusion-height',
+          {
+            "property": "density",
+            "stops": [
+              [{zoom: zoom-0.01, value: 0}, 0],
+              [{zoom: zoom-0.01, value: 250000}, 5000],
+              [{zoom: zoom, value: 0}, 0],
+              [{zoom: zoom, value: 250000}, 5000]
+            ]
+          }
+        )
+      })
+    })
+  })
+
+  function addPoint(e){
+    
+    var pt= lngLatArray(e.lngLat);
+    var dist = turf.distance(turf.point(pts[0]), turf.point(pt), 'kilometers')
+    if (dist>0.1) pts.unshift(pt)
+
+    map.getSource('drawn_polygon')
+    .setData(
+      {type: 'LineString',
+        coordinates:pts
+      }
+    )
+  }
+}
+
+function lngLatArray(obj){
+  return [obj.lng, obj.lat]
+}
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

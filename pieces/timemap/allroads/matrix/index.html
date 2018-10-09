@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>matrix</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='app.js'></script>
+    <script src='network.js'></script>
+
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script></script>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+
+    <style>
+        body { margin:0; padding:0; overflow:hidden;}
+        #map, #timemap { position:absolute; top:0; bottom:0; width:100%; overflow:hidden;}
+        #timemap {right:0; border-left:1px solid white;}
+
+        .node circle {
+          cursor: pointer;
+          stroke: #3182bd;
+          stroke-width: 1.5px;
+        }
+
+        .node text {
+          font: 10px sans-serif;
+          pointer-events: none;
+          text-anchor: middle;
+        }
+
+        line.link {
+          fill: none;
+          stroke: #9ecae1;
+          stroke-width: 1.5px;
+        }
+        .overlay {
+          fill: #fff;
+          pointer-events: all;
+        }
+
+        svg {
+            cursor:-webkit-grab;
+        }
+
+        svg:active{
+            cursor:-webkit-grabbing;
+        }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+<div id='timemap' style='display:none'></div>
+
+    <script src='setup.js'></script>
+
+<script>
+
+    var state = {
+        nodeTracker:{},
+        outstandingRequests:0,
+        nodes: [],
+        edges: [],
+        startingPosition: null
+    };
+
+    var parameters = {
+        batchSize:300,
+        mode: 'driving',
+        token: mapboxgl.accessToken,
+        direction: 'divergent',
+        queryURL: {
+            'divergent': '?sources=0&destinations=all',
+            'convergent': '?sources=all&destinations=0'
+        }
+    };
+
+    map
+        .on('click', function(e){
+            state.startingPosition = [map.unproject(e.point).lng,map.unproject(e.point).lat];
+            var zoom = 12;
+            var pos = (map.unproject(e.point));
+
+            var [x,y,z] = cover.tiles(turf.point([pos.lng, pos.lat]).geometry,{min_zoom:zoom, max_zoom:zoom})[0];
+            
+            var streetsRoads = 'https://b.tiles.mapbox.com/v4/mapbox.mapbox-streets-v7/'+ z+'/'+x+'/'+y +'.vector.pbf?access_token=' + mapboxgl.accessToken;
+            var osrm = 'https://api.mapbox.com/directions/v5/mapbox/driving-traffic/tiles/'+ z+'/'+x+'/'+y +'.mvt?access_token=' + mapboxgl.accessToken
+
+
+            vt({
+                uri: osrm,
+            }, function (err, resp) {
+                if (err) throw err;
+
+                nodeList = {};
+                tree = {};
+                nodes = [];
+                resp = turf.truncate(resp)
+                var bbox = turf.bbox(resp)
+                console.log(bbox)
+                resp.features.forEach(function(ft){
+                    if (ft.properties.vt_layer === 'osmnodes') return nodes.push(ft);
+                    else state.edges.push(ft)
+                })
+
+                nodes.forEach(function(n){
+                    nodeList[n.geometry.coordinates] = {}
+                })
+
+                resp = turf.featureCollection(
+                    resp.features.filter(function(ft){
+                        return ft.properties.vt_layer === 'speeds'
+                    })
+                )
+
+                
+                map.getSource('tileedges')
+                    .setData(resp)
+                
+                // filter apart nodes that are simply road elbows (1 edge in, 1 edge out)
+                state.edges.forEach(function(edge){
+                    edge.geometry.coordinates.forEach(function(coord, i){
+                        if (!state.nodeTracker[coord]) {
+                            state.nodeTracker[coord] = {
+                                'streets': [],
+                                'otherCoord':[]
+                            }
+                        }
+
+                        var otherCoord = JSON.stringify(edge.geometry.coordinates[Math.abs(1-i)]);
+                        if (state.nodeTracker[coord].streets.indexOf(edge.properties.name)===-1) {
+                            state.nodeTracker[coord].streets.push(edge.properties.name)
+                        }
+                        if (state.nodeTracker[coord].otherCoord.indexOf(otherCoord)===-1) {
+                            state.nodeTracker[coord].otherCoord.push(otherCoord)
+                        }
+
+                        // can push directly to nodes here
+
+                    })
+                })
+
+                Object.keys(state.nodeTracker).forEach(function(coord){
+                    var otherCoords = state.nodeTracker[coord].otherCoord.length;
+                    var connectedStreets = state.nodeTracker[coord].streets.length;
+                    var isElbow = connectedStreets === 1 && otherCoords === 2;
+                    state.nodes.push(
+                        turf.point(coord.split(',')
+                            .map(function(str){return parseFloat(str)}), 
+                            {elbow: isElbow, streets: connectedStreets, others:state.nodeTracker[coord].otherCoord}
+                        ))   
+                })
+
+                map.getSource('allcircles')
+                    .setData(turf.featureCollection(state.nodes))
+                map.getSource('progress')
+                    .setData(turf.featureCollection(state.edges))
+                //assemble nodeList object out of line segments
+
+                // resp.features.forEach(function(ft){
+
+                //     c = ft.geometry.coordinates
+                //     if (!nodeList[c[0]]) return
+
+                //     var delta = nodeList[c[1]] ? ft.properties.duration*1.1 : 'edge'
+                //     nodeList[c[0]][c[1]] = {
+                //         'delta': delta,
+                //         'name': ft.properties.name
+                //     }
+                // })
+
+                // var coords = turf.featureCollection(
+                //     listCoordinates(nodeList)
+                //         .map(function(pt){
+                //             return turf.point(pt)
+                //         })
+                // );
+
+                // var nearest = 
+                //     turf.nearest(turf.point(click),coords).geometry.coordinates;
+
+
+                map.getSource('nearest')
+                    .setData(turf.point(state.startingPosition))
+
+
+                batchRequests(state.nodes)
+
+            })
+        })
+
+
+    // route requests to smaller batches
+    function batchRequests(points){
+
+        var coords = points.map(function(pt){
+            return pt.geometry.coordinates
+        });
+        var batchSize = parameters.batchSize-1;
+        state.outstandingRequests += Math.ceil(coords.length/batchSize);
+
+        for (var c = 0; c < coords.length; c += batchSize){
+            var batch = coords.slice(c,c+batchSize);
+            batch.unshift(state.startingPosition);
+            makeRequest(batch)
+        }
+    }
+
+
+    // make API call, stows results in state.travelTimes, signals when all callbacks received
+
+    function makeRequest(coords){
+
+        var formattedCoords = coords.join(';')
+
+        var queryURL = 
+        'https://api.mapbox.com/directions-matrix/v1/mapbox/'+ parameters.mode +'/' + formattedCoords + parameters.queryURL[parameters.direction]+'&access_token=' + parameters.token;
+
+        d3.json(queryURL, function(err, resp){
+
+            var parseDurations = {
+                'divergent':resp.durations[0],
+                'convergent':resp.durations.map(function(item){return item[0]})
+            };
+
+            state.outstandingRequests--
+
+            console.log(resp)
+            // when all callbacks received
+            if (state.outstandingRequests === 0) {
+                console.log('done')    
+            }
+        })
+    }
+
+    function findFastest(candidates){
+        var fastestEdge = ['foo', Infinity];
+
+        for (var c = 0; c<candidates.length; c++){
+
+            //if candidates beats current fastest entry, overwrite
+            if (candidates[c][1] < fastestEdge[1]) {
+                fastestEdge = candidates[c]
+            }
+        }
+        return fastestEdge
+    }
+
+    function stringToCoords(string){
+        return string.split(',')
+            .map(function(num){return parseFloat(num)})
+    }
+
+    function listCoordinates(obj){
+        return Object.keys(obj).map(function(str){return stringToCoords(str)})
+    }
+
+    function objectToArray(obj){
+        var keys = Object.keys(obj)
+
+        return keys.map(function(key){
+            return obj[key]
+        })
+    }
+
+
+
+    function makeForceGraph(tree){
+        console.log(JSON.stringify(objectToArray(tree)))
+        update(objectToArray(tree))
+    }
+
+
+
+</script>
+
+</body>
+</html>

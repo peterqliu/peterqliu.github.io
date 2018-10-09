@@ -1,0 +1,63 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;\csgray\c100000;}
+\margl1440\margr1440\vieww25560\viewh16500\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 GET THE DATA, FORMAT THE STEPS\
+\
+1) Query directions from origin to all destinations. Receive them as an array of routes R, each as an array of individual steps S\
+\
+2) For each step in each route, store them as properties in an object formatted as \'93startTime+instruction\'94. In each entry, also record the immediately preceding step in `parent`\'97 first step of each route should have a parent of \'93start\'94. Entry looks like: \{parent: \'92123+abc\'92, children: \{\}, right: 0, left: 0, width:0, minTime:Infinity, maxTime:0\}\
+\
+3) Once all steps are recorded, get a list of all the steps in 
+\i \ul decreasing order of startTime
+\i0 \ulnone . Should be easy in Object.keys() format.\
+\
+TRICKLE UP, TO DETERMINE RELATIVE POSITION\
+\
+4) Iterate through this list of steps. For each step,\
+\
+	a) Go to its parent, and add the step to the parent\'92s list of children (if not there already). Can use object format for automatic dedupe/ordering\
+	b) If step has no children, set step\'92s `width` to 1. If so, we can skip c).\
+	c) 
+\b We know the list of children for this step is now complete. 
+\b0 Examine the list in descending order of startTime. Set step\'92s `minTime` and `maxTime` as the last and first children\'92s times, respectively.\
+	d) For each child in this list,\
+       \
+		1) Get the child\'92s width, and increment the step\'92s width by that amount.\
+		2) 
+\b Calculate child 
+\i group\'92s
+\i0  position relative to the step.
+\b0  The first (longest) child will be 0. For all other children, determine its right/left direction from the step\'92s counter. \
+		3) 
+\b Calculate the child edge\'92s offset, relative to its group.
+\b0  The first (longest) child will be 0. Determine the direction 
+\i opposite 
+\i0 the child\'92s own direction, and retrieve the child\'92s counter in that direction. This will be the offset.\
+		4) 
+\b The child edge\'92s overall position 
+\b0 is the group position plus the edge\'92s offset. Record this as `relativePosition` in the child entry.
+\b \
+		
+\b0 5) 
+\b Increment the step\'92s right/left counter. 
+\b0 If longest child, increment only by child\'92s own right and left counts. Otherwise, increment
+\b  
+\b0 by the child\'92s overall width, in the direction of the child
+\b .\
+\
+
+\b0 	d) At this point, we know the step\'92s width, right, and left parameters are complete.\
+\
+TRICKLE DOWN, TO DETERMINE ABSOLUTE POSITIONS\
+\
+5) Start at edgeList.start, and record as track:0. Set variable parentPosition as 0.\
+6) Iterate through entry\'92s list of children, and for each child, set its `track` as parentPosition+child.relativePosition. Also set its `geometry` via some transformation of [[startTime, parentPosition], [endTime, track]].\
+7) For each child, execute 6) with parentPosition defined as its own `track` value.\
+\
+\
+\
+}

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>dendro</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js'></script>
+    <script src='utilities.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <style>
+        body { margin:0; padding:0; }
+        #timeline {height:30px; width:100%; position:absolute; z-index: 100; border-bottom:0px solid #BACAD5; pointer-events:none;}
+        #map{height:500px; width:500px; position:absolute; z-index: 100; bottom:0;}
+        #dendrite{height:100%; width:100%; position:absolute;}
+    </style>
+</head>
+<body>
+
+<div id='map' class='map'></div>
+<div id='dendrite' class='map'></div>
+<div id='timeline' class='map'></div>
+<script src='maps.js'></script>
+
+<script>
+    
+
+
+
+    var center = turf.point(util.center(map));
+
+    var circle = [];
+    var destinations = 30;
+
+    var branches = [];
+
+    var edgeList = {};
+
+    var edges = [];
+    var nodes = [];
+    
+    var state = {
+        metersPerSecond:10,
+        angleIncrement: 360/destinations,
+        lngPerSecond:50,
+        minGap: 5,
+        cb: 0,
+        straightElbows: false,
+        preserveBranchDirection: false,
+        mode: 'radial',
+        tuckGap: 10,
+        routes:[],
+        projectedPoints:{},
+        turnTree:{}
+    }
+
+    state.timeline = [];
+
+    //draw 12 circles
+    for (var t = 0; t<60; t++){
+
+        var coords = [];
+        var currentTime = t*60;
+        var circleRes = 120;
+
+        for (var b = 0; b<=circleRes; b++){
+            coords.push(dest([0,0], state.lngPerSecond*currentTime, b*360/circleRes));
+        }
+
+        var props = {klass:t%5}
+        state.timeline.push(turf.lineString(coords, props))
+
+    }
+
+
+    for (var c = 0; c<destinations; c++){
+        var angle = c * state.angleIncrement;
+
+        var pt = turf.destination(center, Math.pow(Math.random(),0.5)*2, angle);
+
+        circle.push(pt)
+    }
+
+
+
+
+    map.on('load', function(){
+        map.addLayer({
+            'id': 'point',
+            'type': 'circle',
+            'source': {
+                'type': 'geojson',
+                'data': turf.featureCollection(circle)
+            }
+        })
+        .addLayer({
+            'id': 'route',
+            'type': 'line',
+            'source':{
+                'type': 'geojson',
+                'data': turf.featureCollection([])
+            },
+            'paint':{
+                'line-width':3,
+                'line-color': 'blue',
+                'line-opacity': 0.25,
+                'line-offset':1
+            }
+        })
+
+        function cullResults(collector, resp){
+
+            var legs = resp.routes[0].legs;
+
+            for (var p = 0; p<legs.length; p+=2){
+                var timeSoFar = 0;
+                var route = [];
+                var payload = legs[p].steps
+                    .map(function(step){
+                        route = route.concat(step.geometry.coordinates);
+
+                        var duration = Math.round(step.duration);
+                        var payload = {
+                            'start': timeSoFar,
+                            'end': timeSoFar+duration,
+                            'duration': duration,
+                            'name': step.name
+                        }
+
+                        var relevantKeys = ['instruction', 'location', 'modifier']
+
+                        relevantKeys.forEach(function(key){
+                            payload[key] = step.maneuver[key]
+                        })
+
+                        timeSoFar += duration;
+                        return payload
+                    });
+
+                state.cb++
+
+                collector.push(payload);
+                state.routes.push(turf.lineString(route))
+            }
+        }
+
+        function batchRequests(center, destinations){
+            
+            var batchQuantity = 12;
+
+            var coords = [];
+            for (var i = 0; i<destinations.length; i++){
+
+                if (i>0 && i%batchQuantity === 0){
+                    request(coords)
+                    coords = [];
+                }
+                coords.push(center, destinations[i]);
+
+            }
+
+            request(coords)
+            
+        }
+
+        function request(coords){
+            util.directions(coords, 'driving', function(resp){
+                state.adjustedOrigin = resp.routes[0].geometry.coordinates[0]
+
+                cullResults(branches, resp);
+
+                if (state.cb === destinations) {
+                    map.getSource('route').setData(turf.featureCollection(state.routes))
+                    drawLines(branches)
+                }
+            })
+        }
+
+        batchRequests(util.center(map), circle.map((pt)=>{return pt.geometry.coordinates}));
+
+    })
+
+    function drawLines(branches){
+
+        branches.forEach(function(track, trackIndex){
+
+            track.forEach(function(step, index){
+
+                if (!state.projectedPoints[step.location]) {
+                    var point = turf.point(
+                        projectPoint(step.location, step.start), 
+                        {
+                            instruction:step.instruction,
+                            direction: getDirection(step)
+                        }
+                    )
+
+                    nodes.push(point);
+                }
+
+                if (!track[index+1]) return
+
+
+
+                var endpoint = track[index+1].location;
+                var builtName = buildName(step)
+                // record to tree
+                if (!state.turnTree[builtName]) {
+
+                    state.turnTree[builtName] = {
+                        name: step.name, 
+                        location:step.location,
+                        children:{},
+                        segment:null,
+                        startTime: step.start,
+                        longestTimeSoFar:0
+                    };
+                }
+
+                state.turnTree[builtName].children[step.end] = endpoint;
+                if (step.end >= state.turnTree[builtName].longestTimeSoFar){
+                    state.turnTree[builtName].longestTimeSoFar = step.end;
+                    state.turnTree[builtName].segment = turf.lineSlice(step.location, endpoint, state.routes[trackIndex]);
+                }
+            
+            })
+
+        })
+
+        Object.keys(state.turnTree)
+            .forEach(function(parent){
+
+                var currentObj = state.turnTree[parent];
+                var segmentGeometry = currentObj.segment.geometry.coordinates;
+                var segmentLength = turf.length(currentObj.segment);
+
+                var timeInterval = currentObj.longestTimeSoFar - currentObj.startTime;
+                
+                var startPoint = turf.point(currentObj.segment.geometry.coordinates[0]);
+                
+                var projectedSegment = segmentGeometry.map(function(pt){
+                    var substr = turf.lineSlice(startPoint, turf.point(pt), currentObj.segment);
+                    var distance = turf.length(substr);
+                    var timeAtJuncture = currentObj.startTime + timeInterval * distance/segmentLength;
+
+                    return projectPoint(pt, timeAtJuncture)
+                })
+
+                // var times = Object.keys(currentObj.children);
+                // var linestring = times.map(function(time){
+                //     var worldCoords = currentObj.children[time];
+                //     return state.projectedPoints[worldCoords]
+                // })
+
+                // if (linestring[0] === undefined) return
+                // linestring.unshift(state.projectedPoints[currentObj.location])
+
+                //currentObj.segment.properties.name = generateLabel(parent);
+                console.log(projectedSegment)
+                edges.push(turf.lineString(projectedSegment, {name: generateLabel(currentObj)}))
+            })
+
+        updateDendrogram()
+    }
+
+    function projectPoint(coord, time, step){
+        
+        var bearing = turf.bearing(turf.point(state.adjustedOrigin), turf.point(coord));
+        //if (step) console.log(step, bearing)
+        var radius = time * state.lngPerSecond;
+
+        var projectedPoint = dest([0,0], radius, bearing-90);
+
+        state.projectedPoints[coord] = projectedPoint
+        return projectedPoint
+    }
+
+
+
+
+    function updateDendrogram(){
+        dendrite.getSource('nodes')
+            .setData(turf.featureCollection(nodes));
+
+        dendrite.getSource('routes')
+            .setData(turf.featureCollection(edges))
+    }
+
+
+    function listKeysInReverse(obj){
+        return Object.keys(obj)
+            .sort(function(a, b) {
+                return b.split('+')[0] - a.split('+')[0];
+            })
+    }
+
+
+    function buildName(step){
+        return step.start + '+' + step.instruction;
+    }
+
+
+
+    function getDirection(child, parent){
+
+        var str = child.instruction
+        var direction = str.includes('left') || str.includes('north') || str.includes('west') ? 'left' : 'right'
+
+
+        return direction
+    }
+
+
+    function generateLabel(obj){
+
+        var payload = obj.name || '(Unnamed)';
+
+        return payload
+            .replace(' Street', ' St')
+            .replace(' Drive', ' Dr')
+            .replace(' Lane', ' Ln')
+            .replace(' Road', ' Rd')
+            .replace(' Avenue', ' Ave')
+            .replace(' Boulevard', ' Blvd')
+            .replace(' Place', ' Pl')
+            .replace(' Parkway', ' Pkwy')
+            .replace(' Freeway', ' Fwy')
+            .replace(' Highway', ' Hwy')
+            .replace(' Expressway', ' Expwy')
+    }
+
+    function convertToRadial(coords){
+        var pt = dest([0,0], coords[0], coords[1]*state.angleIncrement-90)
+        return pt
+    }
+
+    function dest(origin, radius, angle){
+
+        var x = radius * Math.cos(Math.PI*2*angle/360);
+        var y = radius * Math.sin(Math.PI*2*angle/360);
+
+        var desiredPixelPosition = [
+            x+dendrite._container.clientWidth/2,
+            y+dendrite._container.clientHeight/2
+        ]
+
+        var lngLat = dendrite.unproject(desiredPixelPosition);
+        return [lngLat.lng, lngLat.lat]
+    }
+</script>
+
+</body>
+</html>

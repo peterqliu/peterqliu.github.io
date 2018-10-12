@@ -21,8 +21,8 @@
             margin:0; 
             font-family:Chaparral;
             color:#333;
-            font-size:1.2em;
-        }
+/*            font-size:1.2em;
+*/        }
 
         #map { 
             position:absolute; 
@@ -34,7 +34,7 @@
         .container{
             max-width:1234px;
             margin:0 auto;
-            padding:10px; 
+            padding:50px 10px; 
         }
 
         .secondary{
@@ -86,14 +86,15 @@
         }
 
         #modal{
-            background:#eee;
-            margin:0 auto;
-            border-radius:3px;
-            position:absolute;
-            left:30px;
-            right:30px;
-            top:30px;
-            bottom:30px;
+            background: #eee;
+            margin: 0 auto;
+            border-radius: 3px;
+            position: absolute;
+            left: 30px;
+            right: 30px;
+            top: 30px;
+            bottom: 30px;
+            overflow: hidden;
         }
 
         .fl{
@@ -142,24 +143,27 @@
             width:100%;
             height:100%;
             border:none;
+            background:gray;
         }
     </style>
 </head>
 <body>
     <div id='lightbox' class='hidden'>
         <div id='modal'>
-            <div id='explainer' class='m2'>
-                <div id='close' class='bigger a weaker'>✕</div>
-                <div class='big' id='title'>title</div>
-                <div id='blurb' class='weak'></div>
+            <div id='explainer' class=''>
+                <div class='m2'>
+                    <div id='close' class='bigger a weaker'>✕</div>
+                    <div class='big' id='title'></div>
+                    <div id='blurb' class='weak'></div>
 
-                <div id='press' class='hidden'>
-                    <div class=''>Press</div>
-                    <a id='pressLink'></a>
+                    <div id='press' class='hidden'>
+                        <div class=''>Press</div>
+                        <a id='pressLink'></a>
+                    </div>
                 </div>
             </div>
             <div class='wrapper'>
-                <iframe src='https://www.google.com'></iframe>
+                <iframe src=''></iframe>
             </div>
         </div>
     </div>

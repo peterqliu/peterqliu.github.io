@@ -1,5 +1,5 @@
-d3.json('pieces.json', function(err,resp){
-
+d3.json('data.json', function(err,resp){
+	console.log(err,resp)
 	var doc = d3.select('.container')
 
 	var section = doc
@@ -12,7 +12,7 @@ d3.json('pieces.json', function(err,resp){
 
 	section
 		.append('div')
-		.classed('bigger secondary lowercase weak', true)
+		.classed('bigger secondary lowercase weakest', true)
 		.text(function(d,i){
 			return d
 		})
@@ -22,7 +22,7 @@ d3.json('pieces.json', function(err,resp){
 		.data(function(d){return resp[d]})
 		.enter()
 		.append('div')
-		.classed('work a', true)
+		.classed('work a big', true)
 		.text(function(d){return d.name})
 		.on('click', function(d,i){
 

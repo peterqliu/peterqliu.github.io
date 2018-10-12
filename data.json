@@ -11,18 +11,12 @@
 				"pressUrl":"https://www.citylab.com/environment/2016/06/a-real-time-map-of-earthquakes-around-the-world/487868/"
 			},
 			{
-				"name":"Red Bull race tracker",
-				"url": "redbull",
-				"blurb": [
-					"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. On top of a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
-					"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
-					]
-				},
-			{
 				"name":"Population inspector",
 				"url": "population",
 				"blurb": [
-					"Mapbox GL added an extrusion feature to render buildings in 3D. Because 3D often gets in the way more than it helps, we wanted to use it in a way that was actually more illuminating."
+					"Mapbox GL added an extrusion feature to render buildings in 3D. Because 3D often gets in the way more than it helps, we wanted to use it in a way that was actually more illuminating.",
+					"While a typical visualization might use extrusion height to represent raw population count,",
+					"By visualizinUsing block-level population data from the US Census, divided all the counts by surface area to get a density statistic. By using the extrusion to represent density, we were able  "
 				]
 			},
 			{
@@ -34,6 +28,16 @@
 					"The demo also makes use of Surface API -- by sampling the elevation at regular intervals along the route line, we can generate a profile of the hills and slopes to expect as we pedal."
 				]
 
+			},
+			{
+				"name":"Red Bull race tracker",
+				"url": "redbull",
+				"blurb": [
+					"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. On top of a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
+					"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
+					],
+				"press": "Technology & Sport Collide at Red Bull Heavy Water (Red Bull)",
+				"pressUrl": "https://www.redbull.com/us-en/red-bull-heavy-water-tracking-technology-spoondrift-mapbox"
 			},
 			{
 				"name":"Landgrab",
@@ -50,7 +54,8 @@
 				"name":"Courier",
 				"url": "courier",
 				"blurb": [
-					"As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup.",
+					"As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. ",
+					"We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup.",
 					"Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."
 				]	
 			},
@@ -60,7 +65,7 @@
 				"blurb": [""]	
 			},
 			{
-				"name":"Route optimizer",
+				"name":"Traveling Salesman solver",
 				"url": "optimizer",
 				"blurb":[
 					"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it.",

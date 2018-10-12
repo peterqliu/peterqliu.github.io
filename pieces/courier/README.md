@@ -1,0 +1,1 @@
+Blog post at https://www.mapbox.com/blog/dc-bikeshare-revisited/

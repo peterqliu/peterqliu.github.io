@@ -39,6 +39,7 @@
 				"name":"Landgrab",
 				"url": "landgrab/#-112.418898,-112.521208,36.420777,36.341725",
 				"blurb": [
+					""
 				]
 			}
 		],
@@ -48,18 +49,23 @@
 			{
 				"name":"Courier",
 				"url": "courier",
-				"blurb": "As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup. Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."	
+				"blurb": [
+					"As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup.",
+					"Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."
+				]	
 			},
 			{
 				"name":"Isochrone",
 				"url": "isochrone",
-				"blurb": "As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup. Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."	
+				"blurb": [""]	
 			},
 			{
-				"name":"Optimization for logistics",
+				"name":"Route optimizer",
 				"url": "optimizer",
 				"blurb":[
-					"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it. Like with the courier demo, the use case of food delivery here turned out to be both very understandable and fitting: food delivery drivers needed to minimize drive times between restaurants and customers, but also must pick up the food before delivering it. We set up three different restaurants, each with their own dropoff points, and the user interactivity to show off the complexity of the problem and how quickly the API solves it in real time."
+					"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it.",
+					" Like with the courier demo, the use case of food delivery here turned out to be both very understandable and fitting: food delivery drivers needed to minimize drive times between restaurants and customers, but also must pick up the food before delivering it.",
+					"We set up three different restaurants, each with their own dropoff points, and the user interactivity to show off the complexity of the problem and how quickly the API solves it in real time."
 				]
 			}
 		],
@@ -69,7 +75,7 @@
 				"name":"A map of time",
 				"url": "timemap/search",
 				"blurb":[
-					"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it. Like with the courier demo, the use case of food delivery here turned out to be both very understandable and fitting: food delivery drivers needed to minimize drive times between restaurants and customers, but also must pick up the food before delivering it. We set up three different restaurants, each with their own dropoff points, and the user interactivity to show off the complexity of the problem and how quickly the API solves it in real time."
+					"This project was the culmination of a lot of thinking around isochrones, ETAs, space, and time. We use maps as"
 				],
 				"press": "There's An Entirely New Way Of Mapping The World, And It's Brilliant (Fast Company)",
 				"pressUrl":"https://www.fastcompany.com/90143906/theres-an-entirely-new-way-of-mapping-the-world-and-its-brilliant"

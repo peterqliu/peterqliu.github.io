@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Red Bull Heavy Water</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src='mapbox-gl.js'></script>
+    <script src='bundle.js'></script>
+    <script src='data.js'></script>
+
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.39.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+
+    <style>
+      body { margin:0; padding:0; overflow:hidden; user-select:none;}
+
+      #map { 
+        position:absolute; 
+        top:0; 
+        bottom:41px;
+        left:300px; 
+        right:0px; 
+        overflow:hidden;
+        transition: transform 0.5s linear, width 0.1s, height 0.1s;
+      }
+
+      ::-webkit-scrollbar {
+        display:none;
+      }
+
+      .animating .racer {
+        transition: transform 0.5s linear, width 0.1s, height 0.1s;
+      }
+      .racer{
+        z-index: 90;
+        width:25px;
+        height:25px;
+        border-radius:50%;
+        background-color:steelblue;
+        border:2px solid white;
+        background-position: center center;
+        background-size: cover;
+      }
+
+      .racer:hover {
+        width:50px;
+        height:50px;
+      }
+      .marker img {
+          width: 40px;
+          height: 40px;
+          border-radius:10%;
+          border:2px solid white;
+          transition: all 0.1s;
+      }
+      .marker:hover img{
+        transform:scale(1.1);
+      }
+
+      .mapboxgl-popup {
+          pointer-events: none;
+          z-index:100;
+      }
+      .mapboxgl-popup-content{
+      }
+      .mapboxgl-popup-content img{
+          width:100%;
+      }
+
+      .sidebar{
+        width:300px;
+        position:absolute;
+        top:0;
+        bottom:41px;
+        overflow:scroll;
+      }
+
+      .inspector {
+        margin:10px;
+        display:none;
+        pointer-events: none;
+        opacity:0.9;
+        line-height:1.5em;
+      }
+
+      .Waves:hover:not(:active) .inspector {
+        display: inline-block;
+      }
+
+      .rounded {
+        border-radius:5px;
+      }
+
+      .paddlerEntry{
+        height: 80px;
+        position: absolute;
+        transition: -webkit-transform 0.4s;
+        width: 100%;
+        cursor: pointer;
+      }
+
+      .paddlerEntry:hover {
+        background: rgba(0,0,0,0.25);
+      }
+
+      .paddlerEntry:hover .entrymug {
+        transform:scale(1.1);
+      }
+
+      .entrymug{
+        width:60px;
+        height:60px;
+        border-radius:50%;
+        overflow:hidden;
+        margin-right:10px;
+        background: black;
+        background-position: center center;
+        background-size: cover;
+        cursor: hand;
+        transition: transform 0.2s;
+      }
+
+
+      #map.Waves canvas {
+        cursor:crosshair;
+      }
+
+      .redbullRed,
+      #mode a.active {
+        background-color: #db0a40;
+      }
+
+      .loading {
+        background: rgba(0,0,0,0.7);
+        width:100%;
+        height:100%;
+        position:absolute;
+      }
+
+      .center {
+        margin:0 auto;
+        position:relative;
+      }
+
+      .dark .keyline-top,
+      .dark .keyline-bottom {
+        border-color:rgba(0,0,0,0.5);
+      }
+
+      .invert {
+
+        filter:invert(100%);
+        opacity:0.75;
+        z-index:100;
+      }
+      .mapboxgl-popup-content {
+        padding:5px;
+      }
+
+      input.timeslider {
+        border:none;
+        border-radius:6px;
+      }
+
+      input[type=range]::-moz-slider-thumb {
+          box-shadow:#db0a40 -1200px 0 0 1200px;
+          background:#db0a40;
+          cursor:-webkit-grab;
+        }
+      input[type=range]::-webkit-slider-thumb {
+        box-shadow:#db0a40 -1200px 0 0 1200px;
+        background:#fff;
+        width:12px;
+        border-radius:50%;
+        border:5px solid #fff;
+        cursor:-webkit-grab;
+      }
+      input[type=range]::-webkit-slider-thumb:active {
+        cursor:-webkit-grabbing;
+      }
+
+      @media (max-width: 800px) {
+        .sidebar {
+          display:none;
+        }
+
+        #map {
+          left:0px;
+        }
+      }
+
+    </style>
+</head>
+<body>
+  <div class='z100 pin-topleft block sidebar dark fill-navy'>
+    <div class="redbullRed dark center pad1 strong">LEADERBOARD</div>
+    <div id='leaderboard' class=' blockcol12'></div>
+  </div>
+  <div class='pin-topright z100 fill-navy-dark dark rounded' style='width:300px; margin:10px'>
+    <div class='clearfix pad1'>
+      <span class='uppercase z100 strong' style='line-height:2em'>MAP OVERLAY</span>
+      <div id='mode' class='rounded-toggle inline fr' style='margin:0'>
+        <a class='active'>Satellite</a>
+        <a>Waves</a>
+      </div>
+    </div>
+    <div class='dark contain keyline-top pad1 clearfix section hidden Waves col12'>
+      <span class='uppercase small z100 col4' style='line-height:1.25em'>SPEED/HEADING of current</span>
+      <h3 class='fr col6 h1 space-top0 quiet' style='font-size:1.5em'>
+        <div class='inline margin0' style='transform:scale(0.8)'>→</div>
+        <div class='inline margin0' style='transform:scale(1)'>→</div>
+        <div class='inline margin0' style='transform:scale(1.2)'>→</div>
+        <div class='inline margin0' style='transform:scale(1.5)'>→</div>
+      </h3>
+    </div>
+    <div class='dark contain clearfix keyline-top section hidden Waves keyl' >
+      <div class=' uppercase small pad1 z100 col3' style='line-height:1.25em'>WAVE HEIGHT</div>
+      <div class='col9' style='background:linear-gradient(to right, rgba(0,16,44,0), rgba(41,157,193, 0.75), rgba(165,220,183,1), #feffd4)'>
+        <img src='img/waveform2.png'>
+      </div>
+    </div>
+  </div>
+  <div class=' z100 loading'>
+    <div class='center pad6 space-top6'>
+      <div class='mb-logo white' style='margin-top:20%'></div>
+      <div class='dark h2 absolute' style='margin-top:30%'>Loading race data...</div>
+    </div>
+  </div>
+  <div id='map'>
+    <img src='img/logo.jpg' width='100' class='hidden z100 pin-bottomleft'>
+  </div>
+  <div class="pad1 fill-navy dark pin-bottom keyline-top clearfix">
+    <span class="fl code space-right1">0<span id='timer'>0:00:00</span></span>
+    <div class="" id='timescale'>
+      <fieldset class="redbull">
+        <input class="timeslider col12 redbullRed" type="range" value="0" min="0" max="825" step="1" id="timeslider">
+
+      </fieldset>
+    </div>
+  </div>
+<script>
+
+
+  // SETTING UP THE MAP
+
+  mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqbjByZXl1NjA1cmQzd28waXFvdzU5em0ifQ.wE2WaSwX--e0tQNp_k4UKA';
+  
+  var map = new mapboxgl.Map({
+      container: 'map', // container id
+      style: 'mapbox://styles/peterqliu/cj8dbe35b914v2rmrnxxndxwk', // stylesheet location
+      center: [-122.5171,37.7674], // starting position [lng, lat]
+      maxBounds:[[-122.54,37.76],[-122.4405,37.84]],
+      //minZoom: 12,
+      zoom: 15
+  });
+
+  //add the spoondrift logo
+  d3.select('.mapboxgl-ctrl')
+    .append('a')
+    .attr('href', 'https://www.spoondrift.co')
+    .append('img')
+    .style('margin-top', '10px')
+    .attr('src', 'img/spoondrift.png')
+    .attr('width', 100)
+
+
+  // WAIT FOR MAP TO LOAD. ONCE IT DOES,
+
+  map.on('load', function(){
+
+    // add the ocean telemetry overlays
+    map
+      .setPaintProperty('background','background-opacity', 0.25, 'Waves')
+      .setPaintProperty('background','background-color', 'black', 'Waves')
+      .setPaintProperty('water','fill-color', '#00102c', 'Waves')
+      .setPaintProperty('water','fill-opacity', 0)
+      .setPaintProperty('water','fill-opacity', 0.9, 'Waves')
+
+
+    d3.select('.loading')
+      .remove();
+
+    // REQUEST OCEAN TELEMETRY DATA (static file also in repo)
+
+    d3.json('waves.geojson', function(err, resp){
+
+      state.points = resp;
+      
+      // find max speed and height so we know how to set the color ramp
+
+      var maxSpeed = Math.max.apply(
+        Math, 
+        resp.features.map(function(ft){
+          return ft.properties.speed
+        })
+      );
+
+      var maxHeight = Math.max.apply(
+        Math, 
+        resp.features.map(function(ft){
+          return ft.properties.height
+        })
+      );
+
+
+      //add the actual data to the map. heatmap to show wave height, arrows to show direction and speed
+
+      map
+        .addLayer({
+            "id": "waves-heat",
+            "type": "heatmap",
+            'source': {
+              'type': 'geojson',
+              'data': state.points
+            },
+            'paint.Waves':{
+                'heatmap-opacity': 1
+            },
+            "paint": {
+                "heatmap-intensity": 1,
+                "heatmap-weight": {
+                    "property": "height",
+                    "type": "exponential",
+                    "stops": [
+                        [0, 0],
+                        [maxHeight, 0.4]
+                    ]
+                },
+
+                //Color ramp for heatmap.  Domain is 0 (low) to 1 (high)
+                "heatmap-color": {
+                  'stops': [
+                    [0,'rgba(0,16,44,0)'], 
+                    [0.7,'rgba(41,157,193, 0.75)'],
+                    [0.95,'rgba(165,220,183,1)'],
+                    [1,'#feffd4']
+                  ]          
+                },
+                'heatmap-opacity': 0,
+                //Adjust the heatmap radius by zoom level
+                "heatmap-radius": {
+                    'base':2,
+                    "stops": [
+                        [10, 4.5],
+                        [19, 2304],
+                    ]
+                },
+            }
+        })
+      .addLayer({
+        'id': 'arrows',
+        'type': 'symbol',
+        'minzoom':12,
+        'filter': ['>', 'speed', 0],
+        'source': {
+          'type': 'geojson',
+          'data': state.points
+        },
+        'layout':{
+          'text-rotation-alignment': 'map',
+          'text-allow-overlap': true,
+          'text-anchor': 'bottom',
+          'text-field': '↑',
+          'text-rotate': {
+            'property': 'bearing',
+            'type': 'identity'
+          },
+          'text-size':{
+            'property': 'speed',
+            'base':1.5,
+            'stops': [
+              [{zoom: 13, value: 0.1}, 2],[{zoom: 13, value: maxSpeed}, 16],
+              [{zoom: 22, value: 0.1},40],[{zoom: 22, value: maxSpeed}, 200]
+            ]          
+          }
+        },
+        'paint':{
+          'text-opacity':0,
+          'text-color': 'white'
+        },      
+        'paint.Waves':{
+          'text-opacity':{
+            'stops':[[13.5,0.5],[14,0.5]]
+          },       
+        }
+      })
+
+
+      // set up the wave inspector (mouse cursor)
+      var inspector = d3.select('#map')
+        .append('div')
+        .classed('inline inspector pad0 rounded dark fill-navy-dark code rounded micro', true)
+        .html('Current: <span id="speed"></span> knots <br>Waves: <span id="height"></span> feet')
+
+      var speed = d3.select('#speed');
+      var height = d3.select('#height');
+
+      map.on('mousemove', function(e){
+        updateInspector(e)
+      })
+      .on('mouseup', function(e){
+        updateInspector(e)
+      })
+
+      function updateInspector(e){
+      
+        inspector
+          .style('transform', 'translate('+e.point.x+'px, '+e.point.y+'px)');
+
+        var pt = (map.unproject(e.point));
+
+        var target = [pt.lng, pt.lat];
+        var data = turf.nearest(target, state.points).properties;
+
+        speed.text(data.speed.toFixed(2));
+        height.text(data.height.toFixed(2));
+
+      }
+
+
+      // add the route line to the map
+      map
+      .addLayer({
+        'id': 'routeLine',
+        'type': 'fill-extrusion',
+        'source': {
+          'type': 'geojson',
+          'data': state.polygonizedRoute
+        },
+        'paint':{
+          'fill-extrusion-color': '#db0a40',
+          'fill-extrusion-opacity': {
+            'stops':[[12,0.85],[22, 0.25]]
+          },
+          'fill-extrusion-base':15,
+          'fill-extrusion-height':30
+        },
+        'paint.Waves':{
+        }
+      })
+    })
+    
+  })
+
+   
+
+  // DOM STUFF: set up toggle functionality (switcher on upper-right corner)
+
+  var mode = d3.selectAll('#mode a')
+      .data(['Satellite', 'Waves', 'Bathymetry'])
+      .attr('class', function(d,i){
+          var active = i=== 0 ?  'active strong' : ''
+          return active + ' '+ d;
+
+      })
+
+
+  mode
+    .on('click', function(d,i){
+
+      map.setClasses([d])
+
+      //update toggle
+      mode
+        .classed('active strong', function(){
+            return d3.select(this).classed(d)
+        })
+
+      //show/hide legends
+      d3.selectAll('.section')
+        .classed('hidden', function(){
+          return !d3.select(this).classed(d)
+        })
+
+      d3.select('#map')
+        .attr('class', function(){console.log(d); return d})
+    })
+
+
+  // POPULATE LEADERBOARD
+
+  var entries = d3.select('#leaderboard')
+    .selectAll('.paddlerEntry')
+    .data(state.competitors)
+    .enter()
+    .append('div')
+    .attr('class','paddlerEntry pad1 keyline-bottom clearfix fill-navy')
+
+  //mugs  
+  entries
+    .append('div')
+    .attr('class','entrymug fl')
+    .style('background-image',function(d){
+      return getHeadshot(d);
+    })
+
+  //names
+  entries
+      .append('h3')
+      .text(function(d){return d.first_name+' '+d.last_name + ' ' + state.flagConvert[d.nationality]});
+
+  entries
+    .append('span')
+    .classed('fr margin1 quiet leader', true)
+
+  entries
+    .append('div')
+    .classed('quiet small caption1', true)   
+
+  entries
+    .append('div')
+    .classed('quiet small caption2', true)   
+
+
+  // ADD MAKERS FOR RACERS
+  state.competitors.forEach(function(racer){
+
+    var el = document.createElement('div');
+    el.classList = 'racer'
+    el.style['background-image'] = getHeadshot(racer)
+          
+    racer.marker = new mapboxgl.Marker(el)
+      .setLngLat(map.getCenter())
+      .addTo(map);
+  })
+
+
+
+  // REQUEST RACE DATA (as logged from live event. during the live playback, we would poll the API instead)
+  d3.json('10sec.json', function(err, resp){
+
+    state.fullRace = resp
+
+    updateMarkers(0)
+
+    window.setInterval(function(){
+      if (state.currentTimeIndex>=825) return
+
+      state.currentTimeIndex++;
+      d3.select('#timeslider')
+        .property('value', state.currentTimeIndex);
+
+      updateMarkers(state.currentTimeIndex)
+    },500);
+
+    document.getElementById('timeslider')
+      .addEventListener('change', function() {
+        updateMarkers(parseFloat(this.value))
+        var pts = state.competitors.map(function(c){
+          return c.coordinates;
+        })
+
+        var bounds = pts.reduce(function(bounds, coord) {
+            return bounds.extend(coord);
+        }, new mapboxgl.LngLatBounds(pts[0], pts[0]));
+
+        map.fitBounds(bounds, {
+            padding: 40
+        });
+      });
+  })
+
+  //core logic for getting data at a new timestamp, and updating the map/leaderboard accordingly
+  function updateMarkers(timeIndex){
+
+      state.currentTimeIndex = timeIndex
+      state.livePositions = state.fullRace[timeIndex];
+
+      var wholeRoute = state.routeLine.geometry.coordinates;
+
+      //apply live feed to internal dataset
+      state.competitors.forEach(function(entry, index){
+
+        // grab only the racers that are on the official manifest
+        var racer = state.livePositions.filter(function(racer){
+          return racer.qid === entry['Qollector ID']
+        })[0]
+
+        if (!racer) {
+          entry.speed = 0;
+          entry.distance = 0;
+          return
+        }
+ 
+        if (racer.longitude) entry.coordinates = [racer.longitude, racer.latitude];
+
+        if (entry.finish<state.currentTimeIndex*10) {
+          var totalDistance = state.ruler.lineDistance(wholeRoute);
+          var distance = totalDistance-0.0001*entry.final_position
+          entry.coordinates = state.ruler.along(wholeRoute, distance)
+        }
+
+        else {
+          var ptOnLine = state.ruler.pointOnLine(wholeRoute, entry.coordinates).point;
+          var subSegment = state.ruler.lineSlice(wholeRoute[0], ptOnLine, wholeRoute)
+          var distance = state.ruler.lineDistance(subSegment);
+        }
+
+
+
+        entry.speed = racer.speed || 0;
+        entry.distance = distance;
+
+      })
+
+
+
+      assignPlaceValue(state.competitors, 'distance', 'bib')
+
+      // update racer markers
+
+      d3.select('#map')
+        .classed('animating', !map.isMoving())
+
+      map.once('movestart', function(){
+        d3.select('#map')
+          .classed('animating', false)         
+      })
+
+      state.competitors.forEach(function(racer){
+        racer.marker
+          .setLngLat(racer.coordinates)
+
+        d3.select(racer.marker._element)
+          .on('mouseenter', function(d){
+            createPopup(this, racer)
+          })
+      })
+
+      //update timer
+      d3.select('#timer')
+        .text(function(){
+          return formatSeconds(state.currentTimeIndex*10)
+        })
+
+      // UPDATE LEADERBOARD
+
+      var entries = d3.selectAll('.paddlerEntry')
+        .data(state.competitors)
+        .style('transform', function(d){
+          var place = d.finish<state.currentTimeIndex*10 ? d.final_position-1 : d.position
+          return 'translateY('+place*80+'px)'
+        })
+        .on('mouseenter', function(d){
+          createPopup(this, d)
+        })
+        .on('click', function(d){
+          map.easeTo({
+            center: d.coordinates,
+            zoom: 16
+          })
+        })
+
+      // update position text  
+      entries
+        .select('.leader')
+        .style('opacity', function(d){
+          return d.position === 0 ? 1 : 0.5
+        })
+        .text(function(d,i){
+          if (d.finish<state.currentTimeIndex*10) return formatSeconds(d.finish)
+          else {
+            var text = d.position === 0 ? 'LEADER' : '#'+(d.position+1);
+            return text
+          }
+        })
+
+      // update captions
+      entries
+        .select('.caption1')
+        .text(function(d,i){
+
+          if (d.finish<state.currentTimeIndex*10){
+            var place = d.final_position
+            if (place>=7) place++
+            return 'Placed #'+place
+          }
+
+          else {
+            var leadDistance = Math.max.apply(null, state.competitors.map(function(c){return c.distance}));
+            var lag = (leadDistance-d.distance).toFixed(0)
+
+            var text = d.position === 0 ? 'In the lead' : lag + 'm behind leader';
+            return text
+          }
+        })
+
+      entries
+        .select('.caption2')
+        .text(function(d){
+          if (d.finish>state.currentTimeIndex*10) {return d.speed.toFixed(1)+' m/s'}
+        })
+
+  }
+
+
+
+  function createPopup(element, d){
+
+    var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset:{
+            'left': [30, 0],
+            'right': [-30, 0],
+            'top': [0, 30],
+            'bottom': [0, -30],
+            'top-left': [0,30],
+            'top-right': [0,30],
+            'bottom-left': [0,-30],
+            'bottom-right': [0,-30]
+        }
+    });  
+
+    popup.setLngLat(d.coordinates)
+      .setHTML('<span class="strong z100 invert dark">'+ d.first_name+' '+d.last_name+'</span>')
+      .addTo(map)
+
+    d3.select(element)
+      .on('mouseleave', function(){
+        popup.remove();
+      })
+  }
+
+  // ADD PICTURE MARKERS
+
+  state.shots.features.forEach(function(pic){
+
+    // marker
+    var el = document.createElement('div');
+    el.classList = 'marker'
+    var imgURL = pic.properties.url;            
+    el.innerHTML = '<img src="img/pois/'+imgURL+'">'
+
+    // popup
+
+    var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset:{
+            'left': [20, 0],
+            'right': [-20, 0],
+            'top': [0, 20],
+            'bottom': [0, -20],
+            'top-left': [0,20],
+            'top-right': [0,20],
+            'bottom-left': [0,-20],
+            'bottom-right': [0,-20]
+        }
+    });
+
+    new mapboxgl.Marker(el)
+        .setLngLat(pic.geometry.coordinates)
+        .addTo(map);
+
+
+    el
+    .addEventListener('mouseenter', function(){
+      popup
+        .setLngLat(pic.geometry.coordinates)
+        .setHTML("<iframe width='400px' height='235px' src='https://player.vimeo.com/video/"+pic.properties.video+
+          "?autoplay=1&title=0&loop=0&byline=0&portrait=0'></iframe>")
+        .addTo(map)
+    });
+
+    el
+    .addEventListener('mouseleave', function(){
+        popup.remove();
+    })
+  })
+
+
+
+  //given an array of objects, apply a property "position" each would be in, when sorted by a desired property
+  function assignPlaceValue(array, prop, originalProp){
+
+    array.sort(function (a, b) {
+      return b[prop] - a[prop];
+    });
+  
+    array.forEach(function(item, index){
+      item.position = index;
+    })
+
+    array.sort(function (a, b) {
+      return a[originalProp] - b[originalProp];
+    });          
+
+  }
+
+
+  function formatSeconds(input){
+    var hours = Math.floor(input/3600);
+    var minutes = Math.floor((input - hours*3600)/60);
+    var seconds = input - hours*3600 - minutes * 60;
+
+    function leadingZero(input){
+      if (input < 10) return String('0' + input)
+      else return input 
+    }
+    return hours+':'+ leadingZero(minutes)+':'+leadingZero(seconds)
+  }
+
+  function getHeadshot(d){
+    var filename = d.last_name === 'Nika' ? d.first_name + d.last_name : d.last_name
+    return 'url(img/headshots/'+filename+'.jpg)'
+  }
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>peterliu</title>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <style>
+
+        @font-face {
+          font-family: "Chaparral";
+          src: url("/fonts/ChaparralPro-Regular.otf");
+        }
+
+        @font-face {
+          font-family: "Secondary";
+          src: url("/fonts/ChaparralPro-Italic.otf");
+        }        
+
+        body { 
+            background:#eee;
+            margin:0; 
+            font-family:Chaparral;
+            color:#333;
+            font-size:1.2em;
+        }
+
+        #map { 
+            position:absolute; 
+            top:0; 
+            bottom:0; 
+            width:100%; 
+        }
+
+        .container{
+            max-width:1234px;
+            margin:0 auto;
+            padding:10px; 
+        }
+
+        .secondary{
+            font-family:Secondary;
+        }
+
+        .section{
+            margin-top:30px;
+        }
+
+        .work{
+            margin-top:10px;
+        }
+        .big{
+            font-size:1.5em;
+        }
+        .bigger{
+            font-size:2em;
+        }
+
+        .biggest{
+            font-size:3em;
+        }
+
+        .weak {
+            opacity:0.75;
+        }
+
+        .weaker{
+            opacity:0.5;
+        }
+
+        .weakest{
+            opacity:0.3;
+        }
+
+        .lowercase {
+            text-transform:lowercase;
+        }
+
+        #lightbox{
+            background:rgba(0,0,0,0.8);
+            left:0px;
+            right:0px;
+            position:absolute;
+            z-index:100;
+            height:100%;
+            overflow:hidden;
+        }
+
+        #modal{
+            background:#eee;
+            margin:0 auto;
+            border-radius:3px;
+            position:absolute;
+            left:30px;
+            right:30px;
+            top:30px;
+            bottom:30px;
+        }
+
+        .fl{
+            float:left;
+        }
+
+        .fr{
+            float:right;
+        }
+
+        .pad1{
+            padding:10px;
+        }
+
+        .pad2{
+            padding:20px;
+        }
+
+        .m2 {
+            margin:20px;
+        }
+
+        .hidden {
+            display:none;
+        }
+
+        .a{
+            cursor:pointer;
+        }
+
+        #explainer{
+            width:300px;
+            height:100%;
+        }
+        .wrapper {
+            position:absolute;
+            left:300px;
+            right:0px;
+            top:0px;
+            bottom:0px;
+            border:none;
+            height:100%;
+        }
+
+        iframe{
+            width:100%;
+            height:100%;
+            border:none;
+        }
+    </style>
+</head>
+<body>
+    <div id='lightbox' class='hidden'>
+        <div id='modal'>
+            <div id='explainer' class='m2'>
+                <div id='close' class='bigger a weaker'>✕</div>
+                <div class='big' id='title'>title</div>
+                <div id='blurb' class='weak'></div>
+
+                <div id='press' class='hidden'>
+                    <div class=''>Press</div>
+                    <a id='pressLink'></a>
+                </div>
+            </div>
+            <div class='wrapper'>
+                <iframe src='https://www.google.com'></iframe>
+            </div>
+        </div>
+    </div>
+    <div class='container'>
+        <div class='biggest'>peter liu</div>
+
+        <div class='secondary big weaker'>maps, interfaces, algorithms</div>
+    </div>
+
+</body>
+
+    <script src='app.js'></script>
+
+</html>

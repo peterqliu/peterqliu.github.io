@@ -2,33 +2,77 @@
 	"Data made visual":
 		[
 			{
-				"name":"USGS Earthquake tracker",
-				"url": "https://www.mapbox.com/bites/00267/",
-				"blurb":"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality, as well as blend and blur modes with it.",
+				"name":"Earthquake tracker",
+				"url": "earthquake",
+				"blurb":[
+					"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality, as well as blend and blur modes with it."
+				],
 				"press":"A real-time map of earthquakes around the world (The Atlantic)",
 				"pressUrl":"https://www.citylab.com/environment/2016/06/a-real-time-map-of-earthquakes-around-the-world/487868/"
 			},
 			{
-				"name":"Mapbox Optimization for logistics",
-				"url": "https://www.mapbox.com/bites/00359/",
-				"blurb":"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it. Like with the courier demo, the use case of food delivery here turned out to be both very understandable and fitting: food delivery drivers needed to minimize drive times between restaurants and customers, but also must pick up the food before delivering it. We set up three different restaurants, each with their own dropoff points, and the user interactivity to show off the complexity of the problem and how quickly the API solves it in real time."
-			},	
+				"name":"Red Bull race tracker",
+				"url": "redbull",
+				"blurb": [
+					"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. On top of a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
+					"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
+					]
+				},
 			{
-				"name":"Red Bull Heavy Water",
-				"url": "https://www.mapbox.com/bites/00376/",
-				"blurb": "Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. On top of a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay. After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
-			},	
+				"name":"Population inspector",
+				"url": "population",
+				"blurb": [
+					"Mapbox GL added an extrusion feature to render buildings in 3D. Because 3D often gets in the way more than it helps, we wanted to use it in a way that was actually more illuminating."
+				]
+			},
+			{
+				"name":"Bikeshare router",
+				"url": "bikeshare/gl",
+				"blurb": [
+					"Mapbox released Turf.js in 2014, enabling users to do complex spatial analysis right in the browser. We wanted a use case showing Turf in conjunction with other Mapbox utilities, and found a dataset of all stations in DC's bikeshare system.",
+					"Thanks to our bounty of tools, we went beyond the typical bikeshare application to make a full-fledged route planner. Once the user drags the markers for their desired trip, Turf identifies the nearest bikeshare stations to both endpoints. Mapbox Directions then navigates the route in three segments: walking directions to the first station, biking directions to the second station, and walking directions again to the final destination.",
+					"The demo also makes use of Surface API -- by sampling the elevation at regular intervals along the route line, we can generate a profile of the hills and slopes to expect as we pedal."
+				]
+
+			},
+			{
+				"name":"Landgrab",
+				"url": "landgrab/#-112.418898,-112.521208,36.420777,36.341725",
+				"blurb": [
+				]
+			}
 		],
 
-	"Algorithms and interactions":
+	"Algorithms & interactions":
 		[
 			{
 				"name":"Courier",
-				"url": "https://www.mapbox.com/bites/00115/",
-				"blurb":"As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup. Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."	
+				"url": "courier",
+				"blurb": "As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup. Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."	
 			},
-			"isochrone"
-		]
+			{
+				"name":"Isochrone",
+				"url": "isochrone",
+				"blurb": "As Mapbox built a suite of tools around location and logistics -- navigation, geocoding, spatial analysis -- we wanted to tell a compelling story illustrating how these pieces could fit together. We simulated a fictional courier service in Manhattan, where cyclists collected parcels throughout the city, carrying up to five before unloading at one of three dropoff points. As new parcels continuously appear, each courier would target  as their prioritization scheme the oldest and closest parcel for their next pickup. Though entirely a simulation, this demo has all the makings of a real logistics service inside the browser: collecting an influx of pickup addresses, reverse geocoding to convert them to coordinates, Turf.js to measure distances and assign each courier their next pickup, and cycling directions to navigate the courier there."	
+			},
+			{
+				"name":"Optimization for logistics",
+				"url": "optimizer",
+				"blurb":[
+					"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it. Like with the courier demo, the use case of food delivery here turned out to be both very understandable and fitting: food delivery drivers needed to minimize drive times between restaurants and customers, but also must pick up the food before delivering it. We set up three different restaurants, each with their own dropoff points, and the user interactivity to show off the complexity of the problem and how quickly the API solves it in real time."
+				]
+			}
+		],
 
-	"Future thinking"
+	"Looking ahead":[
+			{
+				"name":"A map of time",
+				"url": "timemap/search",
+				"blurb":[
+					"This demo needed to describe a highly nuanced, technical problem (how to visit a series of locations in the minimum time, with several user-enforced sequences) in a relatable way, and showcase how Mapbox’s Optimizer API solves it. Like with the courier demo, the use case of food delivery here turned out to be both very understandable and fitting: food delivery drivers needed to minimize drive times between restaurants and customers, but also must pick up the food before delivering it. We set up three different restaurants, each with their own dropoff points, and the user interactivity to show off the complexity of the problem and how quickly the API solves it in real time."
+				],
+				"press": "There's An Entirely New Way Of Mapping The World, And It's Brilliant (Fast Company)",
+				"pressUrl":"https://www.fastcompany.com/90143906/theres-an-entirely-new-way-of-mapping-the-world-and-its-brilliant"
+			}	
+	]
 }

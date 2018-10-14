@@ -324,17 +324,26 @@
           'data': resp        
         },
         'layout':{
-          'text-field': '○',
-          'text-allow-overlap': true,
-          'text-ignore-placement': true,
-          'text-size':{
-            'stops':[[8,2],[14,16],[15,20]]
+          // 'text-field': '',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          // 'text-size':{
+          //   'stops':[[8,2],[14,16],[15,20]]
+          // },
+          'icon-image':'bike-purple',
+          'icon-size':{
+            'base':1, 
+            'stops':[
+              [10,0.85], 
+              [22,1.2]
+            ]
           }
         },
         'paint': {
-          'text-color':'purple',
-          'text-halo-width':0.5,
-          'text-halo-color': 'purple'
+          // 'text-color':'purple',
+          // 'text-halo-width':0.5,
+          'icon-halo-color': 'purple',
+          'icon-halo-width':30
         }
       })
       .addLayer({
@@ -575,25 +584,28 @@
         "id": "guides",
 
         "paint": {
-          "circle-color": '#fff',
-          "circle-radius":{
-            'base':1, 
-            'stops':[
-              [10,1.2], 
-              [22,10]
-            ]
-          },
-          "circle-stroke-color":'purple',
-          "circle-stroke-width":{
-            'base':1, 
-            'stops':[
-              [10,1], 
-              [22,8]
-            ]
-          }
+          "circle-color": 'purple',
+          "circle-radius":12
         },
         "paint.tilted":{
           "circle-opacity": 0
+        }
+      })
+      .addLayer({
+        "id": "endpointSymbols",
+        "type": "symbol",
+        "source": "endpoints",
+
+        'layout':{
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-image':'bike-white',
+          'icon-size':1
+        },
+        'paint': {
+        },
+        "paint.tilted":{
+          "icon-opacity": 0
         }
       })
       .on('mousemove', function(e){
@@ -769,7 +781,9 @@
           var geom = turf.linestring(route);
           var durationMinutes = Math.round(resp.routes[0].duration/60);
           bounds = turf.extent(geom)
-          map.fitBounds(bounds, {padding:100});
+          map          
+            .fitBounds(bounds, {padding:100, offset:[-200,0]});
+
 
           var counter = 0;
 
@@ -876,7 +890,13 @@
 
             holder.forEach(function(pt,i){
               if (i===299) return;
-              var subShape = turf.buffer(turf.linestring([[holder[i].latlng.lng, holder[i].latlng.lat], [holder[i+1].latlng.lng,holder[i+1].latlng.lat]]), incrementDist/2, 'kilometers').features[0];
+              var subShape = turf.buffer(
+                turf.linestring(
+                  [[holder[i].latlng.lng, holder[i].latlng.lat], [holder[i+1].latlng.lng,holder[i+1].latlng.lat]]
+                ), 
+                incrementDist/2, 
+                'kilometers'
+              ).features[0];
               subShape.properties = {height:smoothened[i]};
               elevations.features.push(subShape)
             })

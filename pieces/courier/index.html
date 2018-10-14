@@ -1,512 +1,788 @@
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset=utf-8 />
-<title>Capital Bikeshare</title>
+<title>Courier</title>
 <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-<script src='turf.min.js'></script>
-<script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script>
-<link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="jquery.min.js"></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.6/mapbox.js'></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+<link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.6/mapbox.css' rel='stylesheet' />
 <style>
-  body { margin:0; 
-    padding:0; 
-    -moz-perspective:1200px;
-    -moz-transform:translate3d(0,0,0); 
-    -webkit-perspective:1200;
-    -webkit-transform:translate3d(0,0,0); 
-    background:#f4f4f4;overflow:hidden;}
-    .tilted .leaflet-tile-container img {
-      pointer-events:none;
+  body { 
+    margin:0;
+    padding:0;
+    font-family:sans-serif;
   }
-  #maprotor{
-    -moz-transition:all 0.5s ease-out;
-    transition:all 0.5s ease-out;
+  .leaflet-zoom-anim .couriericon {
+    transition:all 0s; 
+  }
+
+  #map { 
     position:absolute; 
-    top:-0%; 
-    bottom:0; 
-    width:100%; 
-    overflow:visible;}
-  #map { position:absolute; 
     top:0; 
     bottom:0; 
-    width:100%;  
-    overflow:visible; 
-    background:none;}
-  #maprotor.tilted {
-    -moz-transform:rotateX(60deg);
-    -webkit-transform:rotateX(60deg)
+    right:275px;
+    left:0px;
+    cursor:cell;
   }
-  .leaflet-popup-content .marker-title{
-    font-weight:400;
-    color:#999;
-    line-height:1.3em;}
-  .marker-title span{
-    color:#00704A;
-    font-weight:bold;}
-  #milecount{
-    line-height:2em;
-    color:#00704A}
-  .space-left2 {
-    margin-left: 20px;}
-  .inactivestation {
-    pointer-events:none;
+  #sidebar {
+    width:275px;
+    border-left:1px solid #aaa;
+    right:0;
+    top:0;
+    bottom:0;
+    position:absolute;
+    text-align:center;
+    overflow:scroll
   }
-  .tiltcontrols,
-  .tilted .mt,
-  .tilted path.leaflet-clickable,
-  .tilted .leaflet-control-container,
-  .tilted .leaflet-marker-draggable,
-  .tilted .bikeduration,
-  .tilted .station,
-  .tilted .inactivestation
-    {display:none;}
-  .tilted #map {cursor:col-resize;}
-  .modal.tilted .tiltcontrols {display:block;}
-  .elevmarker{
-    -moz-transform:rotateX(90deg);
-    -moz-transform-origin:0% 0%;
-    -moz-transform-style:preserve-3d;
-    -webkit-transform:rotateX(90deg);
-    -webkit-transform-origin:0% 0%;
-    transform-style:preserve-3d;
-    margin:6px;}
-  .tilted .elevations {
-    display:block}
-  path.leaflet-clickable {
-    stroke:#30a07A;
-    stroke-width:4px;
+  #sound {
+    bottom:0;
+    right:0;
+    position:absolute;
+    width:275px
+  }
+  .metriclabel {
+    text-transform: uppercase;
+    color:#fff;
+    opacity:0.75;
+    font-weight:bold;
+  }
+
+  .metric {
+    margin:0px;
+    font-size:5em;
+    font-weight:bold;
+    color:#fff;
+    opacity:0.3;
+  }
+  path {
     stroke-dashoffset: 10000; 
     stroke-dasharray:10000; 
-    -moz-transition:stroke-dashoffset 4s;
-    -webkit-transition:stroke-dashoffset 4s;
-    pointer-events:none;}
-  .markerline {
-    width:4px; 
-    margin-left:-2px;
-    background:#30a07A;
-    height:0px; 
-    -moz-transition:height 0.2s ease-in;
-    transition:height 0.2s ease-in;}
-  .markercircle {
-    width:4px;
-    height:4px; 
-    border-radius:50%;
-    margin:-2px; 
-    background:#60d0aA;
-    -moz-transform:rotateX(90deg); 
-    -moz-transform-style:preserve-3d;
-    -webkit-transform:rotateX(90deg); 
-    -webkit-transform-style:preserve-3d;}
-  .bottomcap{background:#30a07A;}
-  .elevfigure {
-    -moz-transform:rotateX(180deg) translateX(-50%);
-    -webkit-transform:rotateX(180deg) translateX(-50%);
-    margin-top:10px; 
-    display:none; 
-    color:white;
-    background:purple; 
-    padding:0px 4px; 
-    border-radius:3px;}
-  .elevations {
-    opacity:0.5;
-    display:none;}
-  .elevations:hover {
-    opacity:1;}
-  .elevations:hover .elevfigure{
-    display:inline-block; 
-    width:120px; 
-    text-align:center;}
-  .elevations:hover .elevfigure:after{
-    content:'';
-    width: 0; 
-    height: 0; 
-    display:inline-block;
-      white-space: nowrap;
-    position:absolute;
-    top:20px;
-    left:45%;
+    -webkit-transition:stroke-dashoffset 6s ease-in
+  }
+
+  .couriericon {
+    transition:all 0.25s linear; 
+    width:15px; 
+    height:15px;
+    border-radius:10px; 
+    color:rgba(255,255,255,0.75);
     text-align:center;
-    border-top: 5px solid purple;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;}
-  .elevations:hover .markerline,
-    .elevations:hover .bottomcap{
-      background:#551A8B;}
-  .elevations:hover .markercircle
-    {background:#cea2f7;}
-  .leaflet-marker-pane {
-    -moz-transform: translateZ(1px);
-    -webkit-transform: translateZ(1px);}
-  #map, 
-  #maprotor,
-  .leaflet-map-pane,
-  .leaflet-overlay-pane,
-  .leaflet-marker-pane,
-  .leaflet-marker-icon,
-  .leaflet-popup-pane
-    {-moz-transform-style:preserve-3d;
-      -webkit-transform-style:preserve-3d;
-      -moz-backface-visibility: hidden;
-      backface-visibility: hidden;
-      -webkit-backface-visibility:hidden; }
-.leaflet-overlay-pane {
-  -moz-transform: translateZ(1px);
-  -webkit-transform: translateZ(1px); 
-  pointer-events:none;}
-.leaflet-popup-pane {
-    -moz-transform:translateZ(10px);
-    -webkit-transform:translateZ(10px);
+    line-height:1.6em;
+    font-size:0.8em;
+    font-weight:bold;
+    z-index:999;
+  }
+  .couriericon.Blue{
+    background:#456E75;
+  }
+  .couriericon.Green{
+    background:#8F9957;
+  }
+  .couriericon.Orange{
+    background:#B87C51;
+  }
+  .couriericon.Red{
+    background:#B04548;
+  }
+  .couriericon.Purple{
+    background:#5C2E58;
+  }
+  .hq {
+    width:20px;
+    border-radius:50%;
+    box-shadow: 0 0px 6px rgba(0,0,0,.25);
+  }
+  .couriertarget {
+    z-index:1;
+  }
+  svg path.leaflet-clickable {
+    stroke-width:3px;
+    stroke-opacity:0.7;
+  }
+  .leaflet-popup-content-wrapper {
+    background:#fff;
+    color:#666;
+    opacity:0.9;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .leaflet-popup-content {
+    padding:0px 5px;
+    font-weight:bold
+  }
+  .leaflet-popup-tip {
+    border-top: 5px solid #fff;
+    opacity:1;
+  }
+
+  .leaflet-fade-anim .leaflet-popup, 
+  .leaflet-fade-anim .leaflet-tile{
+    -webkit-transition:none;
+  }
+
+  .ticker {
+    overflow:scroll;
+    border-top:1px solid rgba(255,255,255,0.25);
+
+  }
+  .ticker div{
+    padding:0px 15px;
+    color:#828a8e;
+    max-height:0px;
+    overflow:hidden;
+    transition:all 0.5s ease-in;
+    opacity:0;
+  }
+
+  .ticker div.expanded {
+    max-height:200px;
+    padding:10px 15px;
+    border-bottom:1px solid rgba(255,255,255,0.25);
+    opacity:1
+  }
+
+  .ticker div strong {
+    color:white;
+    border-radius:2px
+  }
+
+.ticker div .incoming {
+  color:#222B30;
+  background:#828a8e;
 }
 
-.bikeduration strong,
-.leaflet-popup-pane strong {
-  color:#30a07A;
-  display:block;
-  margin-bottom:2px;
+.strongpad {
+  padding:0px 4px;
+  margin-right:2px;
 }
-.bikeduration {
-  background:white;
-  border:2px solid #30a07A;
-  color:#30a07A;
-  margin:-7px -19px;
-  width:50px;
-  text-align:center;
-  border-radius:10px;
-  font-weight:bold;
-  -moz-transform: translateZ(1px);
-  -webkit-transform: translateZ(1px); 
-}
-  .elevGraph {
-    fill: rgba(0, 0, 0, 0.1);
-    stroke: none;
-    stroke-width: 4px;
+  @media (max-width: 1000px) {
+    .metric {
+      font-size:4em;
+    }
   }
-
-  #title-block {
-    height: 60px;
+  @media (max-width: 600px) {
+    #sidebar {
+      display:none;
+    }
+    #map {
+      width:100%
+    }
   }
-
-  #tooltip {
-    display:none;
-    position: absolute;
-    top:0;
-    left:0;
+  @media (max-height: 700px) {
+    .blurb {
+      display:none
+    }
   }
-
-  #searchresults {
-      width: 93%;
-      background: #FFF;
-  }
-  .marker-hover {
-    background: steelblue;
-    border-radius: 50%;
-    border: 2px solid white;
-    height: 20px;
-  }
-  .focus circle {
-  fill: steelblue;
-  stroke: white;
-  }
-
-  #geolocate { display: none; }
 </style>
 </head>
 <body>
-<div id='maprotor'>
-    <div id='map'></div>
-</div>
-<div class='pin-topleft pad1 modal'>
-    <div class='button icon mt' onclick="tiltMap()">View elevation profile</div>
-    <div class='button icon undo col12 tiltcontrols' onclick="restoreMap()">Edit route</div>
-</div>
+  <audio src="kick.wav" preload="auto" id='kick'></audio>
+  <audio src="coin.wav" preload="auto" id='coin'></audio>
+  <audio src="fireball.wav" preload="auto" id='fireball'></audio>
 
-<script type='text/javascript' src='d3.js'></script>
+  <div id='map'></div>
+<img src='duallogo.png' class=" pin-bottomleft" target="_blank" style='bottom:5px;left:5px;position:absolute; width:150px'/>
+  <div id='sidebar' class='fill-navy-dark'>
+    <div class='clearfix'>
+      <div class='col6'>
+        <div class='metriclabel small quiet space-top4 space-bottom4'>Packages <br>retrieved</div>
+        <div class='metric retrieved denim'>0</div>
+      </div>
+      <div class='col6'>
+        <div class='metriclabel small quiet space-top4 space-bottom4'>Awaiting <br>pickup</div>
+        <div class='metric queue'>0</div>
+      </div>
+    </div>
+    <div class='metriclabel small quiet space-bottom4' style='padding-top:40px'>Average response time</div>
+    <div class='metric responsetime space-bottom4'>-</div>
+    <div class='dark small text-left pad2 space-top7 blurb hidden'>
+      <p> This simulation models a courier service that picks up packages throughout the city, and offloads them at three designated dropoff points (marked with flags).
+      </p>
+      <p>
+        A simple scheduling algorithm guides five bike couriers to the <strong>oldest</strong> and <strong>nearest</strong> orders to their respective locations. After the 5th pickup, each courier will route to the nearest dropoff point to offload, and the process repeats.
+      </p>
+
+      <p class='strong'> Click anywhere on the map to add a pickup order at that location.</p>
+    </div>
+    <div class='metriclabel small quiet space-top4 space-bottom2'>Events</div>
+    <div class='ticker dark small text-left'>
+    </div>
+  </div>
+    <div class='pad1 checkbox-pill white' >
+      <input type='checkbox' id='hydra' onclick='soundOn=!soundOn'>
+      <label for='hydra' class='button icon check fill-navy-dark black' id='sound'>Sound</label>
+    </div>
 <script>
-L.mapbox.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
 
-var map = L.mapbox.map('map', 'duncangraham.b134a19e',{ 
-    tileSize: 5120,
-    zoomControl: false,
-    minZoom: 13,
-    maxZoom: 16,})
-    .setView([38.95050194,-77.0497369], 13);
-
-var getPxBounds = map.getPixelBounds;
-map.getPixelBounds = function () {
-    var bounds = getPxBounds.call(this);
-    // ... extend the bounds
-    bounds.min.x=bounds.min.x-1000;
-    bounds.min.y=bounds.min.y-1000;
-    bounds.max.x=bounds.max.x+1000;
-    bounds.max.y=bounds.max.y+1000;
-    return bounds;
+function reverseCoords(pair) {return [pair[1], pair[0]]}
+var receivedQuantity = 0;
+var responseNumerator = 0;
+//interval at which animation progresses, in milliseconds per frame
+var pollingInterval = 250;
+var soundOn = false;
+var pickupPoints=
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "64 Delancey St",
+                "time_submitted": 1428941074549
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.990533,
+                    40.719515
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "508 E 6th St",
+                "time_submitted": 1428941076676
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.983455,
+                    40.725007
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "245 E 31st St",
+                "time_submitted": 1428941078865
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.977721,
+                    40.743244
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "118 E 31st St",
+                "time_submitted": 1428941079891
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.981918,
+                    40.744587
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "61 W 9th St",
+                "time_submitted": 1428941080424
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.998362,
+                    40.73411
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "30 Vandam St",
+                "time_submitted": 1428941081584
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -74.004983,
+                    40.726134
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "94 Avenue A",
+                "time_submitted": 1428941082591
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.983624,
+                    40.725472
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "653 E 5th St",
+                "time_submitted": 1428941084832
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.979907,
+                    40.723082
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "97 Charles St",
+                "time_submitted": 1428941085634
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -74.005377,
+                    40.734899
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "357 Grand St",
+                "time_submitted": 1428941086852
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.987387,
+                    40.715673
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "81 Bleecker St",
+                "time_submitted": 1428941087632
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.996342,
+                    40.726976
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "marker-color": "#666",
+                "marker-size": "small",
+                "marker-symbol": "circle",
+                "address": "50 2nd Ave",
+                "time_submitted": 1428941088728
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -73.989756,
+                    40.725359
+                ]
+            }
+        }
+    ]
 };
 
-var isEmbed = location.search;
-isEmbed = isEmbed.slice(1);
+function updateTicker(content) {
+  $('.ticker')
+    .prepend(content)
 
-  new L.Control.Zoom({ position: 'topright' }).addTo(map);
+  window.setTimeout(function(){
+    $('.ticker div').addClass('expanded')
+  },50); 
+}
+
+var colors=[
+  ['Blue','456E75'],
+  ['Green','8F9957'],
+  ['Orange','B87C51'],
+  ['Red','B04548'],
+  ['Purple','5C2E58']
+];
+
+$.get('addresses.json', function(error, response, data){
+  var addresses = data.responseJSON;
+
+
+  //generate new pickups at regular interval
+  var duration = 1200;
+  var newPackage = setInterval(function(){
+    var randomIndex = parseInt(Math.random()*addresses.length);
+    var queryURL = 'https://api.tiles.mapbox.com/v4/geocode/mapbox.places/' + addresses[randomIndex][1]+'.json?access_token=' + L.mapbox.accessToken;
+
+    $.get(queryURL, function(data){
+
+      pickupPoints.features.push(
+        {
+          "type": "Feature",
+          "properties": {
+            "marker-color": "#666",
+            "marker-size": "small",
+            "marker-symbol": "circle",
+            "address": addresses[randomIndex][0],
+            "time_submitted":Date.now()
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": data.features[0]['center']
+          }
+        }
+      )
+
+      updateTicker('<div><strong class="incoming strongpad">★ New order</strong>  <strong>'+addresses[randomIndex][0]+'</strong> added to queue.')
+      updatePickups();
+    })
+
+
+  // bind popups to markers, to display addresses
+    var lastAddress = pickupPoints.features[pickupPoints.features.length-1]['properties']['address'];
+}, duration);
+
+  function setOrderVelocity(ms){
+    clearInterval(newPackage);
+    duration == ms;
+    newPackage
+  }
+
+
+  var bluepath, greenpath, orangepath, redpath, purplepath;
+  pickupPoints.features.forEach(function(n){
+    n.properties.time_submitted = Date.now()
+  })
+  var hq =
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+          -73.98579597473145,
+          40.7350636564899
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              -73.99485111236572,
+              40.75028055686146
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [
+              -73.99661064147949,
+              40.721111772972264
+            ]
+          }
+        }
+      ]
+    }
+  var map = L.mapbox.map('map', 'mapbox.light')
+      .setView([40.74,-73.9921], 14);
   map.scrollWheelZoom.disable();
 
-var person=L.mapbox.marker.icon({
-        "marker-color": "#30a07A",
-        "marker-symbol": "pitch",
-        "marker-size": "large"
+
+  var pickups = L.mapbox.featureLayer().addTo(map);
+
+
+  //update pickup markers and count
+  function updatePickups(){
+    pickups.setGeoJSON(pickupPoints);
+    $('.queue').text(pickupPoints.features.length)
+  }
+
+  //draw hq
+  hq.features.forEach(function(n){
+    L.marker(
+      reverseCoords(n.geometry.coordinates),
+      {icon: L.divIcon({
+      className: 'hq',
+      iconSize: [20, 20],
+      html: '<img class="hq" src="dropoff.png">'
+      })}
+    ).addTo(map);
+
+  })
+
+
+
+  //setOrderVelocity(1000000);
+  //generate new pickups on user click
+  map.on('click', function(e) {
+    var coord =  e.latlng.lng+','+e.latlng.lat;
+    var geocodeURL='https://api.tiles.mapbox.com/v4/geocode/mapbox.places/'+coord+'.json?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g'
+
+    $.get(geocodeURL, function(data, err){
+      var address = (data.features[0].address+' '+data.features[0].text);
+      pickupPoints.features.push(
+        {
+          "type": "Feature",
+          "properties": {
+            "marker-color": "#666",
+            "marker-size": "small",
+            "marker-symbol": "circle",
+            "time_submitted":Date.now(),
+            "address": address
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [e.latlng.lng, e.latlng.lat]
+          }
+        });
+      updatePickups()
+      updateTicker('<div><strong class="incoming strongpad" style="background:white">★ YOUR ORDER</strong>  <strong>'+address+'</strong> added to queue');
+      if (soundOn)  document.getElementById('fireball').play()
     })
-var startMarker = L.marker(new L.LatLng(38.9695527321,-77.1114063), {
-    icon: person,
-    draggable: true,
-    zIndexOffset:999
-});
-
-var endMarker = L.marker(new L.LatLng(38.93150546,-76.9998264), {
-    icon: L.mapbox.marker.icon({
-        "marker-color": "#30a07A",
-        "marker-symbol": "star",
-        "marker-size": "large"
-    }),
-    draggable: true,
-    zIndexOffset:999
-});
-startMarker.addTo(map);
-endMarker.addTo(map);
-
-
-var start,
-    destination,
-    nearestStart,
-    nearestEnd,
-    resampledRoute;
-var angle=0;
-var xdrag=0;
-var isDown=false;
-var xpos=0;
-
-//map rotation
-$('body').on('mousedown','#maprotor.tilted',
-  function(e){
-        xpos=e.pageX;
-        window.isDown = true;
-    })
-    .on('mousemove','#maprotor.tilted', function(e){
-      if(isDown){
-        xdrag =(xpos-e.pageX)/4;
-        $('#map').attr('style', '-webkit-transform:rotateZ('+(angle+xdrag)%360+'deg)');
-        $('.elevmarker').attr('style', '-webkit-transform:rotateX(90deg) rotateY('+(angle+xdrag)*(-1)%360+'deg)')
-      }
-    })
-  .on('mouseup','#maprotor.tilted',function(){
-    isDown=false;
-    angle = angle+xdrag;
   });
 
-function tiltMap(){
-    map.fitBounds(map.featureLayer.setGeoJSON(turf.linestring(resampledRoute)).getBounds(),{
-      paddingTopLeft:[150,50],
-      paddingBottomRight:[150,50]
+  //convert decimal minutes into minutes:seconds
+  function timeConverter(decimal){
+    var min = Math.floor(Math.abs(decimal))
+    var sec = Math.floor((Math.abs(decimal) * 60) % 60);
+    return min + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+
+  function createCourier(color){
+    var courierPayload = 0
+
+    //courier icon
+    var courierIcon = L.divIcon({
+      className: 'couriericon '+color[0],
+      iconSize: [15, 15],
+      html:''
     });
-    //rotate map
-    $('#maprotor, .modal').toggleClass('tilted');;
 
-    //disable panning
-    map.dragging.disable();
-}
-function restoreMap(){
-    $('#maprotor, .modal').toggleClass('tilted');
+    //draw courier
+    var courier = L.marker(reverseCoords(hq.features[0].geometry.coordinates), {
+      icon: courierIcon
+    }).addTo(map);
 
-    //enable panning
-    map
-    .setZoom(13)
-    .dragging.enable();
-    angle=0;
-    $('#map').attr('style', 'transition:all 0.25s');
-    $('.elevmarker').attr('style', '');
-    $('path').css('stroke-dashoffset',0);
-    $('.slider').val(0);
-}
+    var courierTarget= L.marker([0,0], {
+      icon: L.divIcon({
+      className: 'couriertarget '+color[0],
+      iconSize: [20, 50],
+      html: '<img class="couriertarget" src="https://a.tiles.mapbox.com/v4/marker/pin-s-circle+'+color[1]+'.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g">'
+      })
+    }).addTo(map);
 
-$.get('stations.geojson', function(data){
-    //test if data is JSON
-    if(typeof data == 'object') {
-        var fc = data;
-    } else {
-        var fc = JSON.parse(data);
+
+    function dropoff(currentLocation){
+      updateTicker('<div><strong class="strongpad" style="background:#'+color[1]+'"">✓ Pickup</strong> '+color[0]+  ' has arrived at <strong>'+currentLocation.properties.address+'</strong>. Now headed to dropoff point for unloading.');
+
+      var nearestDropoff = turf.nearest(currentLocation, hq)
+      var endpoints = currentLocation.geometry.coordinates+';'+nearestDropoff.geometry.coordinates;
+      var directionsURL='https://api.tiles.mapbox.com/v4/directions/mapbox.cycling/'+endpoints+'.json?access_token='+L.mapbox.accessToken;
+
+      courierTarget.setLatLng(L.latLng(0,0))
+      //query directions
+      $.get(directionsURL, function(data, err){
+
+        var coords= data.routes[0].geometry.coordinates;
+        var processedCoords = coords.map(function(n){return reverseCoords(n)});
+        var path = turf.linestring(coords);
+        $('.'+color[0]+'path').remove();
+        var courierRoute = 
+          L.polyline(processedCoords,
+            {color: "#"+color[1], className:color[0]+'path'})
+            .addTo(map);
+
+
+        //animate route path
+        window.setTimeout(function(){
+          $('path').css('stroke-dashoffset',0)
+        },400); 
+
+        var tripDuration = (data.routes[0].duration/60).toFixed(0); //duration in minutes
+        var tripDistance = data.routes[0].distance; //distance in meters
+        var increment = 0;
+
+        var bikingAnimation= setInterval(function(){
+
+          //once the animation is complete, kill animation and fire this function recursively, starting at the current location
+          if (increment>tripDuration*1000/pollingInterval) {
+            courierPayload=0;
+
+            $('.couriericon.'+color[0]).text(courierPayload);
+            clearInterval(bikingAnimation);
+            if (soundOn)  document.getElementById('coin').play()
+            goToPickup(nearestDropoff)
+
+          }
+
+          //1 SECOND= 60 REAL SECONDS. if the animation is not complete, calculate waypoint for animation and transition there (CSS)
+          increment++;
+          var waypoint=
+          turf.along(path, increment*tripDistance*pollingInterval/(tripDuration*1000*1000), 'kilometers').geometry.coordinates;
+          courier.setLatLng(L.latLng(waypoint[1], waypoint[0]))
+        }, pollingInterval);
+
+      })
     }
-    var inactiveStation=
-      {"iconUrl": "station_inactive.svg",
-      "iconSize": [5, 5],
-      "className": "inactivestation"
-    };
-    fc.features
-      .forEach(function(n){
-        var coords=n.geometry.coordinates;
-        L.marker([coords[1], coords[0]], {icon:L.icon(inactiveStation)}).addTo(map);
+
+
+
+
+
+
+    function goToPickup(currentLocation){
+
+      Array.minIndex = function( array ){
+        return array.indexOf(Math.min.apply( Math, array ));
+      };
+
+      //distance of each pickup, divided by time elapsed
+      var adjustedScores = pickupPoints.features.map(function(n){
+        return (
+          Math.pow(turf.distance(currentLocation, n, 'miles'),2)/(Date.now()-parseFloat(n.properties['time_submitted'])))
       });
 
-    // find nearest, add to map
-    function updateStations(){
-        $('path').remove();
-        $('.station, .bikeduration').not('.leaflet-marker-draggable').remove();
-        start = startMarker.getLatLng();
-        var startPoint = turf.point([start.lng, start.lat]);
-        destination=endMarker.getLatLng();
-        var endPoint=turf.point([destination.lng, destination.lat]);
 
 
-        var bikeIcon ={
-            "iconUrl": "station.svg",
-            "iconSize":[20,20],
-            "popupAnchor": [0, -15],
-            "className": "station"
-        };
+      //identify nearest pickup to the courier, and remove it from the overall list
+      var nearestPickupIndex = Array.minIndex(adjustedScores);
+      var nearestPickup = pickupPoints.features[nearestPickupIndex];
 
-        nearestStart = turf.nearest(startPoint, fc);
-            nearestStart.properties["title"] = '<strong>Grab a bike at</strong>'+nearestStart.properties["name"]+'<br>Bikes: '+nearestStart.properties["nbBikes"]+' Empty Docks: '+nearestStart.properties["nbEmptyDocks"];
-            nearestStart.properties.icon = bikeIcon;
-
-        nearestEnd = turf.nearest(endPoint, fc);
-            nearestEnd.properties["marker-color"] = "C73E3E";
-            nearestEnd.properties["title"] = '<strong>Drop off your bike at</strong>'+nearestEnd.properties["name"]+'<br>Bikes: '+nearestEnd.properties["nbBikes"]+' Empty Docks: '+nearestEnd.properties["nbEmptyDocks"];
-            nearestStart.properties.icon = bikeIcon;
+      pickupPoints.features.splice(nearestPickupIndex,1);
+      updatePickups();
 
 
-        var end_station =
-            L.mapbox
-            .featureLayer()
-            .on('layeradd', function(e) {
-                var marker = e.layer,
-                feature = marker.feature;
-                marker.setIcon(L.icon(bikeIcon))
-            })
-            .setGeoJSON(nearestEnd)
-            .addTo(map)
-            .on('mouseover', function(e) {
-                e.layer.openPopup();
-            })
-            .on('mouseout', function(e) {
-                e.layer.closePopup();
-            });
+      //assemble URL to route from courier's current location to the pickup
+      var endpoints = currentLocation.geometry.coordinates+';'+nearestPickup.geometry.coordinates;
+      var directionsURL='https://api.tiles.mapbox.com/v4/directions/mapbox.cycling/'+endpoints+'.json?access_token='+L.mapbox.accessToken;
 
-        var start_station =
-            L.mapbox
-            .featureLayer()
-            .on('layeradd', function(e) {
-                var marker = e.layer,
-                feature = marker.feature;
-                marker.setIcon(L.icon(bikeIcon));
-            })
-            .setGeoJSON(nearestStart)
-            .addTo(map)
-            .on('mouseover', function(e) {
-                e.layer.openPopup();
-            })
-            .on('mouseout', function(e) {
-                e.layer.closePopup();
-            });
+      courierTarget.setLatLng(L.latLng(nearestPickup.geometry.coordinates[1], nearestPickup.geometry.coordinates[0]))
+
+      //query directions
+      $.get(directionsURL, function(data, err){
+
+        var coords= data.routes[0].geometry.coordinates;
+        var processedCoords = coords.map(function(n){return reverseCoords(n)});
+        var path = turf.linestring(coords);
+        $('.'+color[0]+'path').remove();
+        var courierRoute = 
+          L.polyline(processedCoords,
+            {color: "#"+color[1], className:color[0]+'path'})
+            .addTo(map);
+
+
+        //animate route path
+        window.setTimeout(function(){
+          $('path').css('stroke-dashoffset',0)
+        },400); 
+
+        var tripDuration=(data.routes[0].duration/60).toFixed(0); //duration in minutes
+        var tripDistance=data.routes[0].distance; //distance in meters
+        var increment=0;
+
+      if (currentLocation.properties.address) {
+        updateTicker('<div><strong class="strongpad" style="background:#'+color[1]+'"">✓ Pickup</strong> '+color[0]+  ' has arrived at <strong>'+currentLocation.properties.address+'</strong>. Now headed to <strong>'+nearestPickup.properties.address+'</strong> ('+tripDuration+' min, '+(tripDistance/1609).toFixed(2)+' mi)')
+      }
+
+        var bikingAnimation= setInterval(function(){
+
+          //once the animation is complete, kill animation and fire this function recursively, starting at the current location
+          if (increment>tripDuration*1000/pollingInterval) {
+            courierPayload++
+            receivedQuantity++
+
+            responseNumerator += (Date.now() - nearestPickup.properties['time_submitted'])
+
+            $('.retrieved').text(receivedQuantity);
+            $('.responsetime').text(timeConverter(responseNumerator/(receivedQuantity*1000)));
+            $('.couriericon.'+color[0]).text(courierPayload);
+            clearInterval(bikingAnimation);
+
+            if (soundOn) document.getElementById('kick').play()
+
+            //depending on payload, go to next pickup, or drop off
+            if (courierPayload<5) goToPickup(nearestPickup)
+            else {dropoff(nearestPickup)}
+
+          }
+
+          //1 SECOND= 60 REAL SECONDS. if the animation is not complete, calculate waypoint for animation and transition there (CSS)
+          increment++;
+          var waypoint=
+          turf.along(path, increment*tripDistance*pollingInterval/(tripDuration*1000*1000), 'kilometers').geometry.coordinates;
+          courier.setLatLng(L.latLng(waypoint[1], waypoint[0]))
+        }, pollingInterval);
+      })
     }
 
+    goToPickup(hq.features[0])
+  }
 
-    startMarker
-        .on('drag', function(){updateStations()})
-        .on('dragend',function(){
-            getRouteInfo(nearestStart,nearestEnd)
-        });
-    endMarker
-        .on('drag', function(){updateStations()})
-        .on('dragend',function(){
-            getRouteInfo(nearestStart,nearestEnd)
-        });
-
-    updateStations();
-    getRouteInfo(nearestStart,nearestEnd);
-    map.setZoom(13);
-
-    var elevProfile = []
-    var queryPoints = []
-
-    function getRouteInfo ( origin, goal ) {
-        var startCoord = origin.geometry.coordinates.toString();
-        var endCoord = goal.geometry.coordinates.toString();
-        var directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.cycling/'+ startCoord + ';' + endCoord +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
-        //bike route
-        $.get(directionsURL, function(data){
-          var route = data.routes[0].geometry;
-          map.featureLayer.setGeoJSON(turf.linestring(route.coordinates));
-
-          //resample the line path to have regularly-spaced intervals for elevation query
-          var distance = data.routes[0].distance * 0.000621371192;
-          distance = distance.toFixed(2);
-                $('#routedist').text(distance);
-                var distance=data.routes[0].distance;
-                var sampleQuant= Math.min(distance/50,300);
-                var incrementDist=distance/sampleQuant;
-                resampledRoute= [];
-
-                for (var i=0;i<sampleQuant; i++){
-                    resampledRoute.push(turf.along(turf.linestring(route.coordinates),incrementDist*i*0.001,'kilometers')['geometry']['coordinates'])
-                }
-
-                map.fitBounds(map.featureLayer.setGeoJSON(turf.linestring(resampledRoute)).getBounds(),{
-                    paddingTopLeft:[150,50],
-                    paddingBottomRight:[150,50]
-                });
-                window.setTimeout(function(){$('path').css('stroke-dashoffset',0)},10);
-                //add duration label
-                var durationTime= Math.round(data.routes[0].duration/60);
-                var durationlabel=L.divIcon({className: '', html: '<div class="bikeduration">'+durationTime+' min</strong>'});
-
-                var middlepos=resampledRoute[Math.round(resampledRoute.length/2)];
-                L.marker([middlepos[1],middlepos[0]],{icon: durationlabel}).addTo(map);
-                //get surface deets
-                makeSurfaceCall(resampledRoute, incrementDist);
+  //create couriers
+  colors.forEach(function(n){
+    createCourier(n)
+  })
 
 
-        });
-        //route from origin to first bike station
-        directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.walking/'+ start.lng+','+start.lat + ';' + startCoord +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
 
-        $.get(directionsURL, function(data){
-          var route = data.routes[0].geometry;
-          route= route.coordinates.map(function(n){return [n[1],n[0]]});
-          var walkTo=L.polyline(route, {color: 'red'}).addTo(map);
-        });
 
-        //route from second station to destination
-        directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.walking/'+ endCoord+ ';' + destination.lng+','+destination.lat +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
-        $.get(directionsURL, function(data){
-          var route = data.routes[0].geometry;
-          route= route.coordinates.map(function(n){return [n[1],n[0]]});
-          var walkFrom=L.polyline(route, {color: 'red'}).addTo(map);
-        });
-    }
-
-    function makeSurfaceCall ( points, incrementDist) {
-        $('.elevations').remove();
-        var pointString = '';
-                points= points.map(function(n){return [parseFloat(n[0]).toFixed(6), parseFloat(n[1]).toFixed(6)]});
-        points.forEach(function(arr){
-            pointString = pointString + arr.toString() + ';';
-        })
-        pointString = pointString.slice(0, -1);
-
-        var surfaceURL = 'https://api.tiles.mapbox.com/v4/surface/mapbox.mapbox-terrain-v2.json?layer=contour&interpolate=true&fields=ele&points=' + pointString + '&access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA'
-            $.get(surfaceURL, function(data){
-              //create elevation profile
-              data.results.forEach(function(n,i){
-                var pointGrade='';
-                if (i>0 && i<data.results.length-1){
-                  prevPoint=data.results[i-1].ele;
-                  nextPoint=data.results[i+1].ele;
-
-                  pointGrade = '('+(100*0.5*((n.ele-prevPoint)+(nextPoint-n.ele))/incrementDist).toFixed(0)+'% grade)';
-                }
-                var myIcon=L.divIcon({className: 'elevations', html: '<div class="elevmarker"><div class="markercircle bottomcap"></div><div class="markerline" style="height:'+n.ele*2+'px">'+'</div><div class="markercircle"></div><div class="elevfigure"><strong>'+(n.ele*3.28).toFixed(0)+' ft </strong><span style="font-size:0.9em">'+ pointGrade+'</span></div>'});
-                L.marker([n.latlng.lat,n.latlng.lng],{icon: myIcon}).addTo(map)
-              })
-            })
-    }
-});
+})
 
 </script>
 </body>

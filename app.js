@@ -22,7 +22,7 @@ d3.json('data.json', function(err,resp){
 		.data(function(d){return resp[d]})
 		.enter()
 		.append('div')
-		.classed('work a big', true)
+		.classed('work a big underline', true)
 		.text(function(d){return d.name})
 		.on('click', function(d,i){
 
@@ -46,9 +46,11 @@ d3.json('data.json', function(err,resp){
 				.classed('hidden', true)
 				.select('iframe')
 				.attr('src', '')
+				.classed('hidden', true)
 		},
 
 		update: function(work){
+			
 			this.box
 				.classed('hidden', false)
 				.select('#title')
@@ -57,6 +59,8 @@ d3.json('data.json', function(err,resp){
 			this.box
 				.selectAll('p')
 				.remove();
+
+
 			this.box
 				.select('#blurb')
 				.selectAll('p')
@@ -67,7 +71,8 @@ d3.json('data.json', function(err,resp){
 
 			this.box
 				.select('iframe')
-				.attr('src', 'https://peterqliu.github.io/pieces/'+work.url);
+				.attr('src', 'https://peterqliu.github.io/pieces/'+work.url)
+				.classed('hidden', false)
 
 			this.box
 				.select('#press')

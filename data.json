@@ -2,7 +2,7 @@
 	"Data made visual":
 		[
 			{
-				"name":"Earthquake tracker",
+				"name":"Earthquake watch",
 				"url": "earthquake",
 				"blurb":[
 					"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality, as well as blend and blur modes with it."
@@ -20,11 +20,12 @@
 				]
 			},
 			{
-				"name":"Bikeshare router",
+				"name":"Capitol Bikeshare",
 				"url": "bikeshare/gl",
 				"blurb": [
 					"Mapbox released Turf.js in 2014, enabling users to do complex spatial analysis right in the browser. We wanted a use case showing Turf in conjunction with other Mapbox utilities, and found a dataset of all stations in DC's bikeshare system.",
-					"Thanks to our bounty of tools, we went beyond the typical bikeshare application to make a full-fledged route planner. Once the user drags the markers for their desired trip, Turf identifies the nearest bikeshare stations to both endpoints. Mapbox Directions then navigates the route in three segments: walking directions to the first station, biking directions to the second station, and walking directions again to the final destination.",
+					"Thanks to our bounty of tools, we went beyond the typical bikeshare application to make a full-fledged route planner. Once the user drags the markers for their desired trip, Turf identifies the nearest bikeshare stations to both endpoints. ",
+					"Mapbox Directions then navigates the route in three segments: walking directions to the first station, biking directions to the second station, and walking directions again to the final destination.",
 					"The demo also makes use of Surface API -- by sampling the elevation at regular intervals along the route line, we can generate a profile of the hills and slopes to expect as we pedal."
 				]
 

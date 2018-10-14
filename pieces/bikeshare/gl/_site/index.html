@@ -9,14 +9,17 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
 <style>
+
   body {
     margin:0;
     padding:0;
-    background:#f4f4f4;overflow:hidden;
+    background:#f4f4f4;
+    overflow:hidden;
   }
-::-webkit-scrollbar {
-    display: none;
-}
+
+  ::-webkit-scrollbar {
+      display: none;
+  }
   .undo {
     display:none;
   }
@@ -52,7 +55,7 @@
     width:100%;
     background:white;
     border-radius:6px;
-    box-shadow:0px 0px 5px 0px rgba(0,0,0,0.25);
+    box-shadow:0px 0px 8px 0px rgba(0,0,0,0.5);
     max-height:100%;
     overflow:scroll;
     pointer-events:all;
@@ -80,10 +83,12 @@
       box-shadow:0px 0px 10px 0px rgba(0,0,0,0.5);
   }
 
+  .endmarker:hover{
+    color:#fff;
+    background:purple;
+  }
   .endmarker:active {
       cursor:-webkit-grabbing;
-      color:#fff;
-      background:purple;
   }
 
 
@@ -111,7 +116,10 @@
     color:white;
     background:purple;
   }
-  #geolocate { display: none; }
+  
+  #geolocate { 
+    display: none; 
+  }
 
   .mapboxgl-popup-content{
     padding:8px;
@@ -131,28 +139,23 @@
   .duration {
     border:2px solid purple;
     border-radius:20px;
-    background:white;
-    overflow:hidden;
-    color: purple;
-    font-weight:bold;
-    transform: translateX(-50%) translateY(-50%);
-  }
-
-  .duration img{
     background:purple;
+    overflow:hidden;
+    color: white;
+    font-size:1.25em;
+    transform: translateX(-50%) translateY(-50%);
   }
 
   .station {
     height:100px;
-    border-radius:4px;
-    border: 1px solid #999;
+    borde: 1px solid #999;
     overflow:hidden;
     position:relative;
   }
 
   .station span {
     color: purple;
-    background:white;
+    background:rgba(255,255,255,0.75);
     padding:0px 6px;
   }
 
@@ -170,13 +173,14 @@
   .collapsed #steps {
     max-height:0px;
   }
-
-  #overview {
+  #overview{
     display:none;
+  }
+  .directions {
     cursor:hand;
   }
 
-  #overview:hover {
+  .directions:hover {
     opacity:0.5;
   }
 
@@ -186,7 +190,7 @@
 
   .step{
     border-left:1.5px solid #eee;
-    margin-left:10px;
+    margin-left:20px;
   }
 
   .step .col8 {
@@ -196,7 +200,7 @@
 
   .step .col8::before{
     content:'•';
-    margin-left:-4px;
+    margin-left:-3.5px;
     margin-right:10px;
     color:purple;
   }
@@ -215,36 +219,64 @@
 <body>
   <div id='container'>
     <div id='holder'>
-      <div id='sidebar' class='pad1 fr border-left z100'>
-        <div class='pad1y'>
+      <div id='sidebar' class='fr border-left z100'>
+        <div class='pad2'>
             <div class='button icon mt col12' onclick="tiltMap()">View elevation profile</div>
-            <div class='button icon undo col12 tiltcontrols' onclick="restoreMap()">Edit route</div>
+            <div class='button icon undo col12 tiltcontrols' onclick="restoreMap()">Change route</div>
         </div>
         <div id='start'></div>
-        <div id='stations'>
+        <div id='stations' class=''>
+          <div class='step'>
+            <div class='purple strong fl' style='
+              width: 24px;
+              display: inline-block;
+              height: 24px;
+              margin-left: -5px;
+              border-radius: 50%;
+              background: white;
+            '>A</div>
+            Begin at 
+                <span class='useraddress strong purple'></span>
+          </div>
           <div class='pad2y step'>
-            <span class='icon walk purple'></span>
-            Walk <span class='walkDistance'></span> ft to the nearest station</div>
+            <span class='icon walk purple space-right0'></span>
+            Walk <span class='walkDistance strong purple'></span> to the nearest station
+          </div>
 
-          <div class='station clearfix'>
-            <span class='pin-topleft fill uppercase small'>Pick up a bike at</span>
-            <span class='pin-bottomright fill address small strong'></span>
+          <div class='station'>
+            <span class='pin-topleft fill small'>Pick up a bike at
+            <span class='address strong'></span>
+
+            </span>
           </div>
           <div id='cyclinginstructions' class='clearfix collapsed'>
             <div id='overview' class='pad2y step'>
-            <span class='icon bike purple'></span>
-              <span id='totaldistance'></span>-mile ride (click for directions)</div>
+              <span class='icon bike purple space-right0'></span>
+              <span id='totaldistance'></span>-mile ride
+              <span class='fr small text-right space-right1 quiet purple directions'>Directions</span>
+            </div>
             <div id='steps'></div>
           </div>
 
-          <div class='station clearfix'>
+          <div class='station'>
             <span class='pin-topleft fill dark uppercase small'>Drop off your bike at</span>
             <span class='pin-bottomright address small strong'></span>
           </div>
           <div class='pad2y step'>
-            <span class='icon walk purple'></span>
-            Walk <span class='walkDistance'></span> ft to your destination</div>
-
+            <span class='icon walk purple space-right0'></span>
+            Walk <span class='walkDistance strong purple'></span> to your destination
+          </div>
+          <div class='pad2y step'>
+            <div class='purple strong' style='
+              width: 24px;
+              display: inline-block;
+              height: 24px;
+              margin-left: -5px;
+              border-radius: 50%;
+              background: white;
+            '>B</div>            
+            Arrive at <span class='useraddress strong purple'></span>
+          </div>
         </div>
         <div id='finish'></div>
       </div>
@@ -280,9 +312,9 @@
 
     var stations;
 
-    mapboxgl.util.getJSON('stations.geojson', function(err,resp){
+    d3.json('stations.geojson', function(err,resp){
       stations = resp;
-      console.log(resp)
+
       map
       .addLayer({
         'id': 'stations', 
@@ -292,17 +324,26 @@
           'data': resp        
         },
         'layout':{
-          'text-field': '○',
-          'text-allow-overlap': true,
-          'text-ignore-placement': true,
-          'text-size':{
-            'stops':[[8,2],[14,16],[15,20]]
+          // 'text-field': '',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          // 'text-size':{
+          //   'stops':[[8,2],[14,16],[15,20]]
+          // },
+          'icon-image':'bike-purple',
+          'icon-size':{
+            'base':1, 
+            'stops':[
+              [10,0.85], 
+              [22,1.2]
+            ]
           }
         },
         'paint': {
-          'text-color':'purple',
-          'text-halo-width':0.5,
-          'text-halo-color': 'purple'
+          // 'text-color':'purple',
+          // 'text-halo-width':0.5,
+          'icon-halo-color': 'purple',
+          'icon-halo-width':30
         }
       })
       .addLayer({
@@ -356,9 +397,9 @@
         // once mouse released, get the new route
         .on('dragend', function(d,i){
             var newCoords= map.unproject([d3.event.sourceEvent.clientX-xOffset, d3.event.sourceEvent.clientY])
-            //updateGeocode(i)
             endPoints[i] = [newCoords.lng, newCoords.lat];
             nearestStations[i] = turf.nearest(turf.point(endPoints[i]), stations);
+            geocode();
             getRoute();
         });
 
@@ -401,7 +442,11 @@
       }
 
 
-      var popup = new mapboxgl.Popup({closeOnClick: false, closeButton: false, offset:15, anchor:'top'})
+      var popup = new mapboxgl.Popup({
+        closeOnClick: false, 
+        closeButton: false, 
+        offset:15, anchor:'top'
+      })
 
       popup
         .setLngLat(map.getCenter())
@@ -539,25 +584,28 @@
         "id": "guides",
 
         "paint": {
-          "circle-color": '#fff',
-          "circle-radius":{
-            'base':1, 
-            'stops':[
-              [10,1.2], 
-              [22,10]
-            ]
-          },
-          "circle-stroke-color":'purple',
-          "circle-stroke-width":{
-            'base':1, 
-            'stops':[
-              [10,1], 
-              [22,8]
-            ]
-          }
+          "circle-color": 'purple',
+          "circle-radius":12
         },
         "paint.tilted":{
           "circle-opacity": 0
+        }
+      })
+      .addLayer({
+        "id": "endpointSymbols",
+        "type": "symbol",
+        "source": "endpoints",
+
+        'layout':{
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-image':'bike-white',
+          'icon-size':1
+        },
+        'paint': {
+        },
+        "paint.tilted":{
+          "icon-opacity": 0
         }
       })
       .on('mousemove', function(e){
@@ -600,23 +648,30 @@
         }
       })
 
-      findNearestStations()
+      geocode();
+      findNearestStations();
       getRoute();
+
 
 
       // instantiate duration label
       var el = document.createElement('div');
-      el.innerHTML = "<div class='duration'><span class='icon bike dark' style='padding:10px 3px; background:purple'></span><span style='margin:6px' class='time'>16 min</span></div>"
+      el.innerHTML = "<div class='duration'><span class='icon bike dark' style='padding:10px 3px; background:purple'></span><span style='margin:4px 4px' class='time'>16 min</span></div>"
       var durationMarker = new mapboxgl.Marker(el, {offset: [0 / 2, 0/ 2]})
           .setLngLat([0,0])
           .addTo(map);
 
 
       var bounds;
-      d3.select('#overview')
+      d3.select('.directions')
         .on('click', function(){
-          d3.select(".collapsed").classed("collapsed",false);
-          map.fitBounds(bounds, {padding:100, offset:[-200,0]});
+          
+          d3.select(".collapsed")
+            .classed("collapsed",false);
+          
+          map
+          .fitBounds(bounds, {padding:100, offset:[-200,0]});
+        
         })
 
       function getRoute(){
@@ -633,7 +688,7 @@
         points
         .forEach(function(pair, pairIndex){
 
-          var url = 'https://api.tiles.mapbox.com/v4/directions/mapbox.walking/'+ pair.join(';') +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA'
+          var url = 'https://api.tiles.mapbox.com/v4/directions/mapbox.walking/'+ pair.join(';') +'.json?access_token='+mapboxgl.accessToken
 
           d3.json(url, function (err, resp){
 
@@ -646,7 +701,7 @@
               .each(function(d,i){
                 if (i === pairIndex){
                   d3.select(this)
-                    .text(resp.routes[0].distance)
+                    .text(resp.routes[0].distance+' ft')
                 }
               })
             walkingGeojson.features.push(turf.linestring(route));
@@ -657,7 +712,7 @@
         })
 
         //cycling route
-        var directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.cycling/'+ nearestStations[0].geometry.coordinates+';'+nearestStations[1].geometry.coordinates +'.json?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+        var directionsURL = 'https://api.tiles.mapbox.com/v4/directions/mapbox.cycling/'+ nearestStations[0].geometry.coordinates+';'+nearestStations[1].geometry.coordinates +'.json?access_token='+mapboxgl.accessToken;
 
 
         //apply satellite images
@@ -669,7 +724,7 @@
 
         stations
           .style('background-image', function(d){
-            return 'url(https://api.mapbox.com/v4/mapbox.satellite/'+ d.geometry.coordinates + ',18/330x100@2x.jpg70?access_token=pk.eyJ1IjoibWF0dCIsImEiOiJTUHZkajU0In0.oB-OGTMFtpkga8vC48HjIg)' 
+            return 'url(https://api.mapbox.com/v4/mapbox.satellite/'+ d.geometry.coordinates + ',18/330x100@2x.jpg70?access_token='+mapboxgl.accessToken 
           })
 
         stations
@@ -702,11 +757,14 @@
             .append('div')
             .classed('pad1y clearfix step', true);
 
-            step
+          step
             .append('div')
             .classed('col8', true)
+            // .append('div')
+            // .classed('inline', true)
             .text(function(d){return d[0]})
-            step
+          
+          step
             .append('span')
             .classed('fr small text-right space-right1 quiet', true)
             .text(function(d){
@@ -723,7 +781,9 @@
           var geom = turf.linestring(route);
           var durationMinutes = Math.round(resp.routes[0].duration/60);
           bounds = turf.extent(geom)
-          map.fitBounds(bounds, {padding:100});
+          map          
+            .fitBounds(bounds, {padding:100, offset:[-200,0]});
+
 
           var counter = 0;
 
@@ -743,9 +803,9 @@
           animateLine();
 
 
-          var distance=resp.routes[0].distance/1000;
-          var sampleQuant= 300;
-          var incrementDist=distance/sampleQuant;
+          var distance = resp.routes[0].distance/1000;
+          var sampleQuant = 300;
+          var incrementDist = distance/sampleQuant;
 
           var pointString = '';
 
@@ -769,8 +829,8 @@
           var surfaceURL = 'https://api.tiles.mapbox.com/v4/surface/mapbox.mapbox-terrain-v2.json?layer=contour&interpolate=true&fields=ele&points=' + pointString + '&access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA'
 
 
-          mapboxgl.util.getJSON(surfaceURL, function(err, resp){
-            console.log('surface returned')
+          d3.json(surfaceURL, function(err, resp){
+
             var elevations = JSON.parse(JSON.stringify(emptyGeojson));
 
             // custom interpolation function
@@ -830,34 +890,17 @@
 
             holder.forEach(function(pt,i){
               if (i===299) return;
-              var subShape = turf.buffer(turf.linestring([[holder[i].latlng.lng, holder[i].latlng.lat], [holder[i+1].latlng.lng,holder[i+1].latlng.lat]]), incrementDist/2, 'kilometers').features[0];
+              var subShape = turf.buffer(
+                turf.linestring(
+                  [[holder[i].latlng.lng, holder[i].latlng.lat], [holder[i+1].latlng.lng,holder[i+1].latlng.lat]]
+                ), 
+                incrementDist/2, 
+                'kilometers'
+              ).features[0];
               subShape.properties = {height:smoothened[i]};
               elevations.features.push(subShape)
             })
 
-            /*
-            //generate guide lines
-
-            var guideLines = {
-              "type": "FeatureCollection",
-              "features": []
-            };
-
-            for (var j=0; j<maxEle; j+=50){
-              var line = route.map(function(d,i){
-                if (i===route.length-1) return undefined;
-                return turf.linestring([route[i], route[i+1]],{min:j, max:j+25})
-              });
-
-              guideLines.features = guideLines.features.concat(line);
-
-              guideLines.features.pop();
-              console.log(guideLines)
-
-            }
-
-            map.getSource('guides').setData(guideLines)
-            */
             map.getSource('data').setData(elevations)
             map.getSource('endpoints').setData(turf.featurecollection(nearestStations))
 
@@ -867,10 +910,6 @@
     })
   })
 
-
-
-
-//var normalInteraction = map.dragRotate._ignoreEvent;
 
 function tiltMap(){
 
@@ -901,6 +940,29 @@ function restoreMap(){
 
   d3.select('#map').classed('tooltip', false);
   map.getSource('highlighted_extrusion').setData(emptyGeojson)
+}
+
+function geocode(){
+  endPoints.forEach(function(endpoint, pairIndex){
+    var queryUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places/' + endpoint + '.json?access_token=' + mapboxgl.accessToken
+
+    d3.json(queryUrl, function(err,resp){
+
+      var address = function(){
+        var firstComma = resp.features[0]['place_name'].indexOf(',')
+        var substring = resp.features[0]['place_name'].substr(0, firstComma)
+        return substring
+      }
+
+      d3.selectAll('.useraddress')
+        .each(function(d,i){
+          if (i === pairIndex){
+            d3.select(this)
+              .text(address)
+          }
+        })
+    })
+  })
 }
 </script>
 </body>

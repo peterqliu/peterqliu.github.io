@@ -1,1 +1,3 @@
-Blog post at https://www.mapbox.com/blog/dc-bikeshare-revisited/
+### Courier
+
+A logistics demo using Smart Directions, Turf.js, and messaging with Layer.

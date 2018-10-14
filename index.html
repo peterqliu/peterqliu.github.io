@@ -17,12 +17,11 @@
         }        
 
         body { 
-            background:#eee;
+            background:url('assets/pattern.png');
             margin:0; 
             font-family:Chaparral;
             color:#333;
-/*            font-size:1.2em;
-*/        }
+        }
 
         #map { 
             position:absolute; 
@@ -125,6 +124,14 @@
             cursor:pointer;
         }
 
+        .a:hover{
+            color:orangered;
+        }
+
+        .underline {
+            text-decoration: underline;
+        }
+        
         #explainer{
             width:300px;
             height:100%;
@@ -137,13 +144,15 @@
             bottom:0px;
             border:none;
             height:100%;
+            background:url('assets/pattern.png');
         }
 
         iframe{
             width:100%;
             height:100%;
             border:none;
-            background:gray;
+            opacity:1;
+            transition:opacity 1s;
         }
     </style>
 </head>
@@ -170,7 +179,7 @@
     <div class='container'>
         <div class='biggest'>peter liu</div>
 
-        <div class='secondary big weaker'>maps, interfaces, algorithms</div>
+        <div class='secondary big weaker'>maps / interfaces / algorithms</div>
     </div>
 
 </body>

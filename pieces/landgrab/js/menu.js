@@ -18,6 +18,7 @@ function addSection(title, boldTitle){
 var labels = 
 
 addSection('SMOOTHEN (GAUSSIAN)', true)
+	.classed('border-t', false)
 	.attr('id', 'smoothen')
 	.classed('hide-visually', true)
 	.append('div')

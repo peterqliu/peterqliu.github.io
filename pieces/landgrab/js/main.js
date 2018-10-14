@@ -311,23 +311,23 @@
 
     // compute amount to stride by
 
-    var strideFrequencies = 
-    Object.keys(upsampledResolution)
-      .map(function(key){
-        return upsampledResolution[key]
-      })
+    // var strideFrequencies = 
+    // Object.keys(upsampledResolution)
+    //   .map(function(key){
+    //     return upsampledResolution[key]
+    //   })
 
-    var highestFrequencyIndex = 
-    strideFrequencies.indexOf(
-      strideFrequencies
-        .reduce(
-          function(highest, num){
-            return num>highest ? num : highest 
-          }, 0
-      )
-    )
+    // var highestFrequencyIndex = 
+    // strideFrequencies.indexOf(
+    //   strideFrequencies
+    //     .reduce(
+    //       function(highest, num){
+    //         return num>highest ? num : highest 
+    //       }, 0
+    //   )
+    // )
 
-    state.mostCommonStride = parseFloat(Object.keys(upsampledResolution)[highestFrequencyIndex]);    
+    //state.mostCommonStride = parseFloat(Object.keys(upsampledResolution)[highestFrequencyIndex]);    
 
     state.output = {
       comments: 'Elevation data is presented as a one-dimensional, row-major array. Consecutive points are in the same row west to east, with rows arranged north to south.',
@@ -342,7 +342,7 @@
 
     getSatelliteImage();
     getHypsometricImage();
-    if (state.mostCommonStride>0) state.smoother.postMessage({output: state.output, radius: state.mostCommonStride})
+    //if (state.mostCommonStride>0) state.smoother.postMessage({output: state.output, radius: state.mostCommonStride})
     cb();
   }
 

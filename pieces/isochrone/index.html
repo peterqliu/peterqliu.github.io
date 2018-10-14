@@ -16,21 +16,6 @@
         .mapboxgl-missing-css{
             display:none;
         }
-        #loader{
-            width: 100%;
-            height:100%;
-            position:absolute;
-            z-index:99;
-            background:rgba(0,0,0,0.5);
-            padding-top:30%;
-            opacity:1;
-            transition:all 0.5s;
-        }
-
-        #loader.hidden{
-            opacity:0;
-            pointer-events: none;
-        }
 
         #overlay {
             position:absolute;
@@ -156,7 +141,8 @@
     </style>
 </head>
 <body>
-    <div id='loader' class='loading--dark'>
+    <div id = 'loader' class='loading loading--dark z5 bg-darken75 absolute col--12 viewport-full pt360 align-center color-white'>
+    <div class='txt-h3 my24 mt240'>Calculating isochrone</div>
     </div>
     <div id='map'>
         <div id='tooltip' class='dark'>
@@ -235,7 +221,7 @@
         <div id='band'></div>
         <div class='dark'>
             <span style='left:0px; position:absolute; text-align:center'>0</span> 
-            <span style='left:45%; position:absolute'>MIN</span> 
+            <span style='left:50%; position:absolute; transform:translateX(-50%)'>Minutes to reach here</span> 
             <span style='right:0px; position:absolute' id='max'>60</span>
         </div>
     </div>
@@ -376,7 +362,7 @@ function setState(parameter, value){
     isochrone(c, state, visualize);
     
     d3.select('#loader')
-        .classed('hidden', false)
+        .classed('hide-visually', false)
 }
 
 map.on('load', function(){
@@ -495,11 +481,18 @@ function visualize(geom){
         return modified
     }).reverse();
 
-    map.getSource('hulls').setData(geom)
-    map.setPaintProperty('continuous', 'fill-opacity', 1)
-
-    map.on('mousemove', setHighlight)
-    map.on('touchmove', setHighlight)
+    //set data
+    map.getSource('hulls')
+        .setData(geom)
+    
+    // fit map to isochrone, set hulls visible, bind highlighting handlers
+    map
+        .fitBounds(turf.bbox(geom),{
+            padding: 20
+        })
+        .setPaintProperty('continuous', 'fill-opacity', 1)
+        .on('mousemove', setHighlight)
+        .on('touchmove', setHighlight)
 
     function setHighlight(e){
 
@@ -531,7 +524,7 @@ function visualize(geom){
     
 
     d3.select('#loader')
-        .classed('hidden', true)
+        .classed('hide-visually', true)
         
     //fitBounds(state.threshold, geom);
 
@@ -585,7 +578,7 @@ var drag = d3.drag()
         isochrone(c, state, visualize)
         
         d3.select('#loader')
-        .classed('hidden', false)
+        .classed('hide-visually', false)
     });
 
 d3.select('.origin')

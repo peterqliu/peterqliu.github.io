@@ -20,17 +20,7 @@
     });
 
     map
-    .addLayer({
-      'id':'whiteout',
-      'type':'background',
-      'layout':{
-        'visibility': 'none'
-      },
-      'paint':{
-        'background-color': 'white',
-        'background-opacity':0
-      }
-    })
+
     .addLayer({
       'id':'drawn_polygon', 
       'type':'fill',
@@ -44,14 +34,11 @@
       'id':'corners', 
       'type':'circle',
       'source':'drawn',
-      'layout':{
-        'visibility': 'none'
-      },
       'paint':{
-        'circle-color':'#448ee4',
+        'circle-color':'#fff',
         'circle-radius':3,
-        'circle-stroke-color': 'white',
-        'circle-stroke-width':2
+        'circle-stroke-color': '#448ee4',
+        'circle-stroke-width':3
       },
     })
 
@@ -72,7 +59,6 @@
       updateRect();
       
       makeQuery();
-      //identifyTiles();
       fitBounds();
       toggleInteractivity(false)
     }
@@ -92,10 +78,6 @@
 
 
     else {
-      map
-        .setLayoutProperty('corners', 'visibility', 'none')
-        .setLayoutProperty('whiteout', 'visibility', 'none')
-
       map.off('mousemove', updateCorners);
 
       d3.select('#sidebar')
@@ -106,8 +88,7 @@
     function applyDrawListeners(){
 
       map
-        .setLayoutProperty('corners', 'visibility', 'visible')
-        .setLayoutProperty('whiteout', 'visibility', 'visible')
+
         .getSource('drawn')
           .setData(emptyGeojson);
 

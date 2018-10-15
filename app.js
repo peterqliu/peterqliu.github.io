@@ -1,10 +1,14 @@
 d3.json('data.json', function(err,resp){
-	console.log(err,resp)
-	var doc = d3.select('.container')
+
+	var doc = d3.select('.container');
+	var pieces = resp.pieces;
+
+
+	//portfolio section
 
 	var section = doc
 		.selectAll('.section')
-		.data(Object.keys(resp))
+		.data(Object.keys(pieces))
 		.enter()
 		.append('div')
 		.classed('section',true);
@@ -19,7 +23,7 @@ d3.json('data.json', function(err,resp){
 
 	section
 		.selectAll('.work')
-		.data(function(d){return resp[d]})
+		.data(function(d){return pieces[d]})
 		.enter()
 		.append('div')
 		.classed('work a big underline', true)
@@ -67,7 +71,7 @@ d3.json('data.json', function(err,resp){
 				.data(work.blurb)
 				.enter()
 				.append('p')
-				.text(function(d){return d});
+				.html(function(d){return sanitizeHTML(d)});
 
 			this.box
 				.select('iframe')
@@ -90,5 +94,16 @@ d3.json('data.json', function(err,resp){
 	}
 })
 
+/*!
+ * Sanitize and encode all HTML in a user-submitted string
+ * (c) 2018 Chris Ferdinandi, MIT License, https://gomakethings.com
+ * @param  {String} str  The user-submitted string
+ * @return {String} str  The sanitized string
+ */
 
+var sanitizeHTML = function (str) {
+	var temp = document.createElement('div');
+	temp.textContent = str;
+	return temp.innerHTML;
+};
 

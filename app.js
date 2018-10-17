@@ -37,6 +37,8 @@ d3.json('data.json', function(err,resp){
 	d3.select('.container')
 		.classed('hidden', false)
 
+	d3.selectAll('a')
+		.attr('target', "_blank")
 	//lightbox functionality
 
 	d3.select('#close')
@@ -95,6 +97,9 @@ d3.json('data.json', function(err,resp){
 					.attr('href', work.pressUrl)
 
 			}
+
+			d3.selectAll('a')
+				.attr('target', "_blank")
 		}
 	}
 })

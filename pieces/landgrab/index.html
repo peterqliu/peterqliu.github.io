@@ -47,11 +47,11 @@
           left:0px;
           bottom:0px;
           position:absolute;
-          transition:all 0.25s;
+          transition:all 0.4s;
           z-index:100;
           width:70%;
           height:100%;
-          transform:scale(0.25);
+          transform:scale(0.3);
           transition:transform 0.25s;
           transform-origin: bottom left;
         }
@@ -105,15 +105,17 @@
 
         #buttonsection {
           transition: all 0.25s;
-          transform:translateX(50%) translateY(-50%) scale(4);
+          transform:translateX(50%) translateY(-50%) scale(3);
         }
 
         #expand{
           line-height: 1.75em;
         }
+
         #expand:after {
           content:'Edit';
         }
+
         .expanded #buttonsection{
           transform:translateX(-50%) translateY(25%);
         }

@@ -1,6 +1,6 @@
 d3.json('data.json', function(err,resp){
 
-	var doc = d3.select('.container');
+	var doc = d3.select('#portfolio');
 	var pieces = resp.pieces;
 
 
@@ -15,8 +15,8 @@ d3.json('data.json', function(err,resp){
 
 
 	section
-		.append('div')
-		.classed('bigger secondary lowercase weakest', true)
+		.append('span')
+		.classed('biggest secondary lowercase weakest', true)
 		.text(function(d,i){
 			return d
 		})
@@ -26,7 +26,7 @@ d3.json('data.json', function(err,resp){
 		.data(function(d){return pieces[d]})
 		.enter()
 		.append('div')
-		.classed('work a big underline', true)
+		.classed('work a bigger underline', true)
 		.text(function(d){return d.name})
 		.on('click', function(d,i){
 
@@ -34,6 +34,8 @@ d3.json('data.json', function(err,resp){
 
 		})
 
+	d3.select('.container')
+		.classed('hidden', false)
 
 	//lightbox functionality
 
@@ -71,7 +73,10 @@ d3.json('data.json', function(err,resp){
 				.data(work.blurb)
 				.enter()
 				.append('p')
-				.html(function(d){return sanitizeHTML(d)});
+				.classed('big', true)
+				.html(function(d){
+					return d
+				});
 
 			this.box
 				.select('iframe')

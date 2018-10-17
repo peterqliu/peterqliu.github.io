@@ -42,22 +42,22 @@
 
         .section{
             margin-top:30px;
-/*            width:33%;
-            float:left;
-            display:inline-block;*/
         }
 
         .work{
             margin-top:10px;
         }
         .big{
-            font-size:1.5em;
+            font-size:1.25em;
         }
         .bigger{
-            font-size:2em;
+            font-size:1.5em;
         }
 
         .biggest{
+            font-size:2em;
+        }
+        .title{
             font-size:3em;
         }
 
@@ -91,7 +91,7 @@
         }
 
         #modal{
-            background: #eee;
+            background:url('assets/pattern.png');
             margin: 0 auto;
             border-radius: 3px;
             position: absolute;
@@ -118,14 +118,17 @@
             padding:20px;
         }
 
-        .m2 {
-            margin:20px;
+        .m3 {
+            margin:30px;
         }
 
         .hidden {
             display:none;
         }
 
+        a {
+            color:maroon;
+        }
         .a{
             cursor:pointer;
         }
@@ -139,16 +142,17 @@
         }
         
         #explainer{
-            width:300px;
+            width:360px;
             height:100%;
+            overflow:scroll;
         }
         .wrapper {
             position:absolute;
-            left:300px;
+            left:360px;
             right:0px;
             top:0px;
             bottom:0px;
-            border:none;
+            border-left:1px solid #ccc;
             height:100%;
             background:url('assets/pattern.png');
         }
@@ -166,9 +170,12 @@
     <div id='lightbox' class='hidden'>
         <div id='modal'>
             <div id='explainer' class=''>
-                <div class='m2'>
-                    <div id='close' class='bigger a weaker'>✕</div>
-                    <div class='big' id='title'></div>
+                <div class='m3'>
+                    <div id='close'>
+                        <span class='big a weaker' style='transform:rotateZ(180deg)'>➜</span>
+                        Back
+                    </div>
+                    <div class='bigger section' id='title'></div>
                     <div id='blurb' class='weak'></div>
 
                     <div id='press' class='hidden'>
@@ -182,18 +189,19 @@
             </div>
         </div>
     </div>
-    <div class='container'>
-        <div class='biggest'>peter liu</div>
+    <div class='container hidden'>
+        <div class='title'>peter liu</div>
 
-        <div class='secondary big weaker'>maps / interfaces / algorithms</div>
+        <div class='secondary bigger weaker'>maps / interfaces / algorithms</div>
 
-        <div id='intro' class='bigger weak'>
-            <p>I'm a design technologist, tinkerer, and <a href="https://www.neurobio.ucla.edu/">long-lapsed premed</a> in Oakland, CA. I'm into making technology more human, humane, and useful.</p>
-            <p>An R&D engineer at <a href="https://www.mapbox.com/">Mapbox</a> since 2014, I've enjoyed working across the tech stack to build cutting-edge tools and visualizations. Some select work is below.</p>           
+        <div id='intro' class='biggest weak'>
+            <p>I'm a <a href='https://medium.com/interactive-mind/the-rise-of-the-design-technologist-e9516aa821a0'>design technologist</a>, tinkerer, and noodle enthusiast in Oakland, CA. I'm into making technology more human, humane, and useful.</p>
+            <p>An R&D engineer at <a href="https://www.mapbox.com/">Mapbox</a> since 2014, I've enjoyed working across the tech stack to build cutting-edge tools and visualizations. Some recent work:</p>           
 
         </div>
-                <div class='fr'>peterqliu at gmail</div>
-
+        <div id='portfolio' class=''>
+        </div>
+        <div class='pad2 big' style='margin-top:0px; position:fixed; right:0; bottom:0'><span class='weak'>peterqliu at gmail</span> | <a href='./assets/resume.pdf'>cv</a> | <a href='https://github.com/peterqliu'>github</a></div>
 
     </div>
 

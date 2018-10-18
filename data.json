@@ -8,7 +8,7 @@
 					"url": "earthquake",
 					"blurb":[
 						"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality.",
-						"Using <a href='https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php'>USGS's live data feed</a>, we represented each event as a point, with a second blurred halo behind it to represent severity. This let us communicate frequency and severity simultaneously, without toggling between modes. The map also transitions smoothly to satellite imagery at higher zoom levels, to better portray any structures and inhabitants in the affected area.",
+						"Using <a target='_blank' href='https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php'>USGS's live data feed</a>, we represented each event as a point, with a second blurred halo behind it to represent severity. This let us communicate frequency and severity simultaneously, without toggling between modes. The map also transitions smoothly to satellite imagery at higher zoom levels, to better portray any structures and inhabitants in the affected area.",
 						"This was also one of the few maps where we shifted the longitudinal center away from the prime meridian, to better frame the clusters of quakes around the Pacific's Ring of Fire."
 					],
 					"press": "A real-time map of earthquakes around the world (The Atlantic)",
@@ -27,7 +27,7 @@
 					"name":"Capitol Bikeshare",
 					"url": "bikeshare/gl",
 					"blurb": [
-						"Mapbox released <a href='https://www.turfjs.org'>Turf.js</a> in 2014, enabling users to do complex spatial analysis right in the browser. We wanted a use case showing Turf in conjunction with other Mapbox utilities, and found a dataset of all stations in <a href='https://www.capitalbikeshare.com/'>DC's bikeshare system</a>.",
+						"Mapbox released <a target='_blank' href='https://www.turfjs.org'>Turf.js</a> in 2014, enabling users to do complex spatial analysis right in the browser. We wanted a use case showing Turf in conjunction with other Mapbox utilities, and found a dataset of all stations in <a target='_blank' href='https://www.capitalbikeshare.com/'>DC's bikeshare system</a>.",
 						"Our bounty of tools enabled us to go beyond the typical bikeshare application, to a full-fledged route planner. Once the user drags the markers for their desired trip, Turf identifies the nearest bikeshare stations to both endpoints. ",
 						"Mapbox Directions then navigates the route in three segments: walking directions to the first station, biking directions to the second station, and walking directions again to the final destination.",
 						"The demo also makes use of Surface API -- by sampling the elevation at regular intervals along the route line, we can generate a profile of the hills and elevation changes to expect as we pedal."
@@ -49,7 +49,7 @@
 					"url": "landgrab/#-112.418898,-112.521208,36.420777,36.341725",
 					"blurb": [
 						"Mapbox's investments in augmented reality fueled interest in immersive, photorealistic experiences. We wanted to somehow leverage our existing data and mapping stack for this emergent use case.",
-						"Several pieces fell into place to make this possible: our satellite team found a <a href='https://blog.mapbox.com/global-elevation-data-6689f1d0ba65'>nimble way</a> to deliver global elevation data via png's, and we began experimenting with Three.js for complex shape rendering. These enabled us to build a fully interactive <a href=''>3D map of the world</a>, a lá Google Earth.",
+						"Several pieces fell into place to make this possible: our satellite team found a <a target='_blank' href='https://blog.mapbox.com/global-elevation-data-6689f1d0ba65'>nimble way</a> to deliver global elevation data via png's, and we began experimenting with Three.js for complex shape rendering. These enabled us to build a fully interactive <a target='_blank' href=''>3D map of the world</a>, a lá Google Earth.",
 						"To support developers building 3D worlds, we built a quick tool to inspect, select, and download the imagery and terrain information for a desired land tract."
 					]
 				}
@@ -72,14 +72,14 @@
 					"blurb": [
 						"Isochrones always held a certain appeal to me: a plot of land around you circumscribed not by any physical property, but how <i>long</i> it takes to get there. The area can grow or shrink as you get near a highway, have more time to spare, or jump on a bike or car.",
 						"For years, isochrones were prohibitively difficult to make with the tools we had. I began a long side quest in wrangling various APIs to sample across space and approximate the contours. But these were costly, time consuming, or otherwise unscalable for real-world use.",
-						"It was the Matrix API that became my missing piece: an endpoint that could take hundreds of discrete points and return travel times between all of them. Viable algorithm in hand, I produced an <a href='https://github.com/mapbox/mapbox-isochrone'>open-source library</a> for isochrone generation, as well as this demo to visualize it."
+						"It was the Matrix API that became my missing piece: an endpoint that could take hundreds of discrete points and return travel times between all of them. Viable algorithm in hand, I produced an <a target='_blank' href='https://github.com/mapbox/mapbox-isochrone'>open-source library</a> for isochrone generation, as well as this demo to visualize it."
 					]	
 				},
 				{
 					"name":"Traveling Salesman solver",
 					"url": "optimizer",
 					"blurb":[
-						"Underpinning every logistics algorithm is an imperfect solution to the <a href='https://en.wikipedia.org/wiki/Travelling_salesman_problem'>Traveling Salesman problem</a>: what's the order to visit many points on a map, in a way minimizes the total travel time?",
+						"Underpinning every logistics algorithm is an imperfect solution to the <a target='_blank' href='https://en.wikipedia.org/wiki/Travelling_salesman_problem'>Traveling Salesman problem</a>: what's the order to visit many points on a map, in a way minimizes the total travel time?",
 						"Mapbox's Optimization API solves this, <i>plus</i> the option to specify that certain points must come before others. This became an incredibly nuanced, technical tool in search of a good explanation.",
 						"For us, that surfaced in food delivery service. The user clicks and drags orders from three restaurants around Chicago, which a delivery driver fulfills. Each order must involve a pickup trip to the restaurant before heading to the customer, forming a complex queue that the algorithm handles in real time."
 					]
@@ -92,7 +92,7 @@
 					"url": "timemap/search",
 					"blurb":[
 						"This project was the culmination of several years of thinking around isochrones, ETAs, space, and time. I've noticed that when we talk about physical distance, we're often using it as a leaky substitute for how long it takes to traverse it. What would a map look like, if it directly visualized distance in time?",
-						"A longer writeup of thinking and process was captured on the <a href='https://blog.mapbox.com/a-new-kind-of-map-its-about-time-7bd9f7916f7f'>Mapbox blog</a>."
+						"A longer writeup of thinking and process was captured on the <a target='_blank' href='https://blog.mapbox.com/a-new-kind-of-map-its-about-time-7bd9f7916f7f'>Mapbox blog</a>."
 					],
 					"press": "There's An Entirely New Way Of Mapping The World, And It's Brilliant (Fast Company)",
 					"pressUrl":"https://www.fastcompany.com/90143906/theres-an-entirely-new-way-of-mapping-the-world-and-its-brilliant"

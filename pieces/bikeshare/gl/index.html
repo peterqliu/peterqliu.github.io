@@ -292,6 +292,7 @@
   var nearestStations;
 
   var state = {
+    counter: false,
     tilted: false,
     style: {
       true: [
@@ -393,7 +394,7 @@
         //on start of drag, clear the old route
         .on('dragstart', function(){
             map.getSource('route').setData(emptyGeojson)
-            map.getSource('data').setData(emptyGeojson)
+            map.getSource('heights').setData(emptyGeojson)
             map.getSource('endpoints').setData(emptyGeojson)
             map.getSource('walking_routes').setData(emptyGeojson)
             durationMarker.setLngLat([0,0])
@@ -470,26 +471,21 @@
         .addTo(map);
 
       // add placeholder sources for all runtime layers
-      map.addSource('data', {
+      var emptySource = {
         'type': 'geojson',
         'data': emptyGeojson
-      })
+      };
+
+      map
       .addSource('endpoints', {
         'type': 'geojson',
         'data': emptyGeojson
       })
-      .addSource('walking_routes', {
+      .addSource('route',{
         'type': 'geojson',
+        'lineMetrics': true,
         'data': emptyGeojson
       })
-      .addSource('route', {
-        'type': 'geojson',
-        'data': emptyGeojson
-      })
-      .addSource('highlighted_extrusion', {
-        'type': 'geojson',
-        'data': emptyGeojson
-      });
 
 
     map.setLight({
@@ -500,7 +496,7 @@
     map
       .addLayer({
         "type": "fill-extrusion",
-        "source": "data",
+        "source": emptySource,
         "id": "heights",
 
         "paint": {
@@ -512,7 +508,7 @@
       })
       .addLayer({
         "type": "fill-extrusion",
-        "source": "highlighted_extrusion",
+        "source": emptySource,
         "id": "highlighted_extrusion",
 
         "paint": {
@@ -525,7 +521,7 @@
       .addLayer({
         "id": "walking_routes",
         "type": "line",
-        "source": "walking_routes",
+        "source": emptySource,
         "layout": {
           "line-cap": "round"
         },
@@ -576,7 +572,7 @@
               [22,10]
             ]
           },
-          "line-color": 'purple'
+          "line-color": 'rgba(128,0,128, 0)'
         }
       })
       .addLayer({
@@ -752,8 +748,6 @@
           step
             .append('div')
             .classed('col8', true)
-            // .append('div')
-            // .classed('inline', true)
             .text(function(d){return d[0]})
           
           step
@@ -771,25 +765,38 @@
           route.push(nearestStations[1].geometry.coordinates)
 
           var geom = turf.linestring(route);
+          map.getSource('route')
+            .setData(geom);
+
           var durationMinutes = Math.round(resp.routes[0].duration/60);
           bounds = turf.extent(geom)
           map          
             .fitBounds(bounds, {padding:100});
 
 
-          var counter = 0;
-
           function animateLine(){
-            var point = turf.along(geom, counter, 'kilometers');
-            var interim = turf.lineSlice(turf.point(geom.geometry.coordinates[0]), point,geom)
-            map.getSource('route').setData(interim)
-            counter++
 
-            var raf = window.requestAnimationFrame(animateLine);
-            if (counter >= 1+distance*5) {
-              window.cancelAnimationFrame(raf)
-              counter = 0;
-            }
+            var now = Date.now();
+            if (!state.counter) state.counter = now;
+
+            var progress = Math.min(1, (now - state.counter)/500);
+
+            var style = [
+              'interpolate',
+              ['linear'],
+              ['line-progress'],
+              0, "rgba(128,0,128, 1)",
+              progress, "rgba(128,0,128, 1)",
+              progress+0.0001, "rgba(128,0,0, 0)",
+            ];
+
+            if (progress > 0) map.setPaintProperty('route', 'line-gradient', style)
+
+            if (progress === 1) state.counter = false;
+
+            else window.requestAnimationFrame(animateLine)
+
+
           }
 
           animateLine();
@@ -841,6 +848,7 @@
                   plateauLength = 1;
                 }
               }
+
               var smoothed = [];
 
               for (var j=0; j<output.length-1; j++){
@@ -873,8 +881,16 @@
             }
 
           map
-            .setPaintProperty('heights', 'fill-extrusion-height', ddsStyle('height', [[0, 100], [1000,20000]]))
-            .setPaintProperty('highlighted_extrusion', 'fill-extrusion-height', ddsStyle('height', [[0, 100], [1000,20000]]))
+            .setPaintProperty(
+              'heights', 
+              'fill-extrusion-height', 
+              ddsStyle('height', [[0, 100], [1000,20000]])
+            )
+            .setPaintProperty(
+              'highlighted_extrusion', 
+              'fill-extrusion-height', 
+              ddsStyle('height', [[0, 100], [1000,20000]])
+            )
 
 
 
@@ -893,7 +909,7 @@
               elevations.features.push(subShape)
             })
 
-            map.getSource('data').setData(elevations)
+            map.getSource('heights').setData(elevations)
             map.getSource('endpoints').setData(turf.featurecollection(nearestStations))
 
           })
@@ -939,37 +955,6 @@ function toggleMap(tilt){
   }
 }
 
-function tiltMap(){
-
-  //rotate the map so that the route is mostly horizontal
-  var bearing = endPoints.map(function(pt){
-    return turf.point(pt.slice(0,2))
-  })
-
-  bearing = (turf.bearing(bearing[0], bearing[1]))
-  map
-    .easeTo({pitch:80, bearing:bearing-90, duration:1200})
-    .setClasses(['tilted'])
-    //.dragPan.disable()
-
-  d3.select('#container')
-    .classed('tilted', true)
-}
-
-function restoreMap(){
-  map
-    .easeTo({pitch:0, bearing:0, duration:1200})
-    .setClasses([])
-    //.off('mousemove')
-    .dragPan.enable()
-
-  //map.dragRotate._ignoreEvent = normalInteraction;
-  d3.select('#container')
-    .classed('tilted', false)
-
-  d3.select('#map').classed('tooltip', false);
-  map.getSource('highlighted_extrusion').setData(emptyGeojson)
-}
 
 function geocode(){
   endPoints.forEach(function(endpoint, pairIndex){

@@ -4,8 +4,8 @@
 <title>Capital Bikeshare</title>
 <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 <script src='turf.min.js'></script>
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.0/mapbox-gl.js'></script>
-<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css' rel='stylesheet' />
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
 <style>
@@ -143,7 +143,6 @@
     overflow:hidden;
     color: white;
     font-size:1.25em;
-    transform: translateX(-50%) translateY(-50%);
   }
 
   .station {
@@ -221,8 +220,8 @@
     <div id='holder'>
       <div id='sidebar' class='fr border-left z100'>
         <div class='pad2'>
-            <div class='button icon mt col12' onclick="tiltMap()">View elevation profile</div>
-            <div class='button icon undo col12 tiltcontrols' onclick="restoreMap()">Change route</div>
+            <div class='button icon mt col12' onclick="toggleMap(true)">View elevation profile</div>
+            <div class='button icon undo col12 tiltcontrols' onclick="toggleMap(false)">Change route</div>
         </div>
         <div id='start'></div>
         <div id='stations' class=''>
@@ -292,6 +291,30 @@
   var endPoints = [[-77.0831,38.9408],[-76.98352, 38.89584]]
   var nearestStations;
 
+  var state = {
+    tilted: false,
+    style: {
+      true: [
+        ['heights', "fill-extrusion-opacity", 0.8],
+        ['highlighted_extrusion', "fill-extrusion-opacity", 1],
+        ['walking_routes', "line-opacity", 0],
+        ['direction-arrows', "text-opacity", 0],
+        ['route', "line-opacity", 0],
+        ['guides', "circle-opacity", 0],
+        ['endpointSymbols', "icon-opacity", 0]
+      ],
+      false: [
+        ['heights', "fill-extrusion-opacity", 0],
+        ['highlighted_extrusion', "fill-extrusion-opacity", 1],
+        ['walking_routes', "line-opacity", 1],
+        ['direction-arrows', "text-opacity", 1],
+        ['route', "line-opacity", 1],
+        ['guides', "circle-opacity", 1],
+        ['endpointSymbols', "icon-opacity", 1]
+      ]
+    }
+  };
+
   var emptyGeojson = {
       "type": "FeatureCollection",
       "features": []
@@ -324,12 +347,8 @@
           'data': resp        
         },
         'layout':{
-          // 'text-field': '',
           'icon-allow-overlap': true,
           'icon-ignore-placement': true,
-          // 'text-size':{
-          //   'stops':[[8,2],[14,16],[15,20]]
-          // },
           'icon-image':'bike-purple',
           'icon-size':{
             'base':1, 
@@ -340,8 +359,6 @@
           }
         },
         'paint': {
-          // 'text-color':'purple',
-          // 'text-halo-width':0.5,
           'icon-halo-color': 'purple',
           'icon-halo-width':30
         }
@@ -356,7 +373,6 @@
         },
         'layout':{
           'text-field': '{name}',
-          // 'text-allow-overlap': true,
           'text-justify': 'left',
           'text-anchor': 'left'
         },
@@ -492,9 +508,6 @@
           "fill-extrusion-opacity": 0,
           "fill-extrusion-height": 100,
           "fill-extrusion-base": 0
-        },
-        "paint.tilted":{
-          "fill-extrusion-opacity": 0.8
         }
       })
       .addLayer({
@@ -507,9 +520,6 @@
           "fill-extrusion-opacity": 0,
           "fill-extrusion-height": 100,
           "fill-extrusion-base": 0
-        },
-        "paint.tilted":{
-          "fill-extrusion-opacity": 1
         }
       })
       .addLayer({
@@ -524,11 +534,8 @@
           "line-width": {'base':1, 'stops':[[10,0.5], [18,6]]},
           "line-dasharray":{'base':1, 'stops':[[10,[0,2.5]], [18,[0,3]]]},
           "line-offset": {'base':1, 'stops':[[10,1], [18,10]]},
-        },
-        "paint.tilted": {
-          "line-opacity":0
         }
-      }, 'hole-4bcswk')
+      })
       .addLayer({
         "id": "direction-arrows",
         "type": "symbol",
@@ -551,11 +558,8 @@
             "text-color": "purple",
             "text-halo-width":2,
             "text-halo-color":'white'
-        },
-        "paint.tilted": {
-          "text-opacity":0
         }
-      }, 'hole-4bcswk')
+      })
       .addLayer({
         "type": "line",
         "source": "route",
@@ -573,11 +577,8 @@
             ]
           },
           "line-color": 'purple'
-        },
-        "paint.tilted": {
-          "line-opacity":0
         }
-      }, 'hole-4bcswk')
+      })
       .addLayer({
         "type": "circle",
         "source": "endpoints",
@@ -586,9 +587,6 @@
         "paint": {
           "circle-color": 'purple',
           "circle-radius":12
-        },
-        "paint.tilted":{
-          "circle-opacity": 0
         }
       })
       .addLayer({
@@ -601,20 +599,14 @@
           'icon-ignore-placement': true,
           'icon-image':'bike-white',
           'icon-size':1
-        },
-        'paint': {
-        },
-        "paint.tilted":{
-          "icon-opacity": 0
         }
       })
       .on('mousemove', function(e){
 
-        if (!map.getClasses()[0]) return;
+        if (!state.tilt) return;
         // highlight extrusion
 
-        var p = e.point;
-        var hoveredFill = map.queryRenderedFeatures([[p.x,p.y+500],[p.x,p.y]], {layers:['heights']})[0];
+        var hoveredFill = map.queryRenderedFeatures(e.point, {layers:['heights']})[0];
 
         if (hoveredFill){
 
@@ -670,7 +662,7 @@
             .classed("collapsed",false);
           
           map
-          .fitBounds(bounds, {padding:100, offset:[-200,0]});
+          .fitBounds(bounds, {padding:100});
         
         })
 
@@ -782,7 +774,7 @@
           var durationMinutes = Math.round(resp.routes[0].duration/60);
           bounds = turf.extent(geom)
           map          
-            .fitBounds(bounds, {padding:100, offset:[-200,0]});
+            .fitBounds(bounds, {padding:100});
 
 
           var counter = 0;
@@ -911,6 +903,42 @@
   })
 
 
+function toggleMap(tilt){
+
+  for (style of state.style[tilt]) {
+    map.setPaintProperty(style[0], style[1], style[2])
+  }
+
+  state.tilt = tilt;
+
+  if (tilt) {
+    //rotate the map so that the route is mostly horizontal
+    var bearing = endPoints.map(function(pt){
+      return turf.point(pt.slice(0,2))
+    })
+
+    bearing = (turf.bearing(bearing[0], bearing[1]))
+    map
+      .easeTo({pitch:80, bearing:bearing-90, duration:1200})
+
+
+    d3.select('#container')
+      .classed('tilted', true)    
+  }
+
+  else {
+    map
+      .easeTo({pitch:0, bearing:0, duration:1200})
+      .dragPan.enable()
+
+    d3.select('#container')
+      .classed('tilted', false)
+
+    d3.select('#map').classed('tooltip', false);
+    map.getSource('highlighted_extrusion').setData(emptyGeojson)
+  }
+}
+
 function tiltMap(){
 
   //rotate the map so that the route is mostly horizontal
@@ -927,6 +955,7 @@ function tiltMap(){
   d3.select('#container')
     .classed('tilted', true)
 }
+
 function restoreMap(){
   map
     .easeTo({pitch:0, bearing:0, duration:1200})

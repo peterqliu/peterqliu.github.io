@@ -21,7 +21,84 @@
     <script>
 
         var s = {
-            center: [-122.437, 37.782]
+            center: [-122.437, 37.782],
+            activeRoute: false,
+            routeDrawStart: Date.now()
+        }
+
+        var c = {
+            animationDuration: 500,
+            emptyGeojson: turf.featureCollection([]),
+            color: {
+                'IB':'rgba(170, 51, 69, 1)',
+                'OB': 'rgba(65, 166, 178, 1)',
+                'weak':'#BAB49D'
+            },
+            routeData:{
+
+            }
+        }
+        c.style = {
+            focus:[
+                ['route', 'line-width', 5],
+                ['stops', 'circle-stroke-width', 5],
+                ['stops', 'circle-radius', 5],
+                ['buses', 'circle-color', c.color.weak],
+                ['bus_labels', 'text-opacity', 1]
+            ],
+            active:[
+                ['route', 'line-width', 5],
+                ['stops', 'circle-stroke-width', 0],
+                ['stops', 'circle-radius', 0],
+                ['buses', 'circle-color', c.color.weak],
+                ['bus_labels', 'text-opacity', 0]
+            ],
+            inactive:[
+                ['route', 'line-width', 0],
+                ['stops', 'circle-stroke-width', 0],
+                ['stops', 'circle-radius', 0],
+                ['buses', 'circle-color', {
+                    'property': 'direction',
+                    'type':'categorical',
+                    'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
+                }],
+                ['bus_labels', 'text-opacity', 0]
+            ]
+        }
+        function setState(key, value){
+
+            if (key === 'activeRoute'){
+
+                var newRoute = value ? value.routeId+'-'+value.direction+'-'+value.directionId : false
+
+                //if already highlighting
+                if (s.activeRoute){
+
+                    if (newRoute){
+                        if (newRoute !== s.activeRoute) updateRoute()
+                        s.activeRoute = newRoute
+                    }
+
+                    else {
+                        s.activeRoute = newRoute
+                        updateRoute()
+                    }
+                }
+
+                //if no current highlight
+                else {
+                    if (newRoute){
+                        s.activeRoute = newRoute
+                        updateRoute()
+                    }
+
+                    else {
+
+                    }
+                }
+
+            }
+
         }
     </script>
 
@@ -30,7 +107,7 @@
         <div id='map'></div>
     </body>
     <script src='map.js'></script>
-    <script src='3.js'></script>
+    <!-- <script src='3.js'></script> -->
 </head>
 
 </html>

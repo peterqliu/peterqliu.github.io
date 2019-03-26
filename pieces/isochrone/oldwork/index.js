@@ -86,7 +86,7 @@ function getMin(array){
 function getMax(array){
 	return Math.max.apply(null,Object.keys(array))
 }
-L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
 var colorScheme = ["#F221E0", "#DA2AD5", "#C22FC9", "#AC31BD", "#9632B0", "#8231A2", "#6E2F94", "#5C2C86", "#4B2877", "#3B2368", "#2C1E59", "#1F194A"]
 var altColor = ['#6c054c','#a04a9a','#9b81bd','#5d64b1','#a7d8f5','#a1e2c0','#d2dc20', '#e09d00','#e86300','#e91800','#910003'].reverse();
@@ -182,7 +182,7 @@ function buildIsochrones(startingPosition) {
 			function fireBatch(origin, partialDestinations, batchIndex){
 				partialDestinations.unshift(origin)
 				console.log(partialDestinations)
-				var queryURL = 'https://api.mapbox.com/distances/v1/mapbox/driving?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g'
+				var queryURL = 'https://api.mapbox.com/distances/v1/mapbox/driving?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A'
 
 			    $.ajax({
 			        type: "POST",

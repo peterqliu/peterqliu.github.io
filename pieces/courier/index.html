@@ -215,7 +215,7 @@
       <label for='hydra' class='button icon check fill-navy-dark black' id='sound'>Sound</label>
     </div>
 <script>
-L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g';
+L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
 function reverseCoords(pair) {return [pair[1], pair[0]]}
 var receivedQuantity = 0;
@@ -572,7 +572,7 @@ $.get('addresses.json', function(error, response, data){
   //generate new pickups on user click
   map.on('click', function(e) {
     var coord =  e.latlng.lng+','+e.latlng.lat;
-    var geocodeURL='https://api.tiles.mapbox.com/v4/geocode/mapbox.places/'+coord+'.json?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g'
+    var geocodeURL='https://api.tiles.mapbox.com/v4/geocode/mapbox.places/'+coord+'.json?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A'
 
     $.get(geocodeURL, function(data, err){
       var address = (data.features[0].address+' '+data.features[0].text);
@@ -623,7 +623,7 @@ $.get('addresses.json', function(error, response, data){
       icon: L.divIcon({
       className: 'couriertarget '+color[0],
       iconSize: [20, 50],
-      html: '<img class="couriertarget" src="https://a.tiles.mapbox.com/v4/marker/pin-s-circle+'+color[1]+'.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g">'
+      html: '<img class="couriertarget" src="https://a.tiles.mapbox.com/v4/marker/pin-s-circle+'+color[1]+'.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A">'
       })
     }).addTo(map);
 

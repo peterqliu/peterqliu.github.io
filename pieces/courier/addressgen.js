@@ -11,7 +11,7 @@ fs.readFile('randompoints.json', encoding='utf8', function (err, data) {
 
 		var n=points.features[i];
 		var coord= n.geometry.coordinates;
-		var queryURL='http://api.tiles.mapbox.com/v4/geocode/mapbox.places/'+coord+'.json?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g'
+		var queryURL='http://api.tiles.mapbox.com/v4/geocode/mapbox.places/'+coord+'.json?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A'
 		request(queryURL, function (error, response, body) {
 			if (error) {console.log(queryURL)};
 			if (!error && response.statusCode == 200) {

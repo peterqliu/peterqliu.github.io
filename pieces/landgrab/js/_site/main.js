@@ -191,7 +191,7 @@
     var imgDimensions = canBeDoubled ? [state.output.columns*2, state.output.rows*2] :[state.output.columns, state.output.rows];
     var bumpZoom = canBeDoubled ? 2 : 1
 
-    var url = ('https://api.mapbox.com/v4/mapbox.satellite/'+state.center+','+(state.zoom+bumpZoom)+'/'+imgDimensions.join('x')+'@2x.png?access_token='+'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g')
+    var url = ('https://api.mapbox.com/v4/mapbox.satellite/'+state.center+','+(state.zoom+bumpZoom)+'/'+imgDimensions.join('x')+'@2x.png?access_token='+'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A')
 
     var texture = new THREE.TextureLoader()
       .load(

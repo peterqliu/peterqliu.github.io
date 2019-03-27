@@ -231,7 +231,7 @@ var map = L.mapbox.map('map', null,{
     minZoom: 13,
     maxZoom: 16,})
     .setView([38.95050194,-77.0497369], 13);
-var newLight = L.tileLayer('https://api.mapbox.com/styles/v1/peterqliu/cimmwtr1c0025b3klix9xjhh0/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImpvZmV0UEEifQ._D4bRmVcGfJvo1wjuOpA1g').addTo(map);
+var newLight = L.tileLayer('https://api.mapbox.com/styles/v1/peterqliu/cimmwtr1c0025b3klix9xjhh0/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A').addTo(map);
 var getPxBounds = map.getPixelBounds;
 map.getPixelBounds = function () {
     var bounds = getPxBounds.call(this);

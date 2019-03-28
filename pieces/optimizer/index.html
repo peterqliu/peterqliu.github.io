@@ -10,6 +10,8 @@
     <script src='https://unpkg.com/cheap-ruler@2.5.0/cheap-ruler.js'></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="../credentials.js"></script>
+
     <style>
         body { margin:0; padding:0; }
         #map { 
@@ -414,7 +416,8 @@ var state = {
         state.transientMarker.remove();
     }
 }
-mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
+mapboxgl.accessToken = config.p;
+
 var embed = window.location.href.indexOf('embed=true') !==-1;
 
 var map = new mapboxgl.Map({

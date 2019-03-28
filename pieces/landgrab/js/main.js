@@ -33,7 +33,7 @@
           side: 0
       })
     },
-    token: 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqY3FpYnFhcDM5bG8yeG4zaTRqZDkwcHYifQ.iZLS0B0HnES9foU_Aspk7Q',
+    token: mapboxgl.accessToken,
     smoother:new Worker('smoothen.js')
   };
 

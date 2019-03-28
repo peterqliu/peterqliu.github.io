@@ -7,6 +7,8 @@
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.js'></script>
 <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css' rel='stylesheet' />
 <script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="../../credentials.js"></script>
+
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
 <style>
 
@@ -287,7 +289,7 @@
   </div>
 <script type='text/javascript' src='d3.js'></script>
 <script>
-  mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejkyYm9qbjAwdm8yd3RlaXNtZmN3a3gifQ.Uc9LFNtZpBHYc00cU-tQUA';
+  mapboxgl.accessToken = config.token;
   var endPoints = [[-77.0831,38.9408],[-76.98352, 38.89584]]
   var nearestStations;
 

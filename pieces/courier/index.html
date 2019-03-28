@@ -9,6 +9,8 @@
 <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
 <link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.6/mapbox.css' rel='stylesheet' />
+    <script src="../credentials.js"></script>
+
 <style>
   body { 
     margin:0;
@@ -215,7 +217,7 @@
       <label for='hydra' class='button icon check fill-navy-dark black' id='sound'>Sound</label>
     </div>
 <script>
-L.mapbox.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
+L.mapbox.accessToken = config.token;
 
 function reverseCoords(pair) {return [pair[1], pair[0]]}
 var receivedQuantity = 0;

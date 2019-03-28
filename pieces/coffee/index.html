@@ -2,6 +2,8 @@
 <head>
 <meta charset=utf-8 />
 <title>Your nearest cup of coffee</title>
+    <script src="../credentials.js"></script>
+
 <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v1.3.0/turf.min.js'></script>
 <script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script>
@@ -53,7 +55,7 @@
 </div>
 
 <script>
-L.mapbox.accessToken = 'pk.eyJ1IjoibW9yZ2FuaGVybG9ja2VyIiwiYSI6Ii1zLU4xOWMifQ.FubD68OEerk74AYCLduMZQ';
+L.mapbox.accessToken = config.p;
 
 var map = L.mapbox.map('map', 'morganherlocker.kgidd73k',{ zoomControl: false })
     .setView([47.615,-122.34], 14);

@@ -9,6 +9,8 @@
     <script src='geocoder.js'></script>
     <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v1.3.1/mapbox-gl-geocoder.css' type='text/css' />
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.23.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="../credentials.js"></script>
+
     <style>
         body { margin:0; padding:0;}
         #map { 
@@ -294,7 +296,7 @@
   </div>
 </div>
 <script>
-mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
+mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHJqdG92OTBkNTg0M3BsNDY0d3NudWcifQ.0z4ov_viFE-yBMSijQpOhQ';
 
 var map = new mapboxgl.Map({
     container: 'map', // container id
@@ -738,7 +740,7 @@ var tinySquare =
 
           if (ft.properties.id !== currentBlock){
             var coord = ft.geometry.coordinates[0][0];
-            var queryURL = 'https://api.mapbox.com/geocoding/v5/mapbox.places/'+coord+'.json?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A'
+            var queryURL = 'https://api.mapbox.com/geocoding/v5/mapbox.places/'+coord+'.json?access_token='+ mapboxgl.accessToken
             mapboxgl.util.getJSON(queryURL, function(err, resp){
               currentBlock = ft.properties.id;
               var address = resp.features[0].address+' '+resp.features[0].text;

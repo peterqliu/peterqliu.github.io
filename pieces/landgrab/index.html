@@ -160,8 +160,8 @@
 <div id='sidebar' class='clearfix'>
   <div id='map'></div>  
   <div class='absolute m12 z5 top right' id='buttonsection'>
-    <div class='button txt-s ' onclick='setState("map", "expanded", true)' style='margin-bottom:10px' id='expand'></div>
-    <div class='button txt-s' onclick='setState("map", "drawing", true)' id='draw'>Select area</div>
+    <div class='button txt-s ' onclick='app.setState("map", "expanded", true)' style='margin-bottom:10px' id='expand'></div>
+    <div class='button txt-s' onclick='app.setState("map", "drawing", true)' id='draw'>Select area</div>
   </div>
 </div>
   <div id='menu' class='bg-darken75 color-gray-light absolute top right z5 w360'>
@@ -177,10 +177,14 @@
 <canvas id="myCanvas" class='' width="1000" height="1000">
   Your browser does not support the HTML5 canvas tag.
 </canvas>
-<script src='js/map.js'></script>
 <script src='js/main.js'></script>
+<script src='js/map.js'></script>
 <script src='js/menu.js'></script>
 <script src='js/preview.js'></script>
-
+<script>
+  
+  app.menu.init();
+  app.renderer.init();
+</script>
 </body>
 </html>

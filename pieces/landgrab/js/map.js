@@ -56,14 +56,14 @@
         [array[1], array[2]]
       ];
 
-      updateRect();
+      app.map.updateRect();
       
-      makeQuery();
+      app.makeQuery();
       fitBounds();
       toggleInteractivity(false)
     }
 
-    else setState('map', 'expanded', true)
+    else app.setState('map', 'expanded', true)
 
   })
 
@@ -78,7 +78,7 @@
 
 
     else {
-      map.off('mousemove', updateCorners);
+      map.off('mousemove', app.updateCorners);
 
       d3.select('#sidebar')
         .classed('expanded', false);
@@ -88,27 +88,26 @@
     function applyDrawListeners(){
 
       map
-
         .getSource('drawn')
           .setData(emptyGeojson);
 
       map.once('mousedown', function(e){
-        state.mousedown = lngLatArray(e.lngLat);
+        state.mousedown = app.utils.lngLatArray(e.lngLat);
 
-        map.on('mousemove', updateCorners)
+        map.on('mousemove', app.updateCorners)
 
         map.once('mouseup', function(){
 
           // check if requested area is big enough
           if (state.validQuery){
-            setState('map','expanded', false)
-            makeQuery();
-            //setState('preview', 'smoothen', false);
+            app.setState('map','expanded', false)
+            app.makeQuery();
+            //app.setState('preview', 'smoothen', false);
           }
 
           // if not, try again
           else {
-            map.off('mousemove', updateCorners);
+            map.off('mousemove', app.updateCorners);
             applyDrawListeners()
           }
         })
@@ -145,7 +144,8 @@
     }
   }
 
-  function updateRect(pt){
+app.map = { 
+  updateRect: ()=>{
 
     //make sure bbox pts are clockwise, starting in NW corner
     state.bbox = 
@@ -180,3 +180,4 @@
     }
 
   }
+}

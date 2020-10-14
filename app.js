@@ -16,7 +16,7 @@ d3.json('data.json', function(err,resp){
 
 	section
 		.append('span')
-		.classed('biggest secondary lowercase weakest', true)
+		.classed('bigger secondary lowercase weakest', true)
 		.text(function(d,i){
 			return d
 		})

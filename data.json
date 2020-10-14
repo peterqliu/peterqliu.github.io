@@ -1,60 +1,6 @@
 {
 
 	"pieces": {
-		"Data made visual":
-			[
-				{
-					"name":"Earthquake watch",
-					"url": "earthquake",
-					"blurb":[
-						"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality.",
-						"Using <a target='_blank' href='https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php'>USGS's live data feed</a>, we represented each event as a point, with a second blurred halo behind it to represent severity. This let us communicate frequency and severity simultaneously, without toggling between modes. The map also transitions smoothly to satellite imagery at higher zoom levels, to better portray any structures and inhabitants in the affected area.",
-						"This was also one of the few maps where we shifted the longitudinal center away from the prime meridian, to better frame the clusters of quakes around the Pacific's Ring of Fire."
-					],
-					"press": "A real-time map of earthquakes around the world (The Atlantic)",
-					"pressUrl": "https://www.citylab.com/environment/2016/06/a-real-time-map-of-earthquakes-around-the-world/487868/"
-				},
-				{
-					"name": "Population inspector",
-					"url": "population",
-					"blurb": [
-						"Mapbox GL added an extrusion feature to render buildings in 3D. Because 3D often gets in the way more than it helps, we wanted to use it in a way that was actually more illuminating.",
-						"A U.S. Census dataset gave us the opening to use this feature in a way that was truly helpful. Typically, population data is typically presented in two ways: a raw count in each region, and in density of people per unit of area.",
-						"But by using each city block as a cross section, and extruding it up to a height correlated to its density, the shape's volume naturally represents the raw count. This enabled us to communicate both statistics simultaneously, in the same visual encoding."
-					]
-				},
-				{
-					"name":"Capitol Bikeshare",
-					"url": "bikeshare/gl",
-					"blurb": [
-						"Mapbox released <a target='_blank' href='https://www.turfjs.org'>Turf.js</a> in 2014, enabling users to do complex spatial analysis right in the browser. We wanted a use case showing Turf in conjunction with other Mapbox utilities, and found a dataset of all stations in <a target='_blank' href='https://www.capitalbikeshare.com/'>DC's bikeshare system</a>.",
-						"Our bounty of tools enabled us to go beyond the typical bikeshare application, to a full-fledged route planner. Once the user drags the markers for their desired trip, Turf identifies the nearest bikeshare stations to both endpoints. ",
-						"Mapbox Directions then navigates the route in three segments: walking directions to the first station, biking directions to the second station, and walking directions again to the final destination.",
-						"The demo also makes use of Surface API -- by sampling the elevation at regular intervals along the route line, we can generate a profile of the hills and elevation changes to expect as we pedal."
-					]
-
-				},
-				{
-					"name":"Red Bull race tracker",
-					"url": "redbull",
-					"blurb": [
-						"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. In addition to a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
-						"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
-						],
-					"press": "Technology & Sport Collide at Red Bull Heavy Water (Red Bull)",
-					"pressUrl": "https://www.redbull.com/us-en/red-bull-heavy-water-tracking-technology-spoondrift-mapbox"
-				},
-				{
-					"name":"Landgrab",
-					"url": "landgrab/#-112.418898,-112.521208,36.420777,36.341725",
-					"blurb": [
-						"Mapbox's investments in augmented reality fueled interest in immersive, photorealistic experiences. We wanted to somehow leverage our existing data and mapping stack for this emergent use case.",
-						"Several pieces fell into place to make this possible: our satellite team found a <a target='_blank' href='https://blog.mapbox.com/global-elevation-data-6689f1d0ba65'>nimble way</a> to deliver global elevation data via png's, and we began experimenting with Three.js for complex shape rendering. These enabled us to build a fully interactive <a target='_blank' href=''>3D map of the world</a>, a lá Google Earth.",
-						"To support developers building 3D worlds, we built a quick tool to inspect, select, and download the imagery and terrain information for a desired land tract."
-					]
-				}
-			],
-
 		"Algorithms & interactions":
 			[
 				{
@@ -83,6 +29,60 @@
 						"Mapbox's Optimization API solves this, <i>plus</i> the option to specify that certain points must come before others. This became an incredibly nuanced, technical tool in search of a good explanation.",
 						"For us, that surfaced in food delivery service. The user clicks and drags orders from three restaurants around Chicago, which a delivery driver fulfills. Each order must involve a pickup trip to the restaurant before heading to the customer, forming a complex queue that the algorithm handles in real time."
 					]
+				}
+			],
+
+		"Data made visual":
+			[
+				{
+					"name":"Landgrab",
+					"url": "landgrab/#-112.418898,-112.521208,36.420777,36.341725",
+					"blurb": [
+						"Mapbox's investments in augmented reality fueled interest in immersive, photorealistic experiences. We wanted to somehow leverage our existing data and mapping stack for this emergent use case.",
+						"Several pieces fell into place to make this possible: our satellite team found a <a target='_blank' href='https://blog.mapbox.com/global-elevation-data-6689f1d0ba65'>nimble way</a> to deliver global elevation data via png's, and we began experimenting with Three.js for complex shape rendering. These enabled us to build a fully interactive <a target='_blank' href=''>3D map of the world</a>, a lá Google Earth.",
+						"To support developers building 3D worlds, we built a quick tool to inspect, select, and download the imagery and terrain information for a desired land tract."
+					]
+				},
+				{
+					"name":"Red Bull Heavy Water",
+					"url": "redbull",
+					"blurb": [
+						"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. In addition to a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
+						"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
+						],
+					"press": "Technology & Sport Collide at Red Bull Heavy Water (Red Bull)",
+					"pressUrl": "https://www.redbull.com/us-en/red-bull-heavy-water-tracking-technology-spoondrift-mapbox"
+				},				
+				{
+					"name": "Census population inspector",
+					"url": "population",
+					"blurb": [
+						"Mapbox GL added an extrusion feature to render buildings in 3D. Because 3D often gets in the way more than it helps, we wanted to use it in a way that was actually more illuminating.",
+						"A U.S. Census dataset gave us the opening to use this feature in a way that was truly helpful. Typically, population data is typically presented in two ways: a raw count in each region, and in density of people per unit of area.",
+						"But by using each city block as a cross section, and extruding it up to a height correlated to its density, the shape's volume naturally represents the raw count. This enabled us to communicate both statistics simultaneously, in the same visual encoding."
+					]
+				},
+				{
+					"name":"USGS Earthquake watch",
+					"url": "earthquake",
+					"blurb":[
+						"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality.",
+						"Using <a target='_blank' href='https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php'>USGS's live data feed</a>, we represented each event as a point, with a second blurred halo behind it to represent severity. This let us communicate frequency and severity simultaneously, without toggling between modes. The map also transitions smoothly to satellite imagery at higher zoom levels, to better portray any structures and inhabitants in the affected area.",
+						"This was also one of the few maps where we shifted the longitudinal center away from the prime meridian, to better frame the clusters of quakes around the Pacific's Ring of Fire."
+					],
+					"press": "A real-time map of earthquakes around the world (The Atlantic)",
+					"pressUrl": "https://www.citylab.com/environment/2016/06/a-real-time-map-of-earthquakes-around-the-world/487868/"
+				},
+				{
+					"name":"Capitol Bikeshare",
+					"url": "bikeshare/gl",
+					"blurb": [
+						"Mapbox released <a target='_blank' href='https://www.turfjs.org'>Turf.js</a> in 2014, enabling users to do complex spatial analysis right in the browser. We wanted a use case showing Turf in conjunction with other Mapbox utilities, and found a dataset of all stations in <a target='_blank' href='https://www.capitalbikeshare.com/'>DC's bikeshare system</a>.",
+						"Our bounty of tools enabled us to go beyond the typical bikeshare application, to a full-fledged route planner. Once the user drags the markers for their desired trip, Turf identifies the nearest bikeshare stations to both endpoints. ",
+						"Mapbox Directions then navigates the route in three segments: walking directions to the first station, biking directions to the second station, and walking directions again to the final destination.",
+						"The demo also makes use of Surface API -- by sampling the elevation at regular intervals along the route line, we can generate a profile of the hills and elevation changes to expect as we pedal."
+					]
+
 				}
 			],
 

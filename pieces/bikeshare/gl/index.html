@@ -821,9 +821,11 @@
 
           //assemble surface query url
           for (var d = 0; d<sampleQuant; d++){
-            var startPoint = turf.along(geom, incrementDist*d,'kilometers').geometry.coordinates.map(function(num){return num.toFixed(6)});
-            var endPoint = turf.along(geom, (1+d)*incrementDist,'kilometers').geometry.coordinates.map(function(num){return num.toFixed(6)})
+            var startPoint = turf.along(geom, incrementDist*d,'kilometers').geometry.coordinates.map(num=> parseFloat(num.toFixed(6)));
+            var endPoint = turf.along(geom, (1+d)*incrementDist,'kilometers').geometry.coordinates.map(num=> parseFloat(num.toFixed(6)))
+            console.log(map.queryRenderedFeatures(map.project(endPoint), {layers:['contour']}).map(c=>c.properties.ele))
             pointString+=(endPoint+';')
+
           }
 
           pointString = pointString.slice(0, -1);

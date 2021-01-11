@@ -56,6 +56,9 @@
             font-size:1.5em;
         }
 
+        #title {
+            margin-top:30px;
+        }
         .biggest{
             font-size:2em;
         }
@@ -91,6 +94,7 @@
             z-index:100;
             height:100%;
             overflow:hidden;
+            transition:all 0.25s;
         }
 
         #modal{
@@ -98,10 +102,10 @@
             margin: 0 auto;
             border-radius: 3px;
             position: absolute;
-            left: 30px;
-            right: 30px;
-            top: 30px;
-            bottom: 30px;
+            left: 0px;
+            right: 0px;
+            top: 0px;
+            bottom: 0px;
             overflow: hidden;
         }
 
@@ -126,7 +130,9 @@
         }
 
         .hidden {
-            display:none;
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
         }
 
         a {
@@ -177,7 +183,7 @@
                     <div id='close'>
                         <span class='bigger a weaker' style='transform:rotateZ(180deg)'>✕</span>
                     </div>
-                    <div class='bigger section' id='title'></div>
+                    <div class='bigger' id='title'></div>
                     <div id='blurb' class='weak'></div>
 
                     <div id='press' class='hidden big'>
@@ -197,8 +203,8 @@
         <div class='secondary bigger weaker'>maps / interfaces / algorithms</div>
 
         <div id='intro' class='biggest weak'>
-            <p>I'm a designer, engineer, and noodle enthusiast in Portland, OR. I'm into making tech more human, humane, and useful.</p>
-            <p>Currently open to consult on design and development, especially involving mapping and data visualization. Most recently at Mapbox, I enjoyed working across the stack to build new prototypes and tools. Some recent work:</p>           
+            <p>I'm a designer, engineer, and noodle enthusiast in Portland, OR. I'm into making tech more humane and useful, especially involving mapping and data visualization.</p>
+            <p>I enjoy working across the stack to build new prototypes and tools. Some relevant work from my time at Mapbox:</p>           
 
         </div>
         <div id='portfolio' class=''>

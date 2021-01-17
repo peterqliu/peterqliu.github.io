@@ -2,7 +2,7 @@ mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBld
 
 var map = new mapboxgl.Map({
     container: 'map', // container id
-    antialiased:true,
+    // antialiased:true,
 	style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
     center: s.center, // starting position
     // minZoom: 12,
@@ -35,8 +35,13 @@ function pollBuses(){
 		geojson = turf.featureCollection(geojson)
 
 		updateRouteData(geojson)
+		// console.log(resp)
+		// updateBuses(geojson)
 
-		updateBuses(geojson)
+		s.buses = resp
+		.filter(item =>item.directionId);
+
+		s.customLayer.updateBuses();	
 	})
 }
 
@@ -54,7 +59,7 @@ function setupMap(){
 		'source': 'buses',
 		'paint':{
 			'circle-radius':20,
-			'circle-opacity':0.7,
+			'circle-opacity':0,
 			'circle-color':{
 				'property': 'direction',
 				'type':'categorical',

@@ -24,7 +24,15 @@
         var s = {
             center: [-122.437, 37.782],
             activeRoute: false,
-            routeDrawStart: Date.now()
+            routeDrawStart: Date.now(),
+            utils: {
+                degreeify: radians =>{
+                    radians = radians || 0;
+                    return radians * 360/(Math.PI*2)
+                },
+
+                radify: deg => 2*Math.PI * deg/360
+            }
         }
 
         var c = {

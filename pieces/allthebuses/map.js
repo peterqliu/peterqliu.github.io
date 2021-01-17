@@ -2,9 +2,10 @@ mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBld
 
 var map = new mapboxgl.Map({
     container: 'map', // container id
+    antialiased:true,
 	style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
     center: s.center, // starting position
-    minZoom: 12,
+    // minZoom: 12,
     zoom: 13 // starting zoom
 });
 
@@ -23,9 +24,7 @@ function pollBuses(){
 	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', function(err,resp){
 
 		var geojson = resp
-		.filter(function(item){
-			return item.directionId
-		})
+		.filter(item =>item.directionId)
 		.map(function(item){
 			var id = item.directionId;
 			item.direction = getDirection(id)
@@ -69,14 +68,14 @@ function setupMap(){
 		'source': 'buses',
 		'paint':{
 			'text-color':'white',
-			'text-opacity':0
+			// 'text-opacity':0
 		},
 		'layout':{
 			'text-field':'{routeId}',
-			'text-rotate': {
-				'type':'identity',
-				'property': 'heading'
-			},
+			// 'text-rotate': {
+			// 	'type':'identity',
+			// 	'property': 'heading'
+			// },
 
 			'text-allow-overlap': true
 		}
@@ -118,7 +117,7 @@ function setupMap(){
 		var value = hoveredBus ? hoveredBus.properties : false
 		setState('activeRoute', value)
 	})
-	.on('click', function(e){
+	.on('clickss', function(e){
 
 		var hoveredBus = map.queryRenderedFeatures(e.point, {layers:['buses']})[0];
 
@@ -132,7 +131,16 @@ function setupMap(){
 
 function updateBuses(geojson){
 
-	map.getSource('buses')
+	map
+		.setPaintProperty('bus_labels', 'text-opacity', {
+			property: 'routeId', 
+			type:'categorical',
+			default:0,
+			stops:[
+				[s.activeRoute, 1]
+			]
+		})
+	.getSource('buses')
 		.setData(geojson)
 
 }

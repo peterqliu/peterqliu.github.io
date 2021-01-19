@@ -16,7 +16,7 @@
  -->    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <style>
         body { margin:0; padding:0; }
-        #map { position:absolute; top:0; bottom:0; width:100%; }
+        #map, #overlay { position:absolute; top:0; bottom:0; width:100%; }
         #controls { position:absolute; top:0; left:0; }
     </style>
     <script>
@@ -32,6 +32,12 @@
                 },
 
                 radify: deg => 2*Math.PI * deg/360
+            },
+            highlightedBus: {
+                uuid: null, 
+                routeId: null,
+                startTime: null,
+                markerObj: null
             }
         }
 
@@ -59,7 +65,7 @@
                 ['route', 'line-width', 5],
                 ['stops', 'circle-stroke-width', 0],
                 ['stops', 'circle-radius', 0],
-                ['buses', 'circle-color', c.color.weak],
+                // ['buses', 'circle-color', c.color.weak],
                 ['bus_labels', 'text-opacity', 0]
             ],
             inactive:[
@@ -113,6 +119,7 @@
 
 
     <body>
+        <canvas id='overlay' style='z-index: 99; height:100%; pointer-events: none'></canvas>
         <div id='map'></div>
     </body>
     <script src='map.js'></script>

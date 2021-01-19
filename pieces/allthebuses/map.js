@@ -12,34 +12,39 @@ var map = new mapboxgl.Map({
 map.on('load', function(){
 	
 	setupMap()
+
 	setInterval(function(){pollBuses()}, 5000)
-	pollBuses()
+	pollBuses(true)
 })
 
 function getDirection(str){
 	var output = str.includes('_I_') ? 'IB' : 'OB'
 	return output
 }
-function pollBuses(){
-	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', function(err,resp){
 
-		var geojson = resp
-		.filter(item =>item.directionId)
-		.map(function(item){
-			var id = item.directionId;
-			item.direction = getDirection(id)
-			return turf.point([item.lon, item.lat], item)
-		})
+function pollBuses(initial){
 
+	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', (err,resp) => {
 
-		geojson = turf.featureCollection(geojson)
+		console.log('poll')
+		s.lastPollTime = Date.now();
+		if (!initial) s.animatingBuses = true;
 
-		updateRouteData(geojson)
-		// console.log(resp)
-		// updateBuses(geojson)
+		resp
+			.filter(item =>item.directionId)
+			.forEach(line=>{
+				if (!c.routeData[line.routeId]) fetchRouteData(line.routeId)
+			})
+
 
 		s.buses = resp
-		.filter(item =>item.directionId);
+			.filter(item =>item.directionId)
+			.map(function(item){
+				var id = item.directionId;
+				item.direction = getDirection(id)
+				return item
+			})
+		;
 
 		s.customLayer.updateBuses();	
 	})
@@ -115,13 +120,13 @@ function setupMap(){
 		}
 	})	
 
-	.on('mousemove', function(e){
+	// .on('mousemoves', function(e){
 
-		var hoveredBus = map.queryRenderedFeatures(e.point, {layers:['buses']})[0];
+	// 	var hoveredBus = map.queryRenderedFeatures(e.point, {layers:['buses']})[0];
 
-		var value = hoveredBus ? hoveredBus.properties : false
-		setState('activeRoute', value)
-	})
+	// 	var value = hoveredBus ? hoveredBus.properties : false
+	// 	setState('activeRoute', value)
+	// })
 	.on('clickss', function(e){
 
 		var hoveredBus = map.queryRenderedFeatures(e.point, {layers:['buses']})[0];
@@ -165,6 +170,7 @@ function focusRoute(lnglat){
 function updateRoute(){
 
 	var state = s.activeRoute ? 'active' : 'inactive';
+	console.log(state)
 	c.style[state].forEach(function(style){
 		map.setPaintProperty(style[0], style[1], style[2])
 	})
@@ -172,7 +178,7 @@ function updateRoute(){
 	if (s.activeRoute)  {
 		var routeObj = s.activeRoute.split('-')
 		requestRoute(routeObj, function(resp){
-
+			console.log(routeObj, resp)
 			map.getSource('route')
 				.setData(resp.path)
 
@@ -224,6 +230,7 @@ function drawRoute(){
 }
 
 function requestRoute(routeObj, cb){
+	console.log('requesting', routeObj)
 	var entry = c.routeData[routeObj[0]].processed[routeObj[2]];
 	cb(entry)
 
@@ -261,12 +268,10 @@ function requestRoute(routeObj, cb){
         console.log(stops)
 
         stops = stops
-        .map(function(stop){
-            return turf.point(
+        .map(stop => turf.point(
                 [stop.lon, stop.lat], 
                 {name: stop.title, direction: routeObj[1]}
-            )
-        })
+            ))
 
         var lineString = stops.map(function(stop){
         	return stop.geometry.coordinates
@@ -281,74 +286,36 @@ function requestRoute(routeObj, cb){
 }
 
 
-function updateRouteData(geojson){
+const fetchRouteData = routeId => {
 
-	geojson.features.forEach(function(bus){
-		var route = bus.properties.routeId;
-		if (!c.routeData[route]) {
-			c.routeData[route] = 'pending'
+	// c.routeData[routeId] = 'pending'
 
-			d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+route, function(err, resp){
-				
-				resp.processed = {}
+	d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (err, resp) => {
+		
+		resp.processed = {}
+		// per direction, reconstruct route from stops
+		resp.directions.forEach(function(route){
 
-				resp.directions.forEach(function(route){
+	        var whitelist = route.stops;
 
-			        var whitelist = route.stops;
-			        //console.log(whitelist)
-			        var stops = resp.stops
-			        .filter(function(stop){
-			            return  whitelist.includes(stop.id)
-			        })
-			        .map(function(stop){
-			            return turf.point(
-			                [stop.lon, stop.lat], 
-			                {name: stop.title, direction: getDirection(route.id)}
-			            )
-			        })
+	        var stops = resp.stops
+				.filter(stop =>whitelist.includes(stop.id)) // keep only stops that are in the general list
+				.map(stop => turf.point(
+				        [stop.lon, stop.lat], 
+				        {name: stop.title, direction: getDirection(route.id)}
+				    )
+				)
 
-			        var path = stops.map(function(stop){
-			        	return stop.geometry.coordinates
-			        })
+	        var path = stops.map(stop =>stop.geometry.coordinates)
 
-					resp.processed[route.id] = {
-						path: turf.lineString(path, {direction:getDirection(route.id)}),
-						stops: turf.featureCollection(stops)
-					}
-				})
+			resp.processed[route.id] = {
+				path: turf.lineString(path, {direction:getDirection(route.id)}),
+				stops: turf.featureCollection(stops)
+			}
+		})
 
-		        // var whitelist = resp.directions.filter(function(list){
-		        //     return list.id === routeObj[2] 
-		        // })[0]
+		c.routeData[routeId] = resp;
 
-		        // var stops = resp.stops
-		        // .filter(function(stop){
-		        //     return  whitelist.stops.includes(stop.id)
-		        // })
-
-		        // console.log(stops)
-
-		        // stops = stops
-		        // .map(function(stop){
-		        //     return turf.point(
-		        //         [stop.lon, stop.lat], 
-		        //         {name: stop.title, direction: routeObj[1]}
-		        //     )
-		        // })
-
-		        // var lineString = stops.map(function(stop){
-		        // 	return stop.geometry.coordinates
-		        // })
-
-				// resp.processed = {
-				// 	route: turf.lineString(lineString, {direction:routeObj[1]}),
-				// 	stops: turf.featureCollection(stops)
-				// }
-
-
-				c.routeData[route] = resp;
-
-			})
-		}
 	})
+	
 }

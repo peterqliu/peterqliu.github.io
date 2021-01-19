@@ -116,26 +116,12 @@ function setupMap(){
 				'stops':[['IB', '#aa3345'], ['OB', '#41a6b2']]
 			},
 			'circle-color':'#fff',
-			'circle-stroke-width': 5
+			'circle-radius':0,
+			'circle-stroke-width': 0
 		}
 	})	
+	.addLayer(customLayer)
 
-	// .on('mousemoves', function(e){
-
-	// 	var hoveredBus = map.queryRenderedFeatures(e.point, {layers:['buses']})[0];
-
-	// 	var value = hoveredBus ? hoveredBus.properties : false
-	// 	setState('activeRoute', value)
-	// })
-	.on('clickss', function(e){
-
-		var hoveredBus = map.queryRenderedFeatures(e.point, {layers:['buses']})[0];
-
-		var value = hoveredBus ? hoveredBus.properties : false
-		setState('activeRoute', value)
-
-		focusRoute(e.lngLat)
-	})
 }
 
 
@@ -147,7 +133,7 @@ function updateBuses(geojson){
 			type:'categorical',
 			default:0,
 			stops:[
-				[s.activeRoute, 1]
+				[s.activeRoute.join('-'), 1]
 			]
 		})
 	.getSource('buses')
@@ -155,30 +141,13 @@ function updateBuses(geojson){
 
 }
 
-function focusRoute(lnglat){
-
-	var state = 'focus';
-
-	c.style[state].forEach(function(style){
-		map.setPaintProperty(style[0], style[1], style[2])
-	})
-
-	//map.panTo([lnglat.lng, lnglat.lat])
-	map.easeTo({center: [lnglat.lng, lnglat.lat], zoom:18})
-}
 
 function updateRoute(){
 
-	var state = s.activeRoute ? 'active' : 'inactive';
-	console.log(state)
-	c.style[state].forEach(function(style){
-		map.setPaintProperty(style[0], style[1], style[2])
-	})
-
 	if (s.activeRoute)  {
-		var routeObj = s.activeRoute.split('-')
+		var routeObj = s.activeRoute
 		requestRoute(routeObj, function(resp){
-			console.log(routeObj, resp)
+
 			map.getSource('route')
 				.setData(resp.path)
 
@@ -195,7 +164,7 @@ function drawRoute(){
 	
 	var now = Date.now();
 	var elapsedTime = Math.max(Date.now() - s.routeDrawStart,1);
-	var direction = s.activeRoute.split('-')[1]
+	var direction = s.activeRoute[1]
 
 	var color = c.color[direction];
 	var transparentColor = color.replace(', 1)', ', 0)')
@@ -230,8 +199,11 @@ function drawRoute(){
 }
 
 function requestRoute(routeObj, cb){
+	
 	console.log('requesting', routeObj)
 	var entry = c.routeData[routeObj[0]].processed[routeObj[2]];
+
+	if (!entry) entry = c.routeData[routeObj[0]].processed[routeObj[1]]
 	cb(entry)
 
 	return
@@ -312,6 +284,10 @@ const fetchRouteData = routeId => {
 				path: turf.lineString(path, {direction:getDirection(route.id)}),
 				stops: turf.featureCollection(stops)
 			}
+
+			// add fallbacks
+			if (route.id.includes('I_')) resp.processed.IB = resp.processed[route.id]
+			else resp.processed.OB = resp.processed[route.id]
 		})
 
 		c.routeData[routeId] = resp;

@@ -25,7 +25,7 @@ function getDirection(str){
 function pollBuses(initial){
 
 	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', (err,resp) => {
-
+		if (resp.length === 0) return
 		console.log('poll')
 		s.lastPollTime = Date.now();
 		if (!initial) s.animatingBuses = true;
@@ -125,23 +125,6 @@ function setupMap(){
 }
 
 
-function updateBuses(geojson){
-
-	map
-		.setPaintProperty('bus_labels', 'text-opacity', {
-			property: 'routeId', 
-			type:'categorical',
-			default:0,
-			stops:[
-				[s.activeRoute.join('-'), 1]
-			]
-		})
-	.getSource('buses')
-		.setData(geojson)
-
-}
-
-
 function updateRoute(){
 
 	if (s.activeRoute)  {
@@ -206,61 +189,11 @@ function requestRoute(routeObj, cb){
 	if (!entry) entry = c.routeData[routeObj[0]].processed[routeObj[1]]
 	cb(entry)
 
-	return
-	d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+routeObj[0], function(err,resp){
-
-        // route line
-        // var line = [];
-
-        // resp.paths
-	       //  .forEach(function(chunk, chunkIndex){
-
-	       //  	if (chunkIndex%2 === 1) return
-	       //      var chunk = chunk.points
-	       //          .forEach(function(pt){
-	       //              line.push([pt.lon, pt.lat])
-	       //          })
-
-	       //  })
-
-        // console.log(line)
-
-        // var lineString = turf.lineString(line, {direction:routeObj[1]})
-        //stops
-
-        var whitelist = resp.directions.filter(function(list){
-            return list.id === routeObj[2] 
-        })[0]
-
-        var stops = resp.stops
-        .filter(function(stop){
-            return  whitelist.stops.includes(stop.id)
-        })
-
-        console.log(stops)
-
-        stops = stops
-        .map(stop => turf.point(
-                [stop.lon, stop.lat], 
-                {name: stop.title, direction: routeObj[1]}
-            ))
-
-        var lineString = stops.map(function(stop){
-        	return stop.geometry.coordinates
-        })
-
-        cb(err, 
-        	turf.lineString(lineString, {direction:routeObj[1]}),
-        	turf.featureCollection(stops)
-        )
-
-	})
 }
 
 
 const fetchRouteData = routeId => {
 
-	// c.routeData[routeId] = 'pending'
 
 	d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (err, resp) => {
 		

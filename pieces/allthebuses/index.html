@@ -47,6 +47,7 @@
 
         var c = {
             animationDuration: 500,
+            markerScale: 0.000002,
             emptyGeojson: turf.featureCollection([]),
             color: {
                 'IB':'rgba(170, 51, 69, 1)',
@@ -59,15 +60,15 @@
         }
         c.style = {
             focus:[
-                ['route', 'line-width', {stops:[[12,1], [22,25]]}],
-                ['stops', 'circle-stroke-width', {stops:[[12,1], [22,25]]}],
-                ['stops', 'circle-radius', {stops:[[12,1], [22,25]]}],
+                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
+                ['stops', 'circle-stroke-width', {stops:[[12,1], [22,20]]}],
+                ['stops', 'circle-radius', {stops:[[12,1], [22,20]]}],
                 // ['buses', 'circle-color', c.color.weak],
                 ['bus_labels', 'text-opacity', 1]
             ],
             active:[
-                ['route', 'line-width', {stops:[[12,1], [22,25]]}],
-                ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,25]]}],
+                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
+                ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,20]]}],
                 ['stops', 'circle-radius', 0],
                 // ['buses', 'circle-color', c.color.weak],
                 ['bus_labels', 'text-opacity', 0]
@@ -116,7 +117,6 @@
 
                 s.mode = value;
                 c.style[value].forEach(function(style){
-                    console.log(style)
                     map.setPaintProperty(style[0], style[1], style[2])
                 })
 

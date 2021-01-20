@@ -184,15 +184,21 @@ function drawRoute(){
 function requestRoute(routeObj, cb){
 	
 	console.log('requesting', routeObj)
-	var entry = c.routeData[routeObj[0]].processed[routeObj[2]];
+	const route = c.routeData[routeObj[0]]
+	if (!route) console.log('not yet downloaded')
 
-	if (!entry) entry = c.routeData[routeObj[0]].processed[routeObj[1]]
-	cb(entry)
+	else {
+		var entry = route.processed[routeObj[2]];
+
+		if (!entry) entry = c.routeData[routeObj[0]].processed[routeObj[1]]
+		cb(entry)
+	}
+
 
 }
 
 
-const fetchRouteData = routeId => {
+const fetchRouteData = (routeId, cb) => {
 
 
 	d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (err, resp) => {
@@ -207,13 +213,19 @@ const fetchRouteData = routeId => {
 				.filter(stop =>whitelist.includes(stop.id)) // keep only stops that are in the general list
 				.map(stop => turf.point(
 				        [stop.lon, stop.lat], 
-				        {name: stop.title, direction: getDirection(route.id)}
+				        {
+				        	name: stop.title, 
+				        	id: stop.id,
+				        	routeId: routeId,
+				        	direction: getDirection(route.id)
+				        }
 				    )
 				)
 
 	        var path = stops.map(stop =>stop.geometry.coordinates)
 
 			resp.processed[route.id] = {
+				title: route.title,
 				path: turf.lineString(path, {direction:getDirection(route.id)}),
 				stops: turf.featureCollection(stops)
 			}

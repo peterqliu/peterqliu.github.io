@@ -10,16 +10,43 @@
     <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
 <script src="https://unpkg.com/three@0.106.2/examples/js/loaders/GLTFLoader.js"></script>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
 
 
 <!--     <script src='munirouteconfig.js'></script>
  -->    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <style>
-        body { margin:0; padding:0; }
+        body { margin:0; padding:0; font-family: 'Open Sans', Verdana, sans-serif;}
         #map, #overlay { position:absolute; top:0; bottom:0; width:100%; }
         #controls { position:absolute; top:0; left:0; }
         canvas {
             cursor:auto;
+        }
+        .mapboxgl-map {
+            font-family: inherit
+        }
+
+        .mapboxgl-popup-content {
+            padding:20px;
+            font-size:1.25em;
+            border-radius: 5px;   
+            color:#999;
+            box-shadow: 0 2px 8px rgba(186, 180, 157, 1)
+        }
+
+        .title {
+            font-weight:100;
+            font-size:1.5em;
+            color:#666;
+            line-height: 1.5em;
+        }
+
+        .IB .highlight {
+            color: rgba(170, 51, 69, 1);
+        }        
+
+        .OB .highlight {
+            color: rgba(65, 166, 178, 1);
         }
     </style>
     <script>
@@ -42,6 +69,16 @@
                 routeId: null,
                 startTime: null,
                 markerObj: null
+            },
+            map: {
+                popup: new mapboxgl.Popup({ 
+                    closeButton: false, 
+                    offset:25, 
+                    maxWidth:'none' 
+                })
+                    // .setLngLat([-96, 37.8])
+                    // .setHTML('<h1>Hello World!</h1>')
+                    // .addTo(map);
             }
         }
 
@@ -58,6 +95,7 @@
 
             }
         }
+
         c.style = {
             focus:[
                 ['route', 'line-width', {stops:[[12,1], [22,20]]}],
@@ -84,6 +122,18 @@
                 }],
                 ['bus_labels', 'text-opacity', 0]
             ]
+        }
+
+        const app = {
+            getPrediction: (route, stop, cb) => {
+                const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
+
+                d3.json(url, (e,r)=>{
+                    if (e) return
+                    cb(r[0].values[0]);
+                })
+
+            }
         }
         function setState(key, value){
 

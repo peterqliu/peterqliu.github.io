@@ -17,7 +17,7 @@ function pollBuses(initial){
 		console.log('poll')
 		s.lastPollTime = Date.now();
 		if (!initial) s.animatingBuses = true;
-		else document.querySelector('#loader').style.display = 'none'
+		else document.querySelector('#loader').classList = ''
 		resp
 			.filter(item =>item.directionId)
 			.forEach(line=>{
@@ -89,6 +89,7 @@ function setupMap(){
 			'line-width': 5
 		}
 	})
+	.addLayer(c.customLayer)
 	.addLayer({
 		'id': 'stops',
 		'type':'circle',
@@ -107,7 +108,6 @@ function setupMap(){
 			'circle-stroke-width': 0
 		}
 	})	
-	.addLayer(customLayer)
 
 }
 

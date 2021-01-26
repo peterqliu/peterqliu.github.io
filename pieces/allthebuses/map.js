@@ -9,14 +9,17 @@ function pollBuses(initial){
 	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', (err,resp) => {
 
 		if (resp.length === 0) return
-		console.log('poll')
+		// console.log('poll')
 		s.lastPollTime = Date.now();
 
 
 		resp
 			.filter(item =>item.directionId)
 			.forEach(line=>{
-				if (!c.routeData[line.routeId]) fetchRouteData(line.routeId)
+				if (!c.routeData[line.routeId]) {
+					c.routeData[line.routeId] = 'pending'
+					fetchRouteData(line.routeId)
+				}
 			})
 
 
@@ -180,9 +183,9 @@ function requestRoute(routeObj, cb){
 	if (!route) console.log('not yet downloaded')
 
 	else {
-		var entry = route.processed[routeObj[2]];
+		var entry = route[routeObj[2]];
 
-		if (!entry) entry = c.routeData[routeObj[0]].processed[routeObj[1]]
+		if (!entry) entry = c.routeData[routeObj[0]][routeObj[1]]
 		cb(entry)
 	}
 
@@ -195,41 +198,47 @@ const fetchRouteData = (routeId, cb) => {
 
 	d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (err, resp) => {
 		
-		resp.processed = {}
+		var output = {title: resp.title}
 		// per direction, reconstruct route from stops
-		resp.directions.forEach(function(route){
+		resp.directions.forEach(routeDirection => {
 
-	        var whitelist = route.stops;
+	        var whitelist = {}
+	        resp.stops.forEach(stop=>{
+	        	whitelist[stop.id] = stop
+	        })
+	        // .map(stop=>stop.id);
 
-	        var stops = resp.stops
-				.filter(stop =>whitelist.includes(stop.id)) // keep only stops that are in the general list
+	        var stops = routeDirection.stops
+				.filter(stop => whitelist[stop]) // keep only stops that are in the general list
 				.map(stop => turf.point(
-				        [stop.lon, stop.lat], 
+				        [whitelist[stop].lon, whitelist[stop].lat], 
 				        {
-				        	name: stop.title, 
-				        	id: stop.id,
+				        	name: whitelist[stop].title, 
+				        	id: whitelist[stop].id,
 				        	routeId: routeId,
-				        	direction: app.utils.getDirection(route.id)
+				        	direction: app.utils.getDirection(routeDirection.id)
 				        }
 				    )
 				)
 
+			// if (routeId === '1') console.log(resp.stops, routeDirection.stops, stops)
+
 	        var path = stops.map(stop =>stop.geometry.coordinates)
 
-			resp.processed[route.id] = {
-				title: route.title,
+			output[routeDirection.id] = {
+				title: routeDirection.title,
 				path: turf.linestring(
-					path, {direction:app.utils.getDirection(route.id)}
+					path, {direction:app.utils.getDirection(routeDirection.id)}
 				),
 				stops: turf.featurecollection(stops)
 			}
 
 			// add fallbacks
-			if (route.id.includes('I_')) resp.processed.IB = resp.processed[route.id]
-			else resp.processed.OB = resp.processed[route.id]
+			if (routeDirection.id.includes('I_')) output.IB = output[routeDirection.id]
+			else output.OB = output[routeDirection.id]
 		})
 
-		c.routeData[routeId] = resp;
+		c.routeData[routeId] = output;
 
 	})
 	

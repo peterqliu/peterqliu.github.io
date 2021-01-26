@@ -4,21 +4,25 @@
     <meta charset='utf-8' />
     <title>allthebuses</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='turf.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
+
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
-    <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
-<script src="https://unpkg.com/three@0.106.2/examples/js/loaders/GLTFLoader.js"></script>
-    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
-
-
-<!--     <script src='munirouteconfig.js'></script>
- -->    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <style>
+
         body { margin:0; padding:0; font-family: 'Open Sans', Verdana, sans-serif;}
         #map, #overlay { position:absolute; top:0; bottom:0; width:100%; }
-        #controls { position:absolute; top:0; left:0; }
+        /*#controls { position:absolute; top:0; left:0; }*/
+
+        #back {
+            z-index: 99;
+            opacity:0.8;
+            margin:1%;
+            cursor:pointer;
+            display:none;
+        }
+
         canvas {
             cursor:auto;
         }
@@ -48,44 +52,93 @@
         .OB .highlight {
             color: rgba(65, 166, 178, 1);
         }
+
+        #loader {
+            z-index: 99;
+        }
+
+        #blurFilter {
+            filter:blur(100px);
+            width:100%;
+            height:100%;
+
+        }
+
+        #loader:before {
+            /*content: 'Fetching buses...';*/
+        }
+
+        #spinner {
+            z-index: 99;
+            width:10vh;
+            height:10vh;
+            margin-left:50vw;
+            margin-top:50vh;
+            background: #aa3345;
+            transform-origin: center;
+            animation-duration: 1.2s;
+            animation-iteration-count: infinite;
+            transform-origin: center;
+            fill-opacity:0.8;
+            border-radius: 50%;
+            border-top-right-radius: 0%;
+            position:absolute;
+            animation-name: spinner;
+
+        }
+
+        @-webkit-keyframes spinner {
+            0% {
+                transform: translateX(-50%) translateY(-50%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(-50%) rotate(405deg) ;
+            }
+        }
     </style>
+    <body>
+        <div id='loader'</div>
+            <!-- <div id='spinner' style='transform:rotateY(180deg); background:blue'></div> -->
+            <div id='spinner' ></div>
+            <div id='blurFilter'></div>
+
+        </div>
+        <div id='map'></div>
+        <img src='zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); map.easeTo(s)'/>
+    </body>
     <script>
+
+        mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
         var s = {
             mode: 'inactive',
             center: [-122.437, 37.782],
+            zoom: 13,
             activeRoute: false,
             routeDrawStart: Date.now(),
-            utils: {
-                degreeify: radians =>{
-                    radians = radians || 0;
-                    return radians * 360/(Math.PI*2)
-                },
 
-                radify: deg => 2*Math.PI * deg/360
-            },
             highlightedBus: {
                 uuid: null, 
                 routeId: null,
                 startTime: null,
                 markerObj: null
             },
+
             map: {
                 popup: new mapboxgl.Popup({ 
                     closeButton: false, 
                     offset:25, 
                     maxWidth:'none' 
                 })
-                    // .setLngLat([-96, 37.8])
-                    // .setHTML('<h1>Hello World!</h1>')
-                    // .addTo(map);
+
             }
         }
 
         var c = {
             animationDuration: 500,
             markerScale: 0.000002,
-            emptyGeojson: turf.featureCollection([]),
+            emptyGeojson: {type:"FeatureCollection",features:[]},
             color: {
                 'IB':'rgba(170, 51, 69, 1)',
                 'OB': 'rgba(65, 166, 178, 1)',
@@ -93,7 +146,43 @@
             },
             routeData:{
 
-            }
+            },
+
+            material: {
+                inactive: new THREE.MeshBasicMaterial( { 
+                    color: 0xBAB49D, 
+                    opacity:0.75, 
+                    transparent:true, 
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                }),
+                IB: new THREE.MeshBasicMaterial( { 
+                    color: 0xaa3345,            
+                    opacity:0.75, 
+                    transparent:true,
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                } ),
+                OB: new THREE.MeshBasicMaterial( { 
+                    color: 0x41a6b2,            
+                    opacity:0.75, 
+                    transparent:true,
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                } ),
+
+                text: new THREE.MeshBasicMaterial( { 
+                    color: 0xfffef9, 
+                    side: THREE.BackSide,
+                    // transparent:true,
+                    opacity:0.75,
+                    // depthWrite:false 
+                } )
+            },
+
+            geometry: {
+                bus: null
+            } 
         }
 
         c.style = {
@@ -125,63 +214,105 @@
         }
 
         const app = {
+
             getPrediction: (route, stop, cb) => {
                 const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
 
                 d3.json(url, (e,r)=>{
                     if (e) return
-                    cb(r[0].values[0]);
+                    cb(r[0] ? r[0].values[0] : undefined);
                 })
 
-            }
-        }
-        function setState(key, value){
+            },
 
-            if (key === 'activeRoute'){
+            setState: (key, value) => {
 
-                var newRoute = value ? [value.routeId,value.direction,value.directionId] : false
+                if (key === 'activeRoute'){
 
-                //if already highlighting
-                if (s.activeRoute){
+                    var newRoute = value ? [value.routeId,value.direction,value.directionId] : false
 
-                    if (newRoute){
-                        if (newRoute !== s.activeRoute) s.activeRoute = newRoute
+                    //if already highlighting
+                    if (s.activeRoute){
+
+                        if (newRoute){
+                            if (newRoute !== s.activeRoute) s.activeRoute = newRoute
+                        }
+
+                        else s.activeRoute = newRoute
                     }
 
-                    else s.activeRoute = newRoute
-                }
+                    //if no previous highlight
+                    else if (newRoute) s.activeRoute = newRoute
 
-                //if no previous highlight
-                else if (newRoute) s.activeRoute = newRoute
-
-                
-                // if no new highlight
-                else {
                     
+                    // if no new highlight
+                    else {}
+
+                    updateRoute();
                 }
 
-                updateRoute();
-            }
+                else if (key === 'mode') {
 
-            else if (key === 'mode') {
+                    s.mode = value;
+                    c.style[value].forEach(style => {
+                        app.map.setPaintProperty(style[0], style[1], style[2])
+                    })
 
-                s.mode = value;
-                c.style[value].forEach(function(style){
-                    map.setPaintProperty(style[0], style[1], style[2])
-                })
+                    document.querySelector('#back').style.display = value === 'focus' ? 'block' : 'none'
 
-                if (value === 'inactive') {
+                    if (value === 'inactive') s.customLayer.restoreBusMarkerColors()
 
+                }
+            },
+
+            map: new mapboxgl.Map({
+                container: 'map', // container id
+                // antialiased:true,
+                style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
+                center: s.center, // starting position
+                // minZoom: 12,
+                zoom: s.zoom // starting zoom
+            }),
+
+            utils: {
+
+                degreeify: radians =>{
+                    radians = radians || 0;
+                    return radians * 360/(Math.PI*2)
+                },
+
+                radify: deg => 2*Math.PI * deg/360,
+
+                load: (url, cb) => {
+                    return fetch(url)
+                        .then((response) => {
+                             cb(response.json());
+                        })
+                },
+
+                getDirection: str => {
+                    var output = str.includes('_I_') ? 'IB' : 'OB'
+                    return output
+                },
+                
+                projectToScene: lngLat => {
+
+                    const lng = lngLat.lng;
+
+                    const xMercatorDelta = (lngLat[0]-s.center[0])/360;
+                    const yMercatorDelta = 0.5 - 0.5 * Math.log(Math.tan(Math.PI * (1/4 + lngLat[1]/360)))/Math.PI - c.sceneTranslate.y
+
+                    return new THREE.Vector3(xMercatorDelta, yMercatorDelta, Math.random()/10000000)
                 }
             }
         }
+
     </script>
 
 
-    <body>
-        <canvas id='overlay' style='z-index: 99; height:100%; pointer-events: none'></canvas>
-        <div id='map'></div>
-    </body>
+
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
+    <script src="d3.js"></script>
     <script src='map.js'></script>
     <script src='customlayer.js'></script>
 

@@ -1,15 +1,6 @@
-mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
-var map = new mapboxgl.Map({
-    container: 'map', // container id
-    // antialiased:true,
-	style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
-    center: s.center, // starting position
-    // minZoom: 12,
-    zoom: 13 // starting zoom
-});
 
-map.on('load', function(){
+app.map.on('load', function(){
 	
 	setupMap()
 
@@ -17,19 +8,16 @@ map.on('load', function(){
 	pollBuses(true)
 })
 
-function getDirection(str){
-	var output = str.includes('_I_') ? 'IB' : 'OB'
-	return output
-}
 
 function pollBuses(initial){
 
 	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', (err,resp) => {
+
 		if (resp.length === 0) return
 		console.log('poll')
 		s.lastPollTime = Date.now();
 		if (!initial) s.animatingBuses = true;
-
+		else document.querySelector('#loader').style.display = 'none'
 		resp
 			.filter(item =>item.directionId)
 			.forEach(line=>{
@@ -38,13 +26,12 @@ function pollBuses(initial){
 
 
 		s.buses = resp
-			.filter(item =>item.directionId)
-			.map(function(item){
+			.filter(item => item.directionId)
+			.map(item => {
 				var id = item.directionId;
-				item.direction = getDirection(id)
+				item.direction = app.utils.getDirection(id)
 				return item
-			})
-		;
+			});
 
 		s.customLayer.updateBuses();	
 	})
@@ -52,12 +39,12 @@ function pollBuses(initial){
 
 function setupMap(){
 
-	map.addSource('buses', {
+	app.map.addSource('buses', {
 		'type': 'geojson',
 		'data': c.emptyGeojson
 	})
 
-	map
+	app.map
 	.addLayer({
 		'id':'buses',
 		'type': 'circle',
@@ -131,10 +118,10 @@ function updateRoute(){
 		var routeObj = s.activeRoute
 		requestRoute(routeObj, function(resp){
 
-			map.getSource('route')
+			app.map.getSource('route')
 				.setData(resp.path)
 
-			map.getSource('stops')
+			app.map.getSource('stops')
 				.setData(resp.stops)
 
 			s.routeDrawStart = Date.now()
@@ -178,7 +165,7 @@ function drawRoute(){
 	    ]
 	}
 
-	map.setPaintProperty('route', 'line-gradient', style)
+	app.map.setPaintProperty('route', 'line-gradient', style)
 }
 
 function requestRoute(routeObj, cb){
@@ -217,7 +204,7 @@ const fetchRouteData = (routeId, cb) => {
 				        	name: stop.title, 
 				        	id: stop.id,
 				        	routeId: routeId,
-				        	direction: getDirection(route.id)
+				        	direction: app.utils.getDirection(route.id)
 				        }
 				    )
 				)
@@ -226,8 +213,10 @@ const fetchRouteData = (routeId, cb) => {
 
 			resp.processed[route.id] = {
 				title: route.title,
-				path: turf.lineString(path, {direction:getDirection(route.id)}),
-				stops: turf.featureCollection(stops)
+				path: turf.linestring(
+					path, {direction:app.utils.getDirection(route.id)}
+				),
+				stops: turf.featurecollection(stops)
 			}
 
 			// add fallbacks

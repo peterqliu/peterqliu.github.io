@@ -1,12 +1,7 @@
+pollBuses(true)
 
+setInterval(function(){pollBuses()}, 5000)
 
-app.map.on('load', function(){
-	
-	setupMap()
-
-	setInterval(function(){pollBuses()}, 5000)
-	pollBuses(true)
-})
 
 
 function pollBuses(initial){
@@ -16,8 +11,8 @@ function pollBuses(initial){
 		if (resp.length === 0) return
 		console.log('poll')
 		s.lastPollTime = Date.now();
-		if (!initial) s.animatingBuses = true;
-		else document.querySelector('#loader').classList = ''
+
+
 		resp
 			.filter(item =>item.directionId)
 			.forEach(line=>{
@@ -33,7 +28,15 @@ function pollBuses(initial){
 				return item
 			});
 
-		s.customLayer.updateBuses();	
+		if (!initial) {
+			s.animatingBuses = true;
+			s.customLayer.updateBuses()
+		}
+
+		else {
+			if (app.map.loaded()) setupMap()
+			else app.map.on('load', ()=>setupMap())
+		}
 	})
 }
 
@@ -108,6 +111,8 @@ function setupMap(){
 			'circle-stroke-width': 0
 		}
 	})	
+	
+	console.log('map setup complete')
 
 }
 

@@ -62,15 +62,18 @@
         #loader {
             z-index: 99;
             display:none;
+            width:100%;
+            height:100%;
         }
 
+        #loader.blurred {
+            display:block;
+        }
         .blurred + #map{
             filter:blur(100px);
+            pointer-events: none
         }
 
-        #loader:before {
-            /*content: 'Fetching buses...';*/
-        }
 
         #spinner {
             z-index: 99;
@@ -112,7 +115,6 @@
         <img src='zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.easeTo(s)'/>
     </body>
     <script>
-
         mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
         var s = {
@@ -129,15 +131,6 @@
                 routeId: null,
                 startTime: null,
                 markerObj: null
-            },
-
-            map: {
-                popup: new mapboxgl.Popup({ 
-                    closeButton: false, 
-                    offset:25, 
-                    maxWidth:'none' 
-                })
-
             }
         }
 
@@ -159,7 +152,14 @@
                 id: '3d-model',
                 type: 'custom',
                 renderingMode: '3d',
-                onAdd: (map, gl) => init(gl),
+                onAdd: (map, gl) => init(gl, ()=>{
+                    s.customLayer.updateBuses();
+
+                    app.map
+                        .on('mousemove', (e)=>{app.on.mouseMove(e)} )
+                        .on('click', s.customLayer.focusBus)
+                        .on('zoom', app.on.zoom) 
+                }),
 
                 render: (gl, matrix) => {
 
@@ -211,7 +211,8 @@
             },
 
             geometry: {
-                bus: null
+                bus: null,
+                label: {}
             } 
         }
 
@@ -304,6 +305,12 @@
                 zoom: s.zoom // starting zoom
             }),
 
+            popup: new mapboxgl.Popup({ 
+                closeButton: false, 
+                offset:25, 
+                maxWidth:'none' 
+            }),
+
             utils: {
 
                 degreeify: radians =>{
@@ -333,6 +340,50 @@
                     const yMercatorDelta = 0.5 - 0.5 * Math.log(Math.tan(Math.PI * (1/4 + lngLat[1]/360)))/Math.PI - c.sceneTranslate.y
 
                     return new THREE.Vector3(xMercatorDelta, yMercatorDelta, Math.random()/10000000)
+                }
+            },
+
+            on: {
+                mouseMove: e => {
+
+                    const cL = s.customLayer;
+
+                    const mouse = new THREE.Vector3(
+                        ( e.point.x / window.innerWidth ) * 2 - 1,
+                        - ( e.point.y / window.innerHeight ) * 2 + 1,
+                        1
+                    )
+
+                    const camInverseProjection = new THREE.Matrix4().getInverse(cL.camera.projectionMatrix);
+                    const cameraPosition = new THREE.Vector3().applyMatrix4(camInverseProjection);
+                    const mousePosition = mouse.applyMatrix4(camInverseProjection);
+                    const viewDirection = mousePosition.clone().sub(cameraPosition).normalize();        
+
+                    cL.raycaster.set(cameraPosition, viewDirection)
+                    const intersect = cL.raycaster.intersectObjects( s.mesh.markers)[0];
+                    
+                    cL.highlightMarker(intersect ? intersect.object : undefined)
+                
+                    if (s.mode === 'focus' && !intersect) {
+                        const hoveredStop = app.map
+                            .queryRenderedFeatures(e.point, {layers:['stops']})[0];
+
+                        cL.highlightStop(hoveredStop)
+                        if (!hoveredStop)  app.popup.remove()
+
+                    }
+                    
+                },
+
+                zoom: () =>{
+                    const shouldShowLabels = app.map.getZoom() >= c.labelZoomThreshold;
+                    
+                    if (shouldShowLabels !== s.showLabels) {
+                        console.log('changing')
+                        const scale = shouldShowLabels ? 1 : 0.000001;
+                        s.mesh.labels.forEach(label => label.scale.set(scale, scale, scale));
+                        s.showLabels = shouldShowLabels;
+                    }
                 }
             }
         }

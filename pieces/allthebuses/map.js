@@ -7,7 +7,7 @@ setInterval(function(){pollBuses()}, 5000)
 function pollBuses(initial){
 
 	app.utils.load('http://restbus.info/api/agencies/sf-muni/vehicles', (resp) => {
-		console.log(resp)
+
 		if (resp.length === 0) return
 		// console.log('poll')
 		s.lastPollTime = Date.now();

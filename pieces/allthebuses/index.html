@@ -120,7 +120,7 @@
         var s = {
             mode: 'inactive',
             showLabels: false,
-            center: [-122.437, 37.782],
+            center: [-122.44, 37.77],
             zoom: 13,
             pitch:0,
             activeRoute: false,
@@ -174,7 +174,7 @@
                     s.customLayer.camera.projectionMatrix = m.multiply(l);
                     if (s.animatingBuses) s.customLayer.animateBus();
                     s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
-                    app.map.triggerRepaint();
+                    // app.map.triggerRepaint();
 
                 }
             },
@@ -303,7 +303,7 @@
 
             map: new mapboxgl.Map({
                 container: 'map', // container id
-                // antialiased:true,
+                antialiased:true,
                 style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
                 center: s.center, // starting position
                 // minZoom: 12,

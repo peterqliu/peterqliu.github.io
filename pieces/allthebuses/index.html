@@ -4,7 +4,6 @@
     <meta charset='utf-8' />
     <title>allthebuses</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='turf.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
 
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.js'></script>
@@ -42,6 +41,7 @@
             color:#999;
             box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
             pointer-events: none;
+            transition:transform 0.1s;
         }
 
         .title {
@@ -186,6 +186,11 @@
                     side: THREE.DoubleSide,
                     // depthWrite:false  
                 }),
+                inactiveHover: new THREE.MeshBasicMaterial( { 
+                    color: 0xBAB49D,
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                }),
                 IB: new THREE.MeshBasicMaterial( { 
                     color: 0xaa3345,            
                     opacity:0.75, 
@@ -249,8 +254,8 @@
             getPrediction: (route, stop, cb) => {
                 const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
 
-                d3.json(url, (e,r)=>{
-                    if (e) return
+                app.utils.load(url, (r)=>{
+                    // if (e) return
                     cb(r[0] ? r[0].values[0] : undefined);
                 })
 
@@ -311,6 +316,9 @@
                 maxWidth:'none' 
             }),
 
+            clearPopup: () => {
+                document.querySelector('.mapboxgl-popup-content').style.transform = 'scale(0)'
+            },
             utils: {
 
                 degreeify: radians =>{
@@ -322,9 +330,8 @@
 
                 load: (url, cb) => {
                     return fetch(url)
-                        .then((response) => {
-                             cb(response.json());
-                        })
+                        .then(response => response.json())
+                        .then(data=> cb(data))
                 },
 
                 getDirection: str => {
@@ -393,11 +400,8 @@
 
 
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
-    <script src="d3.js"></script>
     <script src='map.js'></script>
     <script src='customlayer.js'></script>
-
-    <!-- <script src='3.js'></script> -->
 </head>
 
 </html>

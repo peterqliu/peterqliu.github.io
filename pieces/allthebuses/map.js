@@ -6,8 +6,8 @@ setInterval(function(){pollBuses()}, 5000)
 
 function pollBuses(initial){
 
-	d3.json('http://restbus.info/api/agencies/sf-muni/vehicles', (err,resp) => {
-
+	app.utils.load('http://restbus.info/api/agencies/sf-muni/vehicles', (resp) => {
+		console.log(resp)
 		if (resp.length === 0) return
 		// console.log('poll')
 		s.lastPollTime = Date.now();
@@ -196,7 +196,7 @@ function requestRoute(routeObj, cb){
 const fetchRouteData = (routeId, cb) => {
 
 
-	d3.json('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (err, resp) => {
+	app.utils.load('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (resp) => {
 		
 		var output = {title: resp.title}
 		// per direction, reconstruct route from stops
@@ -210,27 +210,40 @@ const fetchRouteData = (routeId, cb) => {
 
 	        var stops = routeDirection.stops
 				.filter(stop => whitelist[stop]) // keep only stops that are in the general list
-				.map(stop => turf.point(
-				        [whitelist[stop].lon, whitelist[stop].lat], 
-				        {
-				        	name: whitelist[stop].title, 
-				        	id: whitelist[stop].id,
-				        	routeId: routeId,
-				        	direction: app.utils.getDirection(routeDirection.id)
-				        }
-				    )
-				)
-
+				.map(stop => {
+					return {
+						"type": "Feature",
+						"properties": {
+							name: whitelist[stop].title, 
+							id: whitelist[stop].id,
+							routeId: routeId,
+							direction: app.utils.getDirection(routeDirection.id)
+						},
+						"geometry": {
+							"type": "Point",
+							"coordinates": [whitelist[stop].lon, whitelist[stop].lat]
+						}
+					}
+				})
+			
 			// if (routeId === '1') console.log(resp.stops, routeDirection.stops, stops)
 
 	        var path = stops.map(stop =>stop.geometry.coordinates)
 
 			output[routeDirection.id] = {
 				title: routeDirection.title,
-				path: turf.linestring(
-					path, {direction:app.utils.getDirection(routeDirection.id)}
-				),
-				stops: turf.featurecollection(stops)
+				path: {
+					"type": "Feature",
+					"properties": {direction:app.utils.getDirection(routeDirection.id)},
+					"geometry": {
+					"type": "LineString",
+					"coordinates": path
+					}
+				},
+				stops: {
+					"type": "FeatureCollection",
+					"features":stops
+				}
 			}
 
 			// add fallbacks

@@ -10,6 +10,10 @@
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
     <style>
 
+        :root {
+            --IB: rgba(170, 51, 69, 1);
+            --OB: rgba(65, 166, 178, 1);
+        }
         body { margin:0; padding:0; font-family: 'Open Sans', Verdana, sans-serif;}
         #map, #overlay { position:absolute; top:0; bottom:0; width:100%; background:#B8C8D3;}
         /*#controls { position:absolute; top:0; left:0; }*/
@@ -52,12 +56,13 @@
         }
 
         .IB .highlight {
-            color: rgba(170, 51, 69, 1);
+            color: var(--IB);
         }        
 
         .OB .highlight {
-            color: rgba(65, 166, 178, 1);
+            color: var(--OB);
         }
+
 
         #loader {
             z-index: 99;
@@ -94,6 +99,50 @@
 
         }
 
+        #modal {
+            position:absolute;
+            bottom:0;
+            right:0;
+            padding:30px;
+            background:white;
+            margin:1vw;
+            box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
+            border-radius:10px;
+            font-size:2em;
+            z-index: 99
+        }
+        .barLabel {
+            font-size: 0.5em;
+            color:#aaa;
+        }
+        .bar {
+            height: 4px;
+            width: 100%;
+            background: var(--OB);
+            border-radius: 2px;
+            overflow: hidden;
+            opacity:0.8;
+            margin-bottom:5px;
+        }
+
+        .bar div {
+            background:var(--IB);
+            float: right;
+            text-align: right;
+            width: 40%;
+            height: 100%;
+        }
+
+        .marker {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            border-top-right-radius: 0px;
+            transform: rotate(45deg);
+            background: var(--OB);
+            margin-left:2px;
+        }
         @-webkit-keyframes spinner {
             0% {
                 transform: translateX(-50%) translateY(-50%) rotate(45deg);
@@ -111,7 +160,33 @@
             <div id='blurFilter'></div>
 
         </div>
-        <div id='map'></div>
+        <div id='map'>
+            <div id='modal'>
+                <div class='title'>Muni, this moment</div>
+                <div class='bar'>
+                    <div></div>
+                </div>
+                <div class='barLabel'>
+                    <span class='marker'></span>
+                    <span id='ob'></span> Outbound
+                    <span style='float:right'>
+                        <span id='ib'></span> 
+                        Inbound 
+                        <span class='marker' 
+                            style='transform: rotate(-135deg); background: var(--IB); margin-right:2px'
+                        ></span>
+                    </span>
+                </div>
+
+<!--                 <select>
+                    <option>sdfsd</option>
+                    <option>sdfsd</option>
+                    <option>sdfsd</option>
+
+                </select> -->
+            </div>            
+        </div>
+
         <img src='zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.easeTo(s)'/>
     </body>
     <script>
@@ -174,20 +249,21 @@
                     s.customLayer.camera.projectionMatrix = m.multiply(l);
                     if (s.animatingBuses) s.customLayer.animateBus();
                     s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
-                    // app.map.triggerRepaint();
 
                 }
             },
             material: {
                 inactive: new THREE.MeshBasicMaterial( { 
                     color: 0xBAB49D, 
-                    opacity:0.75, 
+                    opacity:0.5, 
                     transparent:true, 
                     side: THREE.DoubleSide,
                     // depthWrite:false  
                 }),
                 inactiveHover: new THREE.MeshBasicMaterial( { 
-                    color: 0xBAB49D,
+                    color: 0xBAB49D, 
+                    opacity:0.75, 
+                    transparent:true,                    
                     side: THREE.DoubleSide,
                     // depthWrite:false  
                 }),
@@ -207,11 +283,12 @@
                 } ),
 
                 text: new THREE.MeshBasicMaterial( { 
-                    color: 0xfffef9, 
+                    color: 0xf0eed9, 
                     side: THREE.BackSide,
                     // transparent:true,
-                    opacity:0.25,
-                    depthWrite:false 
+                    opacity:0.7,
+                    // depthWrite:false,
+                    // depthTest: false 
                 } )
             },
 
@@ -317,7 +394,8 @@
             }),
 
             clearPopup: () => {
-                document.querySelector('.mapboxgl-popup-content').style.transform = 'scale(0)'
+                app.popup.remove()
+                // document.querySelector('.mapboxgl-popup-content').style.transform = 'scale(0)'
             },
             utils: {
 
@@ -392,6 +470,15 @@
                         s.showLabels = shouldShowLabels;
                     }
                 }
+            },
+
+            updateModalBar: () => {
+
+                const IBCount = s.buses.filter(bus=>bus.direction === 'IB').length
+                document.querySelector('#ob').innerHTML = s.buses.length - IBCount;
+                document.querySelector('#ib').innerHTML = IBCount;
+
+                document.querySelector('.bar div').style.width = 100 * IBCount / s.buses.length + '%';
             }
         }
 

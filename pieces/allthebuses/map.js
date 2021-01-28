@@ -31,15 +31,19 @@ function pollBuses(initial){
 				return item
 			});
 
-		if (!initial) {
-			s.animatingBuses = true;
-			s.customLayer.updateBuses()
+		app.updateModalBar();
+
+		if (initial) {
+			if (app.map.loaded()) setupMap()
+			else app.map.on('load', () => setupMap())
 		}
 
 		else {
-			if (app.map.loaded()) setupMap()
-			else app.map.on('load', ()=>setupMap())
+			s.animatingBuses = true;
+			s.customLayer.updateBuses();
 		}
+
+
 	})
 }
 
@@ -95,7 +99,6 @@ function setupMap(){
 			'line-width': 5
 		}
 	})
-	.addLayer(c.customLayer)
 	.addLayer({
 		'id': 'stops',
 		'type':'circle',
@@ -114,7 +117,8 @@ function setupMap(){
 			'circle-stroke-width': 0
 		}
 	})	
-	
+	.addLayer(c.customLayer)
+
 	console.log('map setup complete')
 
 }
@@ -178,7 +182,6 @@ function drawRoute(){
 
 function requestRoute(routeObj, cb){
 	
-	console.log('requesting', routeObj)
 	const route = c.routeData[routeObj[0]]
 	if (!route) console.log('not yet downloaded')
 

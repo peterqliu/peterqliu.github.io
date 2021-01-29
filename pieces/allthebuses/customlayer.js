@@ -4,6 +4,8 @@ s.customLayer = {
 
 	buses: {},
 
+	camera: new THREE.OrthographicCamera(),
+	scene: new THREE.Scene(),
 	raycaster: new THREE.Raycaster(),
 
 	render: () =>{
@@ -45,7 +47,6 @@ s.customLayer = {
 		}
 
 		// console.log('updatebus complete', Date.now()-start)
-		document.querySelector('#loader').classList = ''
 		app.map.triggerRepaint();
 
 		// console.log(s.customLayer.scene.children.length, ' in scene', Object.keys(s.customLayer.buses).length, ' on record')
@@ -69,7 +70,7 @@ s.customLayer = {
 		if (!geomLookup) {
 
 			const textGeom = new THREE.TextGeometry( d.routeId, {
-				font: s.customLayer.font,
+				font: c.font,
 				size: 1/Math.pow(1.25, d.routeId.length),
 				height:0,
 				curveSegments: 24
@@ -302,15 +303,22 @@ s.customLayer = {
 			.addTo(app.map)
 	},
 
-	focusBus: () => {
+	onClick: () => {
 
 		const hB = s.highlightedBus;
 
+		// if no highlighted bus, stop here
 		if (!hB.markerObj) return
 
+		// zoom in on bus
 		app.map.easeTo({
 			center: [hB.markerObj.userData.lon, hB.markerObj.userData.lat], 
 			zoom:15
+		})
+
+		//fetch predictions for whole route, and update modal UI
+		app.getRoutePredictions(s.activeRoute, d=>{
+			app.updateModalRouteFocus(d.stops.features)
 		})
 
 		app.setState('mode', 'focus')
@@ -335,26 +343,11 @@ s.customLayer = {
 }
 
 // init
-const init = (gl, cb) => {
+const buildRenderer = (gl) => {
 
-	const loader = new THREE.FontLoader();
-
-	loader.load( 'Open Sans_Regular.json', font => {
-		cL.font = font;
-		console.log('init complete, font loaded')
-
-		cb()
-	} );
-	c.sceneTranslate = mapboxgl.MercatorCoordinate.fromLngLat(
-	    s.center,
-	    0
-	);	
+	const startTime = performance.now()
 
 	const cL = s.customLayer;
-
-	// set up scene, camera, renderer
-	cL.camera = new THREE.OrthographicCamera();
-	cL.scene = new THREE.Scene();
 
 	cL.renderer = new THREE.WebGLRenderer({
 	    canvas: app.map.getCanvas(),
@@ -367,15 +360,6 @@ const init = (gl, cb) => {
 	cL.renderer.setSize(window.innerWidth, window.innerHeight)
 	cL.renderer.autoClear = false;
 
-
-	// build shape primitive and load font
-	const x = 0, y = 0;
-
-	const markerShape = new THREE.Shape();
-	markerShape.arc(0, 0, 1, Math.PI/2, 0, false);
-	markerShape.lineTo(x+1, y+1);
-
-	c.geometry.bus = new THREE.ShapeGeometry( markerShape );
-
-
+	app.setState('initScene', true);
+	console.log('scene initialized in ', performance.now()- startTime)
 }

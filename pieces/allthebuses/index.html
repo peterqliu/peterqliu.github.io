@@ -14,7 +14,12 @@
             --IB: rgba(170, 51, 69, 1);
             --OB: rgba(65, 166, 178, 1);
         }
-        body { margin:0; padding:0; font-family: 'Open Sans', Verdana, sans-serif;}
+        body { 
+            margin:0; 
+            padding:0; 
+            font-family: 'Open Sans', Verdana, sans-serif;
+            overflow:hidden;
+        }
         #map, #overlay { position:absolute; top:0; bottom:0; width:100%; background:#B8C8D3;}
         /*#controls { position:absolute; top:0; left:0; }*/
 
@@ -66,18 +71,18 @@
 
         #loader {
             z-index: 99;
-            display:none;
             width:100%;
             height:100%;
+            /*display: none;*/
+            backdrop-filter: blur(50px);
+            position: absolute;
+            pointer-events: none;
+            transition:opacity 2s;
         }
 
-        #loader.blurred {
-            display:block;
-        }
-        .blurred + #map{
-            filter:blur(100px);
+/*        .blurred + #map{
             pointer-events: none
-        }
+        }*/
 
 
         #spinner {
@@ -105,11 +110,13 @@
             right:0;
             padding:30px;
             background:white;
-            margin:1vw;
+            margin:2vh;
             box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
             border-radius:10px;
             font-size:2em;
-            z-index: 99
+            z-index: 90;
+            max-height:96vh;
+            overflow:hidden;
         }
         .barLabel {
             font-size: 0.5em;
@@ -122,7 +129,7 @@
             border-radius: 2px;
             overflow: hidden;
             opacity:0.8;
-            margin-bottom:5px;
+            margin:5px 0px;
         }
 
         .bar div {
@@ -153,12 +160,10 @@
             }
         }
     </style>
-    <body>
+    <body mode='loading'>
         <div id='loader' class='blurred'>
             <!-- <div id='spinner' style='transform:rotateY(180deg); background:blue'></div> -->
             <div id='spinner' ></div>
-            <div id='blurFilter'></div>
-
         </div>
         <div id='map'>
             <div id='modal'>
@@ -177,7 +182,8 @@
                         ></span>
                     </span>
                 </div>
-
+                <div id='routeFocus'>
+                </div>
 <!--                 <select>
                     <option>sdfsd</option>
                     <option>sdfsd</option>
@@ -187,12 +193,15 @@
             </div>            
         </div>
 
-        <img src='zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.easeTo(s)'/>
+        <img src='zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
     </body>
+    <script src='map.js'></script>
+
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
         var s = {
+
             mode: 'inactive',
             showLabels: false,
             center: [-122.44, 37.77],
@@ -200,6 +209,8 @@
             pitch:0,
             activeRoute: false,
             routeDrawStart: Date.now(),
+
+            initScene: false,
 
             highlightedBus: {
                 uuid: null, 
@@ -210,6 +221,10 @@
         }
 
         var c = {
+            fullBounds:[
+                [-122.51981158087418,37.73448595445758],
+                [-122.35330876278951,37.830708228670474]
+            ],
             labelZoomThreshold:14,
             animationDuration: 500,
             markerScale: 0.000002,
@@ -219,6 +234,10 @@
                 'OB': 'rgba(65, 166, 178, 1)',
                 'weak':'#BAB49D'
             },
+            sceneTranslate: mapboxgl.MercatorCoordinate.fromLngLat(
+                s.center,
+                0
+            ),
             routeData:{
 
             },
@@ -227,14 +246,7 @@
                 id: '3d-model',
                 type: 'custom',
                 renderingMode: '3d',
-                onAdd: (map, gl) => init(gl, ()=>{
-                    s.customLayer.updateBuses();
-
-                    app.map
-                        .on('mousemove', (e)=>{app.on.mouseMove(e)} )
-                        .on('click', s.customLayer.focusBus)
-                        .on('zoom', app.on.zoom) 
-                }),
+                onAdd: (map, gl) => buildRenderer(gl, ()=>{}),
 
                 render: (gl, matrix) => {
 
@@ -328,6 +340,29 @@
 
         const app = {
 
+            init: () => {
+                pollBuses(true)
+                setInterval(()=>pollBuses(), 5000)
+
+                // build shape primitive and load font
+                const loader = new THREE.FontLoader();
+
+                loader.load( 'Open Sans_Regular.json', font => {
+
+                    c.font = font;
+                    app.setState('initFont', true);
+
+                } );
+
+                const x = 0, y = 0;
+
+                const markerShape = new THREE.Shape();
+                markerShape.arc(0, 0, 1, Math.PI/2, 0, false);
+                markerShape.lineTo(x+1, y+1);
+
+                c.geometry.bus = new THREE.ShapeGeometry( markerShape );
+            },
+
             getPrediction: (route, stop, cb) => {
                 const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
 
@@ -338,6 +373,30 @@
 
             },
 
+            getRoutePredictions: (routeDir, cb) => {
+
+                const route = requestRoute(routeDir);
+                const tuple = route.stops.features
+                    .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
+
+                const tupleEndpoint = `http://restbus.info/api/agencies/sf-muni/tuples/${tuple}/predictions`
+                app.utils.load(
+                    tupleEndpoint, 
+                    d=>{
+                        const output = d.map((stop, index)=>{
+                            route.stops.features[index].properties.prediction = stop.values[0].seconds
+
+                            return {
+                                title: stop.stop.title,
+                                prediction:stop.values[0].seconds
+                            }
+                        })
+
+                        cb(route)
+                    }
+                )
+
+            },
             setState: (key, value) => {
 
                 if (key === 'activeRoute'){
@@ -357,9 +416,6 @@
                     //if no previous highlight
                     else if (newRoute) s.activeRoute = newRoute
 
-                    
-                    // if no new highlight
-                    else {}
 
                     updateRoute();
                 }
@@ -367,13 +423,33 @@
                 else if (key === 'mode') {
 
                     s.mode = value;
+
+                    // apply map styling for current mode
                     c.style[value].forEach(style => {
                         app.map.setPaintProperty(style[0], style[1], style[2])
                     })
 
+                    // update back button visibility
                     document.querySelector('#back').style.display = value === 'focus' ? 'block' : 'none'
 
                     if (value === 'inactive') s.customLayer.restoreBusMarkerColors()
+                    // else if (value === 'focus')
+                }
+
+
+                else if (key.includes('init')) {
+
+                    s[key] = value;
+
+                    if (s.initScene === s.initFont === true) {
+
+                        document.querySelector('#loader').style.opacity = 0
+
+                        app.map
+                            .on('mousemove', (e)=>{app.on.mouseMove(e)} )
+                            .on('click', s.customLayer.onClick)
+                            .on('zoom', app.on.zoom) 
+                    }
 
                 }
             },
@@ -479,16 +555,28 @@
                 document.querySelector('#ib').innerHTML = IBCount;
 
                 document.querySelector('.bar div').style.width = 100 * IBCount / s.buses.length + '%';
+            },
+
+            updateModalRouteFocus: (stops) => {
+                d3.select('#routeFocus')
+                    .selectAll('.stop')
+                    .data(stops)
+                    .enter()
+                    .append('div')
+                    .text(d=>d.properties.name+','+d.properties.prediction)
             }
         }
 
+
+        app.init();
     </script>
 
 
 
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
-    <script src='map.js'></script>
     <script src='customlayer.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
+
 </head>
 
 </html>

@@ -1,15 +1,9 @@
-pollBuses(true)
-
-setInterval(function(){pollBuses()}, 5000)
-
-
-
 function pollBuses(initial){
 
 	app.utils.load('http://restbus.info/api/agencies/sf-muni/vehicles', (resp) => {
 
 		if (resp.length === 0) return
-		// console.log('poll')
+		console.log('poll')
 		s.lastPollTime = Date.now();
 
 
@@ -40,9 +34,10 @@ function pollBuses(initial){
 
 		else {
 			s.animatingBuses = true;
-			s.customLayer.updateBuses();
+			// s.customLayer.updateBuses();
 		}
 
+        s.customLayer.updateBuses();
 
 	})
 }
@@ -119,7 +114,7 @@ function setupMap(){
 	})	
 	.addLayer(c.customLayer)
 
-	console.log('map setup complete')
+	// console.log('map setup complete')
 
 }
 
@@ -127,18 +122,20 @@ function setupMap(){
 function updateRoute(){
 
 	if (s.activeRoute)  {
-		var routeObj = s.activeRoute
-		requestRoute(routeObj, function(resp){
 
+		const route = requestRoute(s.activeRoute);
+
+		if (route) {
 			app.map.getSource('route')
-				.setData(resp.path)
+				.setData(route.path)
 
 			app.map.getSource('stops')
-				.setData(resp.stops)
+				.setData(route.stops)
 
 			s.routeDrawStart = Date.now()
 			drawRoute()
-		})
+
+		}
 	}
 }
 
@@ -164,7 +161,7 @@ function drawRoute(){
 	        elapsedTime/(c.animationDuration-1), transparentColor
 	    ]
 
-	    requestAnimationFrame(function(){drawRoute(direction)})
+	    requestAnimationFrame(()=>drawRoute(direction))
 	}
 
 	else {
@@ -180,22 +177,29 @@ function drawRoute(){
 	app.map.setPaintProperty('route', 'line-gradient', style)
 }
 
+// retrieves route from constants (can be abstracted away)
 function requestRoute(routeObj, cb){
-	
+
+	// routeObj is [line, generic direction, specific direction]
 	const route = c.routeData[routeObj[0]]
-	if (!route) console.log('not yet downloaded')
+	const direction = routeObj[1];
+
+	if (!route) {
+		console.log('not yet downloaded')
+		return false
+	}
 
 	else {
-		var entry = route[routeObj[2]];
 
-		if (!entry) entry = c.routeData[routeObj[0]][routeObj[1]]
-		cb(entry)
+		// fall back to generic IB/OB if specific direction not found
+		var routeDirection = route[routeObj[2]] || route[direction];
+		return routeDirection
 	}
 
 
 }
 
-
+//API call to populate route data
 const fetchRouteData = (routeId, cb) => {
 
 
@@ -228,13 +232,16 @@ const fetchRouteData = (routeId, cb) => {
 						}
 					}
 				})
-			
-			// if (routeId === '1') console.log(resp.stops, routeDirection.stops, stops)
 
-	        var path = stops.map(stop =>stop.geometry.coordinates)
+	        var path = stops.map(stop =>stop.geometry.coordinates);
+	        const bounds = resp.bounds;
 
 			output[routeDirection.id] = {
 				title: routeDirection.title,
+				bounds: [
+					[bounds.sw.lon, bounds.sw.lat],
+					[bounds.ne.lon, bounds.ne.lat]
+				],
 				path: {
 					"type": "Feature",
 					"properties": {direction:app.utils.getDirection(routeDirection.id)},

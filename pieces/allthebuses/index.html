@@ -206,21 +206,16 @@
                         </span>
                     </div>
                 </div>
-                <div id='routeFocus' style='display:non'>
+                <div id='routeFocus'>
                     <div class='title'></div>
                 </div>
-<!--                 <select>
-                    <option>sdfsd</option>
-                    <option>sdfsd</option>
-                    <option>sdfsd</option>
 
-                </select> -->
             </div>            
         </div>
 
-        <img src='zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
+        <img src='src/zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
     </body>
-    <script src='map.js'></script>
+    <script src='src/map.js'></script>
 
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
@@ -372,7 +367,7 @@
                 // build shape primitive and load font
                 const loader = new THREE.FontLoader();
 
-                loader.load( 'Open Sans_Regular.json', font => {
+                loader.load( 'src/Open Sans_Regular.json', font => {
 
                     c.font = font;
                     app.setState('initFont', true);
@@ -449,7 +444,8 @@
                 else if (key === 'mode') {
 
                     s.mode = value;
-                    document.querySelector('body').setAttribute('mode', value)
+                    // document.querySelector('body').setAttribute('mode', value)
+                    
                     // apply map styling for current mode
                     c.style[value].forEach(style => {
                         app.map.setPaintProperty(style[0], style[1], style[2])
@@ -603,7 +599,7 @@
 
 
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
-    <script src='customlayer.js'></script>
+    <script src='src/customlayer.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
 
 </head>

@@ -79,6 +79,8 @@ s.customLayer = {
 			// center text
 			textGeom.computeBoundingBox();
 			textGeom.bb = textGeom.boundingBox;
+
+			textGeom.matrixAutoUpdate = false;
 			c.geometry.label[d.routeId] = geomLookup = textGeom
 		}
 

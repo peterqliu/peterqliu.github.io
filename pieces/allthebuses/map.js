@@ -126,6 +126,7 @@ function updateRoute(){
 		const route = requestRoute(s.activeRoute);
 
 		if (route) {
+			
 			app.map.getSource('route')
 				.setData(route.path)
 

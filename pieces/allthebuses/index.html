@@ -14,13 +14,21 @@
             --IB: rgba(170, 51, 69, 1);
             --OB: rgba(65, 166, 178, 1);
         }
+
         body { 
             margin:0; 
             padding:0; 
             font-family: 'Open Sans', Verdana, sans-serif;
             overflow:hidden;
         }
-        #map, #overlay { position:absolute; top:0; bottom:0; width:100%; background:#B8C8D3;}
+
+        #map, #overlay { 
+            position:absolute; 
+            top:0; 
+            bottom:0; 
+            width:100%; 
+            background:#B8C8D3;
+        }
         /*#controls { position:absolute; top:0; left:0; }*/
 
         #back {
@@ -29,12 +37,13 @@
             margin:1%;
             cursor:pointer;
             display:none;
-            transition:transform 0.1s;
+            transition:all 0.1s;
             transform-origin: center;
         }
 
         #back:hover {
             transform:scale(1.25);
+            opacity:1;
         }
         canvas {
             cursor:auto;
@@ -87,8 +96,8 @@
 
         #spinner {
             z-index: 99;
-            width:10vh;
-            height:10vh;
+            width:5vh;
+            height:5vh;
             margin-left:50vw;
             margin-top:50vh;
             background: #aa3345;
@@ -159,6 +168,19 @@
                 transform: translateX(-50%) translateY(-50%) rotate(405deg) ;
             }
         }
+
+        #routeFocus {
+            display:none;
+        }
+        body[mode='focus'] #routeFocus {
+            display:block;
+        }
+
+        body[mode='focus'] #general {
+            display:none;
+        }
+
+
     </style>
     <body mode='loading'>
         <div id='loader' class='blurred'>
@@ -167,22 +189,25 @@
         </div>
         <div id='map'>
             <div id='modal'>
-                <div class='title'>Muni, this moment</div>
-                <div class='bar'>
-                    <div></div>
+                <div id='general'>
+                    <div class='title'>Muni, this moment</div>
+                    <div class='bar'>
+                        <div></div>
+                    </div>
+                    <div class='barLabel'>
+                        <span class='marker'></span>
+                        <span id='ob'></span> Outbound
+                        <span style='float:right'>
+                            <span id='ib'></span> 
+                            Inbound 
+                            <span class='marker' 
+                                style='transform: rotate(-135deg); background: var(--IB); margin-right:2px'
+                            ></span>
+                        </span>
+                    </div>
                 </div>
-                <div class='barLabel'>
-                    <span class='marker'></span>
-                    <span id='ob'></span> Outbound
-                    <span style='float:right'>
-                        <span id='ib'></span> 
-                        Inbound 
-                        <span class='marker' 
-                            style='transform: rotate(-135deg); background: var(--IB); margin-right:2px'
-                        ></span>
-                    </span>
-                </div>
-                <div id='routeFocus'>
+                <div id='routeFocus' style='display:non'>
+                    <div class='title'></div>
                 </div>
 <!--                 <select>
                     <option>sdfsd</option>
@@ -361,6 +386,7 @@
                 markerShape.lineTo(x+1, y+1);
 
                 c.geometry.bus = new THREE.ShapeGeometry( markerShape );
+                c.geometry.bus.matrixAutoUpdate() = false;
             },
 
             getPrediction: (route, stop, cb) => {
@@ -423,7 +449,7 @@
                 else if (key === 'mode') {
 
                     s.mode = value;
-
+                    document.querySelector('body').setAttribute('mode', value)
                     // apply map styling for current mode
                     c.style[value].forEach(style => {
                         app.map.setPaintProperty(style[0], style[1], style[2])
@@ -558,12 +584,15 @@
             },
 
             updateModalRouteFocus: (stops) => {
-                d3.select('#routeFocus')
-                    .selectAll('.stop')
-                    .data(stops)
-                    .enter()
-                    .append('div')
-                    .text(d=>d.properties.name+','+d.properties.prediction)
+
+                d3.select('#routeFocus .title')
+                    .text(c.routeData[s.activeRoute[0]].title)
+                // d3.select('#routeFocus')
+                //     .selectAll('.stop')
+                //     .data(stops)
+                //     .enter()
+                //     .append('div')
+                //     .text(d=>d.properties.name+','+d.properties.prediction)
             }
         }
 

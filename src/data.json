@@ -15,6 +15,7 @@
 				},
 				{
 					"name":"Traveling Salesman solver",
+					"tagline": "order of orders",
 					"url": "optimizer",
 					"blurb":[
 						"Underpinning every logistics algorithm is an imperfect solution to the <a target='_blank' href='https://en.wikipedia.org/wiki/Travelling_salesman_problem'>Traveling Salesman problem</a>: what's the order to visit many points on a map, in a way minimizes the total travel time?",
@@ -28,7 +29,7 @@
 			[
 				{
 					"name":"Muni, this moment",
-					"tagline": "All aboard the transit panopticon",
+					"tagline": "all aboard the transit panopticon",
 					"url": "allthebuses",
 					"blurb": [
 						"Visualizing complex systems usually takes two angles: a broad system schematic explaining how components 'generally behave,' but devoid of concrete or real-time examples. Or a display of those specific, tangible elements, but without inferring broader trends and patterns of how they work together.",
@@ -59,6 +60,7 @@
 				},				
 				{
 					"name": "Census population inspector",
+					"tagline": "all you need is TIGER (data)",
 					"url": "population",
 					"blurb": [
 						"Mapbox GL added an extrusion feature to render buildings in 3D. Because 3D often gets in the way more than it helps, we wanted to use it in a way that was actually more illuminating.",
@@ -68,6 +70,7 @@
 				},
 				{
 					"name":"USGS Earthquake watch",
+					"tagline": "shaking around the Ring of Fire",
 					"url": "earthquake",
 					"blurb":[
 						"We built this live earthquake tracker as a demonstration of Mapbox GL's new circle functionality.",
@@ -93,7 +96,7 @@
 				},
 				{
 					"name":"A map of time",
-					"tagline": "but, how far in time?",
+					"tagline": "a minute, as the clock flies",
 					"url": "timemap/search",
 					"blurb":[
 						"This project was the culmination of several years of thinking around isochrones, ETAs, space, and time. I've noticed that when we talk about physical distance, we're often using it as a leaky substitute for how long it takes to traverse it. What would a map look like, if it directly visualized distance in time?",

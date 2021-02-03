@@ -1,4 +1,4 @@
-d3.json('data.json', function(err,resp){
+d3.json('src/data.json', function(err,resp){
 
 	var doc = d3.select('#portfolio');
 	var pieces = resp.pieces;

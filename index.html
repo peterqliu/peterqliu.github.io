@@ -5,6 +5,10 @@
     <title>peterliu</title>
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <style>
+        ::-webkit-scrollbar { 
+          width: 0 !important;
+          display: none; 
+        }
 
         @font-face {
           font-family: "Chaparral";
@@ -34,6 +38,8 @@
             max-width:1024px;
             margin:0 auto;
             padding:50px 10px; 
+            height:100%;
+            overflow:scroll;
         }
 
         .secondary{
@@ -49,6 +55,10 @@
         .work{
             margin-top:10px;
         }
+
+        .maroon  {
+            color:maroon;
+        }
         .big{
             font-size:1.25em;
         }
@@ -59,6 +69,7 @@
         #title {
             margin-top:30px;
         }
+
         .biggest{
             font-size:2em;
         }
@@ -90,8 +101,9 @@
             background:rgba(0,0,0,0.8);
             left:0px;
             right:0px;
-            position:absolute;
             z-index:100;
+            top:0px;
+            bottom:0px;
             height:100%;
             overflow:hidden;
             transition:all 0.25s;
@@ -176,27 +188,7 @@
     </style>
 </head>
 <body>
-    <div id='lightbox' class='hidden'>
-        <div id='modal'>
-            <div id='explainer' class=''>
-                <div class='m3'>
-                    <div id='close'>
-                        <span class='bigger a weaker' style='transform:rotateZ(180deg)'>✕</span>
-                    </div>
-                    <div class='bigger' id='title'></div>
-                    <div id='blurb' class='weak'></div>
 
-                    <div id='press' class='hidden big'>
-                        <div class='bold'>Press</div>
-                        <a target="_blank" id='pressLink'></a>
-                    </div>
-                </div>
-            </div>
-            <div class='wrapper'>
-                <iframe src=''></iframe>
-            </div>
-        </div>
-    </div>
     <div class='container hidden'>
         <div class='title'>peter liu</div>
 
@@ -212,7 +204,28 @@
         <div class='pad2 big' style='margin-top:0px; position:fixed; right:0; bottom:0'><span class='weak'>peterqliu at gmail</span> | <a target="_blank" href='./assets/resume.pdf'>cv</a> | <a target="_blank" href='https://github.com/peterqliu'>github</a></div>
 
     </div>
+    <div id='lightbox' class='hidden'>
+        <div id='modal'>
+            <div id='explainer' class=''>
+                <div class='m3'>
+                    <div id='close'>
+                        <span class='bigger a weaker' style='transform:rotateZ(180deg)'>✕</span>
+                    </div>
+                    <div class='maroon biggest' id='title'></div>
+                    <div class='big secondary weaker' id='subhed'></div>
+                    <div id='blurb' class='weak'></div>
 
+                    <div id='press' class='hidden big'>
+                        <div class='bold'>Press</div>
+                        <a target="_blank" id='pressLink'></a>
+                    </div>
+                </div>
+            </div>
+            <div class='wrapper'>
+                <iframe src=''></iframe>
+            </div>
+        </div>
+    </div>
 </body>
 
     <script src='src/app.js'></script>

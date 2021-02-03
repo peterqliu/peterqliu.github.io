@@ -65,6 +65,9 @@ d3.json('src/data.json', function(err,resp){
 				.text(work.name);
 
 			this.box
+				.select('#subhed')
+				.text(work.tagline);
+			this.box
 				.selectAll('p')
 				.remove();
 

@@ -4,53 +4,345 @@
     <meta charset='utf-8' />
     <title>allthebuses</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
-    <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
-    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/loaders/GLTFLoader.js"></script>
 
-<!--     <script src='munirouteconfig.js'></script>
- -->    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
     <style>
-        body { margin:0; padding:0; }
-        #map { position:absolute; top:0; bottom:0; width:100%; }
-        #controls { position:absolute; top:0; left:0; }
+
+        :root {
+            --IB: rgba(170, 51, 69, 1);
+            --OB: rgba(65, 166, 178, 1);
+        }
+
+        body { 
+            margin:0; 
+            padding:0; 
+            font-family: 'Open Sans', Verdana, sans-serif;
+            overflow:hidden;
+        }
+
+        #map, #overlay { 
+            position:absolute; 
+            top:0; 
+            bottom:0; 
+            width:100%; 
+            background:#B8C8D3;
+        }
+        /*#controls { position:absolute; top:0; left:0; }*/
+
+        #back {
+            z-index: 99;
+            opacity:0.8;
+            margin:1%;
+            cursor:pointer;
+            display:none;
+            transition:all 0.1s;
+            transform-origin: center;
+        }
+
+        #back:hover {
+            transform:scale(1.25);
+            opacity:1;
+        }
+        canvas {
+            cursor:auto;
+        }
+        .mapboxgl-map {
+            font-family: inherit
+        }
+
+        .mapboxgl-popup-content {
+            padding:20px;
+            font-size:1.25em;
+            border-radius: 5px;   
+            color:#999;
+            box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
+            pointer-events: none;
+            transition:transform 0.1s;
+        }
+
+        .title {
+            font-weight:100;
+            font-size:1.5em;
+            color:#666;
+            line-height: 1.5em;
+        }
+
+        .IB .highlight {
+            color: var(--IB);
+        }        
+
+        .OB .highlight {
+            color: var(--OB);
+        }
+
+
+        #loader {
+            z-index: 99;
+            width:100%;
+            height:100%;
+            /*display: none;*/
+            backdrop-filter: blur(50px);
+            position: absolute;
+            pointer-events: none;
+            transition:opacity 2s;
+        }
+
+/*        .blurred + #map{
+            pointer-events: none
+        }*/
+
+
+        #spinner {
+            z-index: 99;
+            width:5vh;
+            height:5vh;
+            margin-left:50vw;
+            margin-top:50vh;
+            background: #aa3345;
+            transform-origin: center;
+            animation-duration: 1.2s;
+            animation-iteration-count: infinite;
+            transform-origin: center;
+            fill-opacity:0.8;
+            border-radius: 50%;
+            border-top-right-radius: 0%;
+            position:absolute;
+            animation-name: spinner;
+
+        }
+
+        #modal {
+            position:absolute;
+            bottom:0;
+            right:0;
+            padding:30px;
+            background:white;
+            margin:2vh;
+            box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
+            border-radius:10px;
+            font-size:2em;
+            z-index: 90;
+            max-height:96vh;
+            overflow:hidden;
+        }
+        .barLabel {
+            font-size: 0.5em;
+            color:#aaa;
+        }
+        .bar {
+            height: 4px;
+            width: 100%;
+            background: var(--OB);
+            border-radius: 2px;
+            overflow: hidden;
+            opacity:0.8;
+            margin:5px 0px;
+        }
+
+        .bar div {
+            background:var(--IB);
+            float: right;
+            text-align: right;
+            width: 40%;
+            height: 100%;
+        }
+
+        .marker {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            border-top-right-radius: 0px;
+            transform: rotate(45deg);
+            background: var(--OB);
+            margin-left:2px;
+        }
+        @-webkit-keyframes spinner {
+            0% {
+                transform: translateX(-50%) translateY(-50%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(-50%) rotate(405deg) ;
+            }
+        }
+
+        #routeFocus {
+            display:none;
+        }
+        body[mode='focus'] #routeFocus {
+            display:block;
+        }
+
+        body[mode='focus'] #general {
+            display:none;
+        }
+
+
     </style>
+    <body mode='loading'>
+        <div id='loader' class='blurred'>
+            <!-- <div id='spinner' style='transform:rotateY(180deg); background:blue'></div> -->
+            <div id='spinner' ></div>
+        </div>
+        <div id='map'>
+            <div id='modal'>
+                <div id='general'>
+                    <div class='title'>Muni, this moment</div>
+                    <div class='bar'>
+                        <div></div>
+                    </div>
+                    <div class='barLabel'>
+                        <span class='marker'></span>
+                        <span id='ob'></span> Outbound
+                        <span style='float:right'>
+                            <span id='ib'></span> 
+                            Inbound 
+                            <span class='marker' 
+                                style='transform: rotate(-135deg); background: var(--IB); margin-right:2px'
+                            ></span>
+                        </span>
+                    </div>
+                </div>
+                <div id='routeFocus'>
+                    <div class='title'></div>
+                </div>
+
+            </div>            
+        </div>
+
+        <img src='src/zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
+    </body>
+    <script src='src/map.js'></script>
+
     <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
         var s = {
-            center: [-122.437, 37.782],
+
+            mode: 'inactive',
+            showLabels: false,
+            center: [-122.44, 37.77],
+            zoom: 13,
+            pitch:0,
             activeRoute: false,
-            routeDrawStart: Date.now()
+            routeDrawStart: Date.now(),
+
+            initScene: false,
+
+            highlightedBus: {
+                uuid: null, 
+                routeId: null,
+                startTime: null,
+                markerObj: null
+            }
         }
 
         var c = {
+            fullBounds:[
+                [-122.51981158087418,37.73448595445758],
+                [-122.35330876278951,37.830708228670474]
+            ],
+            labelZoomThreshold:14,
             animationDuration: 500,
-            emptyGeojson: turf.featureCollection([]),
+            markerScale: 0.000002,
+            emptyGeojson: {type:"FeatureCollection",features:[]},
             color: {
                 'IB':'rgba(170, 51, 69, 1)',
                 'OB': 'rgba(65, 166, 178, 1)',
                 'weak':'#BAB49D'
             },
+            sceneTranslate: mapboxgl.MercatorCoordinate.fromLngLat(
+                s.center,
+                0
+            ),
             routeData:{
 
-            }
+            },
+            customLayer: {
+
+                id: '3d-model',
+                type: 'custom',
+                renderingMode: '3d',
+                onAdd: (map, gl) => buildRenderer(gl, ()=>{}),
+
+                render: (gl, matrix) => {
+
+                    var m = new THREE.Matrix4().fromArray(matrix);
+                    var l = new THREE.Matrix4()
+                        .makeTranslation(
+                            c.sceneTranslate.x,
+                            c.sceneTranslate.y,
+                            c.sceneTranslate.z
+                        )
+
+                    s.customLayer.camera.projectionMatrix = m.multiply(l);
+                    if (s.animatingBuses) s.customLayer.animateBus();
+                    s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
+
+                }
+            },
+            material: {
+                inactive: new THREE.MeshBasicMaterial( { 
+                    color: 0xBAB49D, 
+                    opacity:0.5, 
+                    transparent:true, 
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                }),
+                inactiveHover: new THREE.MeshBasicMaterial( { 
+                    color: 0xBAB49D, 
+                    opacity:0.75, 
+                    transparent:true,                    
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                }),
+                IB: new THREE.MeshBasicMaterial( { 
+                    color: 0xaa3345,            
+                    opacity:0.75, 
+                    transparent:true,
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                } ),
+                OB: new THREE.MeshBasicMaterial( { 
+                    color: 0x41a6b2,            
+                    opacity:0.75, 
+                    transparent:true,
+                    side: THREE.DoubleSide,
+                    // depthWrite:false  
+                } ),
+
+                text: new THREE.MeshBasicMaterial( { 
+                    color: 0xf0eed9, 
+                    side: THREE.BackSide,
+                    // transparent:true,
+                    opacity:0.7,
+                    // depthWrite:false,
+                    // depthTest: false 
+                } )
+            },
+
+            geometry: {
+                bus: null,
+                label: {}
+            } 
         }
+
         c.style = {
             focus:[
-                ['route', 'line-width', 5],
-                ['stops', 'circle-stroke-width', 5],
-                ['stops', 'circle-radius', 5],
-                ['buses', 'circle-color', c.color.weak],
+                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
+                ['stops', 'circle-stroke-width', {stops:[[12,1], [22,20]]}],
+                ['stops', 'circle-radius', {stops:[[12,1], [22,20]]}],
+                // ['buses', 'circle-color', c.color.weak],
                 ['bus_labels', 'text-opacity', 1]
             ],
             active:[
-                ['route', 'line-width', 5],
-                ['stops', 'circle-stroke-width', 0],
+                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
+                ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,20]]}],
                 ['stops', 'circle-radius', 0],
-                ['buses', 'circle-color', c.color.weak],
+                // ['buses', 'circle-color', c.color.weak],
                 ['bus_labels', 'text-opacity', 0]
             ],
             inactive:[
@@ -65,49 +357,251 @@
                 ['bus_labels', 'text-opacity', 0]
             ]
         }
-        function setState(key, value){
 
-            if (key === 'activeRoute'){
+        const app = {
 
-                var newRoute = value ? value.routeId+'-'+value.direction+'-'+value.directionId : false
+            init: () => {
+                pollBuses(true)
+                setInterval(()=>pollBuses(), 5000)
 
-                //if already highlighting
-                if (s.activeRoute){
+                // build shape primitive and load font
+                const loader = new THREE.FontLoader();
 
-                    if (newRoute){
-                        if (newRoute !== s.activeRoute) updateRoute()
-                        s.activeRoute = newRoute
+                loader.load( 'src/Open Sans_Regular.json', font => {
+
+                    c.font = font;
+                    app.setState('initFont', true);
+
+                } );
+
+                const x = 0, y = 0;
+
+                const markerShape = new THREE.Shape();
+                markerShape.arc(0, 0, 1, Math.PI/2, 0, false);
+                markerShape.lineTo(x+1, y+1);
+
+                c.geometry.bus = new THREE.ShapeGeometry( markerShape );
+                c.geometry.bus.matrixAutoUpdate() = false;
+            },
+
+            getPrediction: (route, stop, cb) => {
+                const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
+
+                app.utils.load(url, (r)=>{
+                    // if (e) return
+                    cb(r[0] ? r[0].values[0] : undefined);
+                })
+
+            },
+
+            getRoutePredictions: (routeDir, cb) => {
+
+                const route = requestRoute(routeDir);
+                const tuple = route.stops.features
+                    .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
+
+                const tupleEndpoint = `http://restbus.info/api/agencies/sf-muni/tuples/${tuple}/predictions`
+                app.utils.load(
+                    tupleEndpoint, 
+                    d=>{
+                        const output = d.map((stop, index)=>{
+                            route.stops.features[index].properties.prediction = stop.values[0].seconds
+
+                            return {
+                                title: stop.stop.title,
+                                prediction:stop.values[0].seconds
+                            }
+                        })
+
+                        cb(route)
+                    }
+                )
+
+            },
+            setState: (key, value) => {
+
+                if (key === 'activeRoute'){
+
+                    var newRoute = value ? [value.routeId,value.direction,value.directionId] : false
+
+                    //if already highlighting
+                    if (s.activeRoute){
+
+                        if (newRoute){
+                            if (newRoute !== s.activeRoute) s.activeRoute = newRoute
+                        }
+
+                        else s.activeRoute = newRoute
                     }
 
-                    else {
-                        s.activeRoute = newRoute
-                        updateRoute()
-                    }
+                    //if no previous highlight
+                    else if (newRoute) s.activeRoute = newRoute
+
+
+                    updateRoute();
                 }
 
-                //if no current highlight
-                else {
-                    if (newRoute){
-                        s.activeRoute = newRoute
-                        updateRoute()
-                    }
+                else if (key === 'mode') {
 
-                    else {
+                    s.mode = value;
+                    // document.querySelector('body').setAttribute('mode', value)
+                    
+                    // apply map styling for current mode
+                    c.style[value].forEach(style => {
+                        app.map.setPaintProperty(style[0], style[1], style[2])
+                    })
 
-                    }
+                    // update back button visibility
+                    document.querySelector('#back').style.display = value === 'focus' ? 'block' : 'none'
+
+                    if (value === 'inactive') s.customLayer.restoreBusMarkerColors()
+                    // else if (value === 'focus')
                 }
 
+
+                else if (key.includes('init')) {
+
+                    s[key] = value;
+
+                    if (s.initScene === s.initFont === true) {
+
+                        document.querySelector('#loader').style.opacity = 0
+
+                        app.map
+                            .on('mousemove', (e)=>{app.on.mouseMove(e)} )
+                            .on('click', s.customLayer.onClick)
+                            .on('zoom', app.on.zoom) 
+                    }
+
+                }
+            },
+
+            map: new mapboxgl.Map({
+                container: 'map', // container id
+                antialiased:true,
+                style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
+                center: s.center, // starting position
+                // minZoom: 12,
+                zoom: s.zoom // starting zoom
+            }),
+
+            popup: new mapboxgl.Popup({ 
+                closeButton: false, 
+                offset:25, 
+                maxWidth:'none' 
+            }),
+
+            clearPopup: () => {
+                app.popup.remove()
+                // document.querySelector('.mapboxgl-popup-content').style.transform = 'scale(0)'
+            },
+            utils: {
+
+                degreeify: radians =>{
+                    radians = radians || 0;
+                    return radians * 360/(Math.PI*2)
+                },
+
+                radify: deg => 2*Math.PI * deg/360,
+
+                load: (url, cb) => {
+                    return fetch(url)
+                        .then(response => response.json())
+                        .then(data=> cb(data))
+                },
+
+                getDirection: str => {
+                    var output = str.includes('_I_') ? 'IB' : 'OB'
+                    return output
+                },
+                
+                projectToScene: lngLat => {
+
+                    const lng = lngLat.lng;
+
+                    const xMercatorDelta = (lngLat[0]-s.center[0])/360;
+                    const yMercatorDelta = 0.5 - 0.5 * Math.log(Math.tan(Math.PI * (1/4 + lngLat[1]/360)))/Math.PI - c.sceneTranslate.y
+
+                    return new THREE.Vector3(xMercatorDelta, yMercatorDelta, Math.random()/10000000)
+                }
+            },
+
+            on: {
+                mouseMove: e => {
+
+                    const cL = s.customLayer;
+
+                    const mouse = new THREE.Vector3(
+                        ( e.point.x / window.innerWidth ) * 2 - 1,
+                        - ( e.point.y / window.innerHeight ) * 2 + 1,
+                        1
+                    )
+
+                    const camInverseProjection = new THREE.Matrix4().getInverse(cL.camera.projectionMatrix);
+                    const cameraPosition = new THREE.Vector3().applyMatrix4(camInverseProjection);
+                    const mousePosition = mouse.applyMatrix4(camInverseProjection);
+                    const viewDirection = mousePosition.clone().sub(cameraPosition).normalize();        
+
+                    cL.raycaster.set(cameraPosition, viewDirection)
+                    const intersect = cL.raycaster.intersectObjects( s.mesh.markers)[0];
+                    
+                    cL.highlightMarker(intersect ? intersect.object : undefined)
+                
+                    if (s.mode === 'focus' && !intersect) {
+                        const hoveredStop = app.map
+                            .queryRenderedFeatures(e.point, {layers:['stops']})[0];
+
+                        cL.highlightStop(hoveredStop)
+                        if (!hoveredStop)  app.popup.remove()
+
+                    }
+                    
+                },
+
+                zoom: () =>{
+                    const shouldShowLabels = app.map.getZoom() >= c.labelZoomThreshold;
+                    
+                    if (shouldShowLabels !== s.showLabels) {
+                        console.log('changing')
+                        const scale = shouldShowLabels ? 1 : 0.000001;
+                        s.mesh.labels.forEach(label => label.scale.set(scale, scale, scale));
+                        s.showLabels = shouldShowLabels;
+                    }
+                }
+            },
+
+            updateModalBar: () => {
+
+                const IBCount = s.buses.filter(bus=>bus.direction === 'IB').length
+                document.querySelector('#ob').innerHTML = s.buses.length - IBCount;
+                document.querySelector('#ib').innerHTML = IBCount;
+
+                document.querySelector('.bar div').style.width = 100 * IBCount / s.buses.length + '%';
+            },
+
+            updateModalRouteFocus: (stops) => {
+
+                d3.select('#routeFocus .title')
+                    .text(c.routeData[s.activeRoute[0]].title)
+                // d3.select('#routeFocus')
+                //     .selectAll('.stop')
+                //     .data(stops)
+                //     .enter()
+                //     .append('div')
+                //     .text(d=>d.properties.name+','+d.properties.prediction)
             }
-
         }
+
+
+        app.init();
     </script>
 
 
-    <body>
-        <div id='map'></div>
-    </body>
-    <script src='map.js'></script>
-    <!-- <script src='3.js'></script> -->
+
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
+    <script src='src/customlayer.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
+
 </head>
 
 </html>

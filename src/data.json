@@ -27,16 +27,7 @@
 
 		"Data made visual":
 			[
-//				{
-//					"name":"Muni, this moment",
-//					"tagline": "all aboard the transit panopticon",
-//					"url": "allthebuses",
-//					"blurb": [
-//						"Visualizing complex systems usually takes two angles: a broad system schematic explaining how components 'generally behave,' but devoid of concrete or real-time examples. Or a display of those specific, tangible elements, but without inferring broader trends and patterns of how they work together.",
-//						"This was an attempt to do both, with a city bus system. Beginning with that low-level view of individual vehicles, the user interacts with them to see the paths, stops, and predictions of each route. Progressive disclosure keeps the information manageable at each juncture.",
-//						"First built in 2014, this was my first project after learning how to make network requests. Originally rendered as one massive SVG, with hundreds of discrete DOM elements animated with CSS transforms, I've updated it to use WebGL in Three.js and Mapbox."
-//					]
-//				},
+
 				{
 					"name":"Landgrab",
 					"tagline": "Earth bumps, on demand",

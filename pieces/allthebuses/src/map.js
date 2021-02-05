@@ -1,6 +1,6 @@
 function pollBuses(initial){
 
-	app.utils.load('https://restbus.info/api/agencies/sf-muni/vehicles', (resp) => {
+	app.utils.load('http://restbus.info/api/agencies/sf-muni/vehicles', (resp) => {
 
 		if (resp.length === 0) return
 		console.log('poll')
@@ -204,7 +204,7 @@ function requestRoute(routeObj, cb){
 const fetchRouteData = (routeId, cb) => {
 
 
-	app.utils.load('https://restbus.info/api/agencies/sf-muni/routes/'+routeId, (resp) => {
+	app.utils.load('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (resp) => {
 		
 		var output = {title: resp.title}
 		// per direction, reconstruct route from stops

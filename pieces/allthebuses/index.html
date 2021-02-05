@@ -385,7 +385,7 @@
             },
 
             getPrediction: (route, stop, cb) => {
-                const url = `https://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
+                const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
 
                 app.utils.load(url, (r)=>{
                     // if (e) return
@@ -400,7 +400,7 @@
                 const tuple = route.stops.features
                     .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
 
-                const tupleEndpoint = `https://restbus.info/api/agencies/sf-muni/tuples/${tuple}/predictions`
+                const tupleEndpoint = `http://restbus.info/api/agencies/sf-muni/tuples/${tuple}/predictions`
                 app.utils.load(
                     tupleEndpoint, 
                     d=>{

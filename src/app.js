@@ -29,8 +29,11 @@ d3.json('src/data.json', function(err,resp){
 		.classed('work a bigger underline', true)
 		.text(function(d){return d.name})
 		.on('click', function(d,i){
-
-			lightbox.update(d);
+			if (d.directLink) {
+				const openDirectly = confirm(d.confirmText);
+				if (openDirectly) open(d.url, '_blank')
+			}
+			else lightbox.update(d);
 
 		})
 
@@ -45,6 +48,7 @@ d3.json('src/data.json', function(err,resp){
 		.on('click', function(d,i){
 			lightbox.close();
 		})
+
 
 	lightbox = {
 		box: d3.select('#lightbox'),

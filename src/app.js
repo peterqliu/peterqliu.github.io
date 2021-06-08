@@ -29,11 +29,12 @@ d3.json('src/data.json', function(err,resp){
 		.classed('work a bigger underline', true)
 		.text(function(d){return d.name})
 		.on('click', function(d,i){
-			if (d.directLink) {
-				const openDirectly = confirm(d.confirmText);
-				if (openDirectly) open(d.url, '_blank')
+			if (d.directLink) open(d.url, '_blank')
+			else {
+				lightbox.update(d);
+				state.paused = true;
 			}
-			else lightbox.update(d);
+			
 
 		})
 
@@ -46,6 +47,7 @@ d3.json('src/data.json', function(err,resp){
 
 	d3.select('#close')
 		.on('click', function(d,i){
+			state.paused = false;
 			lightbox.close();
 		})
 

@@ -34,7 +34,7 @@ d3.json('src/data.json', function(err,resp){
 				lightbox.update(d);
 				state.paused = true;
 			}
-			
+
 
 		})
 

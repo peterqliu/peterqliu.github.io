@@ -97,7 +97,9 @@ const app = {
 
         //bind events to drawing surface
         window.addEventListener('mousemove', (e)=>{
-            app.registerGesture(e, 'fan');
+
+            state.lastMouseEvent = e;
+            state.imageNeedsUpdate = true;
             state.longPress = false;
         })
         window.addEventListener('mousedown', (e)=>{
@@ -169,8 +171,8 @@ const app = {
 
 
     getPixelPosition: e => [
-        e.offsetX/app.constants.rasterGridRatio,
-        e.offsetY/app.constants.rasterGridRatio
+        e.pageX/app.constants.rasterGridRatio,
+        e.pageY/app.constants.rasterGridRatio
     ],
 
     registerGesture: (e, brush) =>{
@@ -186,9 +188,9 @@ const app = {
 
         if (brush === 'fan') {
             options = {
-                scalar: e.which ? 2 : 0.1,
+                scalar: e.which ? 1.5 : state.amplitude,
                 impulseAngle: app.lookupAtan2(e.movementY, e.movementX),
-                decayPower: e.which ? 0.5 : 0.1
+                decayPower: 0.5
             }
         }
 
@@ -200,7 +202,7 @@ const app = {
 
         state.lastImpulse = pxPosition;
         state.lastImpulseTime = Date.now();
-        state.imageNeedsUpdate = true;
+        // state.imageNeedsUpdate = true;
 
     },
 
@@ -265,21 +267,18 @@ const app = {
         if (!state.paused) {
         
             if (state.imageNeedsUpdate) {
+                app.registerGesture(state.lastMouseEvent, 'fan');
                 app.updateImage()
                 state.imageNeedsUpdate = false;
-            }
-
-            if (state.longPress) {
-
-
-                // app.iterateRowsColumns(
-                //     r => Math.floor(r-y),
-
-                // )
-                app.applyImpulse('gyre', ...app.getPixelPosition(state.longPress), {scalar:10})
-                state.imageNeedsUpdate = true;
 
             }
+
+            // if (state.longPress) {
+
+            //     app.applyImpulse('gyre', ...app.getPixelPosition(state.longPress), {scalar:10})
+            //     state.imageNeedsUpdate = true;
+
+            // }
 
             if (Date.now()-state.lastImpulseTime < 10000) app.decay(0.9, 200)
             if (wind.windData) wind.draw();
@@ -300,6 +299,7 @@ const arctan = ratio => 360 * Math.atan(ratio) / (Math.PI * 2)
 const state = {
     width: Math.round(innerWidth/app.constants.rasterGridRatio),
     height: Math.round(innerHeight/app.constants.rasterGridRatio),
+    amplitude: 0.2
 }
 
 var windData = {

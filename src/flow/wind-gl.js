@@ -100,7 +100,7 @@ var defaultRampColors = {
 
 var defaultRampColors = {
     0.0: '#3288bd',
-    1.0: '#f46d43'
+    0.5: '#f46d43'
 };
 var WindGL = function WindGL(gl, options) {
     this.gl = gl;

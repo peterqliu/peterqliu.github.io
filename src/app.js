@@ -26,7 +26,8 @@ d3.json('src/data.json', function(err,resp){
 		.data(function(d){return pieces[d]})
 		.enter()
 		.append('div')
-		.classed('work a bigger underline', true)
+		.classed('work a bigger underline inlineBlock', true)
+		.append('a')
 		.text(function(d){return d.name})
 		.on('click', function(d,i){
 			if (d.directLink) open(d.url, '_blank')

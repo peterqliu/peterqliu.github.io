@@ -505,7 +505,8 @@
                 radify: deg => 2*Math.PI * deg/360,
 
                 load: (url, cb) => {
-                    return fetch(url)
+                    const lambdaFn = 'https://pnvf7oppjd3jzo3wvcslnfshri0qxynb.lambda-url.us-west-2.on.aws/?url=';
+                    return fetch(`${lambdaFn}${url}`)
                         .then(response => response.json())
                         .then(data=> cb(data))
                 },

@@ -5,68 +5,32 @@ const app = {
         rasterGridRatio:15,
         distanceDecayFunction: d=>1/Math.pow(d,1.5),
         impulseCoefficient: 10,
-        lookup: {
+        lookup: {}
+    },
+
+    initState: () => ({
+        width: Math.round(innerWidth/app.constants.rasterGridRatio),
+        height: Math.round(innerHeight/app.constants.rasterGridRatio),
+        amplitude: 0.2
+    }),
+    canvas: document.getElementById('canvas'),
+    reset: () => {
+
+        state = app.initState();
+
+        const pxRatio = Math.max(Math.floor(window.devicePixelRatio) || 1, 2);
+
+        //update retina
+        app.canvas.width = innerWidth * pxRatio;
+        app.canvas.height = innerHeight * pxRatio;
+
+        app.constants.lookup = {
             atan2:[],
             sine:[],
             cosine:[],
             distance:[]
-        }
-    },
+        };
 
-    setup: () => {
-
-        // using var to work around a WebKit bug
-        var canvas = document.getElementById('canvas'); // eslint-disable-line
-        const pxRatio = Math.max(Math.floor(window.devicePixelRatio) || 1, 2);
-
-        //update retina
-        canvas.width = innerWidth * pxRatio;
-        canvas.height = innerHeight * pxRatio;
-
-        // wind.resize();
-
-
-        var dC = document.getElementById('drawCanvas');
-        dC.width = state.width;
-        dC.height = state.height;
-
-        var ctx = dC.getContext('2d');
-        ctx.fillStyle='rgb(128,128,128)';
-        ctx.fillRect(0,0, state.width, state.height)
-
-        var img = document.createElement("img");
-        windData.image = img;
-        img.onload = () => wind.setWind(windData);
-
-
-        state.draw = {
-            rawImgData: new Array(state.width*state.height*4).fill(128),
-            imgData: ctx.getImageData(0,0,state.width, state.height),
-            drawingTexture: dC,
-        }
-
-        app.updateImage();
-
-        const gl = canvas.getContext('webgl', {antialiasing: false});
-
-
-        const wind = window.wind = new WindGL(gl, {
-            // speedFactor:1
-        });
-        wind.numParticles = 40000;
-
-        window.addEventListener('resize', () => {
-            wind.resize()
-        })
-        // const gui = new dat.GUI();
-        // gui.add(wind, 'numParticles', 1, 999999);
-        // gui.add(wind, 'fadeOpacity', 0, 0.999).step(0.001).updateDisplay();
-        // gui.add(wind, 'speedFactor', 0.05, 1.0);
-        // gui.add(wind, 'dropRate', 0, 0.1);
-        // gui.add(wind, 'dropRateBump', 0, 0.2);
-
-
-       
         // precalculate lookups
         for (var r=0; r<=state.height; r++) {
             var rawDistance = []
@@ -94,6 +58,56 @@ const app = {
             app.constants.lookup.cosine.push(cosine(a))
         }
 
+        var dC = document.getElementById('drawCanvas');
+        dC.width = state.width;
+        dC.height = state.height;
+
+        var ctx = dC.getContext('2d');
+        ctx.fillStyle='rgb(128,128,128)';
+        ctx.fillRect(0,0, state.width, state.height)
+
+        var img = document.createElement("img");
+        windData.image = img;
+        img.onload = () => wind.setWind(windData);
+
+
+        state.draw = {
+            rawImgData: new Array(state.width*state.height*4).fill(128),
+            imgData: ctx.getImageData(0,0,state.width, state.height),
+            drawingTexture: dC,
+        }
+
+        app.updateImage();
+
+        const gl = app.canvas.getContext('webgl', {antialiasing: false});
+
+
+        const wind = window.wind = new WindGL(gl, {
+            // speedFactor:1
+        });
+        wind.numParticles = 40000;
+    },
+
+    setup: () => {
+        
+        app.reset();
+        
+
+        // wind.resize();
+
+
+
+        window.addEventListener('resize', () => {
+            wind.resize()
+        })
+        // const gui = new dat.GUI();
+        // gui.add(wind, 'numParticles', 1, 999999);
+        // gui.add(wind, 'fadeOpacity', 0, 0.999).step(0.001).updateDisplay();
+        // gui.add(wind, 'speedFactor', 0.05, 1.0);
+        // gui.add(wind, 'dropRate', 0, 0.1);
+        // gui.add(wind, 'dropRateBump', 0, 0.2);
+
+
 
         //bind events to drawing surface
         window.addEventListener('mousemove', (e)=>{
@@ -109,6 +123,8 @@ const app = {
             state.lastImpulse = null;
             state.longPress = false;
         })
+
+        window.addEventListener('resize', app.reset);
         // window.addEventListener('wheel', (e)=>console.log(event.deltaX,event.deltaY))
 
         app.render();
@@ -243,7 +259,8 @@ const app = {
 
                 const dX = Math.floor(c-x);
 
-                const relativeAngle = app.constants.lookup.atan2[dY][dX];
+                const relativeAngle = app.constants.lookup.atan2?.[dY]?.[dX];
+                if (!relativeAngle) return
                 const distance = Math.max(1, app.lookupDistance(dY, dX));
 
                 const delta = brushes[brush](
@@ -264,6 +281,8 @@ const app = {
 
     render: () => {
 
+        // run only if a portfolio piece isn't open
+        
         if (!state.paused) {
         
             if (state.imageNeedsUpdate) {
@@ -272,13 +291,6 @@ const app = {
                 state.imageNeedsUpdate = false;
 
             }
-
-            // if (state.longPress) {
-
-            //     app.applyImpulse('gyre', ...app.getPixelPosition(state.longPress), {scalar:10})
-            //     state.imageNeedsUpdate = true;
-
-            // }
 
             if (Date.now()-state.lastImpulseTime < 10000) app.decay(0.9, 200)
             if (wind.windData) wind.draw();
@@ -296,11 +308,7 @@ const arcsine = ratio => 360 * Math.asin(ratio) / (Math.PI * 2)
 const arccosine = ratio => 360 * Math.acos(ratio) / (Math.PI * 2)
 const arctan = ratio => 360 * Math.atan(ratio) / (Math.PI * 2)
 
-const state = {
-    width: Math.round(innerWidth/app.constants.rasterGridRatio),
-    height: Math.round(innerHeight/app.constants.rasterGridRatio),
-    amplitude: 0.2
-}
+let state = app.initState();
 
 var windData = {
   "source": "http://nomads.ncep.noaa.gov",

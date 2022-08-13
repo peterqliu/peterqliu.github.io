@@ -1,14 +1,15 @@
 function pollBuses(initial){
-
-	app.utils.load('http://restbus.info/api/agencies/sf-muni/vehicles', (resp) => {
-
+	
+	app.utils.loadRaw('?command=vehicleLocations&a=sf-muni', (r) => {
+		const resp = r.vehicle;
+		//http://restbus.info/api/agencies/sf-muni/vehicles
 		if (resp.length === 0) return
 		console.log('poll')
 		s.lastPollTime = Date.now();
 
 
 		resp
-			.filter(item =>item.directionId)
+			.filter(item =>item.dirTag)
 			.forEach(line=>{
 				if (!c.routeData[line.routeId]) {
 					c.routeData[line.routeId] = 'pending'
@@ -18,9 +19,9 @@ function pollBuses(initial){
 
 
 		s.buses = resp
-			.filter(item => item.directionId)
+			.filter(item => item.dirTag)
 			.map(item => {
-				var id = item.directionId;
+				var id = item.dirTag;
 				item.direction = app.utils.getDirection(id)
 				return item
 			});
@@ -64,24 +65,24 @@ function setupMap(){
 			}
 		}
 	})
-	.addLayer({
-		'id':'bus_labels',
-		'type': 'symbol',
-		'source': 'buses',
-		'paint':{
-			'text-color':'white',
-			// 'text-opacity':0
-		},
-		'layout':{
-			'text-field':'{routeId}',
-			// 'text-rotate': {
-			// 	'type':'identity',
-			// 	'property': 'heading'
-			// },
+	// .addLayer({
+	// 	'id':'bus_labels',
+	// 	'type': 'symbol',
+	// 	'source': 'buses',
+	// 	'paint':{
+	// 		'text-color':'white',
+	// 		// 'text-opacity':0
+	// 	},
+	// 	'layout':{
+	// 		'text-field':'{routeId}',
+	// 		// 'text-rotate': {
+	// 		// 	'type':'identity',
+	// 		// 	'property': 'heading'
+	// 		// },
 
-			'text-allow-overlap': true
-		}
-	})
+	// 		'text-allow-overlap': true
+	// 	}
+	// })
 	.addLayer({
 		'id': 'route',
 		'type':'line',
@@ -205,7 +206,7 @@ const fetchRouteData = (routeId, cb) => {
 
 
 	app.utils.load('http://restbus.info/api/agencies/sf-muni/routes/'+routeId, (resp) => {
-		
+		console.log(resp)
 		var output = {title: resp.title}
 		// per direction, reconstruct route from stops
 		resp.directions.forEach(routeDirection => {

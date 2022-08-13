@@ -269,18 +269,14 @@
                 onAdd: (map, gl) => buildRenderer(gl, ()=>{}),
 
                 render: (gl, matrix) => {
-
+                    const {x, y, z} = c.sceneTranslate;
+                    const {scene, camera, renderer, animateBus} = s.customLayer;
                     var m = new THREE.Matrix4().fromArray(matrix);
-                    var l = new THREE.Matrix4()
-                        .makeTranslation(
-                            c.sceneTranslate.x,
-                            c.sceneTranslate.y,
-                            c.sceneTranslate.z
-                        )
+                    var l = new THREE.Matrix4().makeTranslation(x,y,z)
 
-                    s.customLayer.camera.projectionMatrix = m.multiply(l);
-                    if (s.animatingBuses) s.customLayer.animateBus();
-                    s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
+                    camera.projectionMatrix = m.multiply(l);
+                    if (s.animatingBuses) animateBus();
+                    renderer.render(scene, camera);
 
                 }
             },
@@ -336,14 +332,14 @@
                 ['stops', 'circle-stroke-width', {stops:[[12,1], [22,20]]}],
                 ['stops', 'circle-radius', {stops:[[12,1], [22,20]]}],
                 // ['buses', 'circle-color', c.color.weak],
-                ['bus_labels', 'text-opacity', 1]
+                // ['bus_labels', 'text-opacity', 1]
             ],
             active:[
                 ['route', 'line-width', {stops:[[12,1], [22,20]]}],
                 ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,20]]}],
                 ['stops', 'circle-radius', 0],
                 // ['buses', 'circle-color', c.color.weak],
-                ['bus_labels', 'text-opacity', 0]
+                // ['bus_labels', 'text-opacity', 0]
             ],
             inactive:[
                 ['route', 'line-width', 0],
@@ -354,7 +350,7 @@
                     'type':'categorical',
                     'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
                 }],
-                ['bus_labels', 'text-opacity', 0]
+                // ['bus_labels', 'text-opacity', 0]
             ]
         }
 
@@ -381,41 +377,42 @@
                 markerShape.lineTo(x+1, y+1);
 
                 c.geometry.bus = new THREE.ShapeGeometry( markerShape );
-                c.geometry.bus.matrixAutoUpdate() = false;
+                c.geometry.bus.matrixAutoUpdate = false;
             },
 
             getPrediction: (route, stop, cb) => {
-                const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
+                // const url = `http://restbus.info/api/agencies/sf-muni/routes/${route}/stops/${stop}/predictions`;
 
-                app.utils.load(url, (r)=>{
+                app.utils.loadRaw(`?command=predictions&a=sf-muni&s=${stop}&r=${route}`, resp=>{
+                    const r = resp?.predictions?.[0]?.direction?.[0]?.prediction?.[0];
                     // if (e) return
-                    cb(r[0] ? r[0].values[0] : undefined);
+                    cb(r || undefined);
                 })
 
             },
 
             getRoutePredictions: (routeDir, cb) => {
 
-                const route = requestRoute(routeDir);
-                const tuple = route.stops.features
-                    .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
+                // const route = requestRoute(routeDir);
+                // const tuple = route.stops.features
+                //     .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
 
-                const tupleEndpoint = `http://restbus.info/api/agencies/sf-muni/tuples/${tuple}/predictions`
-                app.utils.load(
-                    tupleEndpoint, 
-                    d=>{
-                        const output = d.map((stop, index)=>{
-                            route.stops.features[index].properties.prediction = stop.values[0].seconds
+                // const tupleEndpoint = `http://restbus.info/api/agencies/sf-muni/tuples/${tuple}/predictions`
+                // app.utils.load(
+                //     tupleEndpoint, 
+                //     d=>{
+                //         const output = d.map((stop, index)=>{
+                //             route.stops.features[index].properties.prediction = stop.values[0].seconds
 
-                            return {
-                                title: stop.stop.title,
-                                prediction:stop.values[0].seconds
-                            }
-                        })
+                //             return {
+                //                 title: stop.stop.title,
+                //                 prediction:stop.values[0].seconds
+                //             }
+                //         })
 
-                        cb(route)
-                    }
-                )
+                //         cb(route)
+                //     }
+                // )
 
             },
             setState: (key, value) => {
@@ -510,6 +507,12 @@
                         .then(data=> cb(data))
                 },
 
+                loadRaw: (url, cb) => {
+                    const lambdaFn = 'https://cfauh4oguuzl2yahkb25sazidq0ewxjm.lambda-url.us-west-2.on.aws/';
+                    return fetch(`${lambdaFn}${url}`)
+                        .then(response => response.json())
+                        .then(data=> cb(data))
+                },
                 getDirection: str => {
                     var output = str.includes('_I_') ? 'IB' : 'OB'
                     return output
@@ -562,10 +565,12 @@
                     const shouldShowLabels = app.map.getZoom() >= c.labelZoomThreshold;
                     
                     if (shouldShowLabels !== s.showLabels) {
-                        console.log('changing')
+
                         const scale = shouldShowLabels ? 1 : 0.000001;
                         s.mesh.labels.forEach(label => label.scale.set(scale, scale, scale));
                         s.showLabels = shouldShowLabels;
+
+                        if (!shouldShowLabels) app.setState("mode", "inactive")
                     }
                 }
             },

@@ -152,7 +152,6 @@ s.customLayer = {
                 
                 app.map.triggerRepaint();
 
-				// bus.children[0].rotation.set(0,0, bus.userData.lastBearing+bus.userData.bearingDelta*progress)
 			}
 					
 		}
@@ -209,20 +208,20 @@ s.customLayer = {
 			hB.markerObj = newBus;
 
 			// set popup for hovered bus
+			const {routeId, directionId, kph, lon, lat, direction} = newBus.userData;
+
 			const hoveredMarkerData = newBus.userData;
-			const relevantRoute = c.routeData[hoveredMarkerData.routeId]
-			const subhead = relevantRoute[hoveredMarkerData.directionId] ? relevantRoute[hoveredMarkerData.directionId].title : relevantRoute[hoveredMarkerData.direction].title
+			const relevantRoute = c.routeData[routeId]
+			const subhead = relevantRoute[directionId] ? relevantRoute[directionId].title : relevantRoute[direction].title
 
 			s.customLayer.setPopup(
+				[lon, lat],
 				[
-					hoveredMarkerData.lon, 
-					hoveredMarkerData.lat
-				],
-				[
-					c.routeData[hoveredMarkerData.routeId].title, // route name
+					c.routeData[routeId].title, // route name
 					subhead
 						.replace('Outbound', '<span class="highlight">Outbound</span>')
-						.replace('Inbound', '<span class="highlight">Inbound</span>')
+						.replace('Inbound', '<span class="highlight">Inbound</span>'),
+					`at ${ kph ? Math.round(kph*0.621371)+' mph' : 'rest'}`
 
 				],
 
@@ -298,7 +297,8 @@ s.customLayer = {
 
 
 	setPopup: (lngLat, content, direction, offsetMultiplier) => {
-		const markup = `<div class='title'>${content[0]}</div><div class='${direction}'>${content[1]}</div>`
+		const [title, prediction, speed] = content;
+		const markup = `<div class='title'>${title}</div><div class='${direction}'>${prediction}</div>${speed ||''}`
 		app.popup.options.offset = 25 * Math.pow(1.25, Math.max(0, app.map.getZoom()-13))
 		app.popup.setLngLat(lngLat)
 			.setHTML(markup)
@@ -319,9 +319,9 @@ s.customLayer = {
 		})
 
 		//fetch predictions for whole route, and update modal UI
-		app.getRoutePredictions(s.activeRoute, d=>{
-			app.updateModalRouteFocus(d.stops.features)
-		})
+		// app.getRoutePredictions(s.activeRoute, d=>{
+		// 	app.updateModalRouteFocus(d.stops.features)
+		// })
 
 		app.setState('mode', 'focus')
 

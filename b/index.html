@@ -1,0 +1,60 @@
+<html>
+    <script type="module">
+        // import { Octokit } from "https://cdn.skypack.dev/@octokit/core";
+
+        // const octokit = new Octokit({ auth: `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` });
+        // await octokit.request('GET /gists/280262ebce904f7366fe4cc155593e90', {
+        //     gist_id: '280262ebce904f7366fe4cc155593e90',
+        //     headers: {
+        //         'X-GitHub-Api-Version': '2022-11-28'
+        //     }
+        // })
+    </script>
+    <style>
+        body {
+            margin:0;
+        }
+        iframe {
+            position:absolute;
+            top:0;
+            bottom:0;
+            left:0;
+            right:0;
+            width:100%;
+            height:100%;
+            border:none;
+        }
+    </style>
+    <body>
+        <iframe></iframe>
+    </body>
+    <script>
+
+        let iframeUrl;
+        const iframe = document.querySelector('iframe');
+
+        // if providing user, just set that in
+        if (location.search.includes('/')) {
+            const gistUrl = location.search
+                .replace('?','')
+                .replace('/', '/raw/')
+            iframeUrl = `https://blocks.roadtolarissa.com/${gistUrl}`
+            iframe.setAttribute('src', iframeUrl)
+        }
+
+        // if only gist id, assume it's my own
+        else {
+            const id = location.search.replace('?',''); //'280262ebce904f7366fe4cc155593e90';
+            const gistUrl = `peterqliu/raw/${id}`;
+
+            iframe.setAttribute('src', `https://blocks.roadtolarissa.com/${gistUrl}`)
+
+            // fetch(`https://api.github.com/gists/${id}?${id}`)
+            //   .then((response) => response.json())
+            // .then((e,r)=>{
+            //     const user = e.owner.login;
+            // })
+        }
+
+    </script>
+</html>

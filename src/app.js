@@ -92,7 +92,7 @@ d3.json('src/data.json', function(err,resp){
 
 			this.box
 				.select('iframe')
-				.attr('src', 'https://peterqliu.github.io/pieces/'+work.url)
+				.attr('src', ()=>work.url.includes('https')? work.url : './pieces/'+work.url)
 				.classed('hidden', false)
 
 			this.box

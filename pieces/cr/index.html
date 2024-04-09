@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>CR2</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<!-- <script src="../build/three.min.js"></script> -->
+		<script src="./js/tweakpane.min.js"></script>
+		<script src="./js/tweakpane-plugin-essentials.min.js"></script>
+		<!-- <script src="https://0b5vr.com/tweakpane-plugin-rotation/dist/tweakpane-plugin-rotation.js"></script> -->
+
+		<style>
+			#info > * {
+				max-width: 650px;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+			#project {
+			}
+
+			.ui {
+				position: absolute;
+				width:320px;
+				top:0;
+				bottom:0;
+				user-select: none;
+				pointer-events: none;
+			}
+
+			.ui:active ~ canvas {
+				pointer-events: none
+			}
+			
+			#stats,
+			#stats * {
+				bottom: 0;
+				position:absolute !important;
+				pointer-events: all;
+			}
+			.right {
+				right:0;
+			}
+
+			.pane {
+				margin:8px;
+				pointer-events: all;
+			}
+
+			#bloom {
+				left:0;
+				right:0;
+			}
+
+			#system {
+				max-height: calc(100vh - 100px);
+				overflow:scroll;
+				border-radius:6px;
+			}
+			.tp-ckbv_w {
+				float: right;
+			}
+			:root {
+			--in-fg: white;
+/*			--tp-base-background-color: hsla(0, 0%, 10%, 0.8);
+			--tp-base-shadow-color: hsla(0, 0%, 0%, 0.2);
+			--tp-button-background-color: hsla(0, 0%, 80%, 1);
+			--tp-button-background-color-active: hsla(0, 0%, 100%, 1);
+			--tp-button-background-color-focus: red;
+			--tp-button-background-color-hover: hsla(0, 0%, 85%, 1);
+			--tp-button-foreground-color: hsla(0, 0%, 0%, 0.8);
+			--tp-container-background-color: hsla(0, 0%, 0%, 0.3);
+			--tp-container-background-color-active: hsla(0, 0%, 0%, 0.6);
+			--tp-container-background-color-focus: hsla(0, 0%, 0%, 0.5);
+			--tp-container-background-color-hover: hsla(0, 0%, 0%, 0.4);
+			--tp-container-foreground-color: hsla(0, 0%, 100%, 0.5);
+			--tp-groove-foreground-color: hsla(0, 0%, 0%, 0.2);
+			--tp-input-background-color: hsla(0, 0%, 0%, 0.3);
+			--tp-input-background-color-active: hsla(0, 0%, 0%, 1.0);
+			--tp-input-background-color-focus: hsla(0, 0%, 0%, 0.5);
+			--tp-input-background-color-hover: hsla(0, 0%, 0%, 0.4);
+			--tp-input-foreground-color: hsla(0, 0%, 100%, 0.5);
+			--tp-label-foreground-color: hsla(0, 0%, 100%, 0.5);
+			--tp-monitor-background-color: hsla(0, 0%, 0%, 0.3);
+			--tp-monitor-foreground-color: hsla(0, 0%, 100%, 0.3);*/
+			}
+
+			.tp-sldtxtv_s {
+				flex: 0;
+				display:none;
+			}
+			.tp-sldv_t {
+				display:non;
+			}
+			.tp-lblv_v > .tp-txtv.tp-txtv-num {
+				width:50%;
+				float:right;
+			}
+
+			.tp-txtv_k::before {
+				opacity: 0.8 !important;
+				transition: transform 0.2s;
+			}
+
+			.tp-txtv_k {
+				cursor: ew-resize !important;
+				transform:translate(5px);
+			}
+
+			.tp-txtv_k:hover::before {
+				opacity: 1 !important;
+				transform:scale(1.25);
+				background-color: #abcdef !important;
+			}
+
+			.tp-txtv_k:active {
+				cursor: grabbing;
+			}
+		</style>
+	</head>
+	<body>
+		<a id="download"></a>
+		<input type="file" id="upload" accept=".json" style='display:none'>
+		<input type="file" id="obj" accept=".obj" style='display:none'>
+
+		<div class="ui" style='width:280px'>
+			<div id="project" class="pane"></div>
+			<div id="bloom" class="pane"></div>
+			<div id="stats"></div>
+		</div>
+		<div class='right ui'>
+			<div id="systemList" class="pane"></div>
+			<div id="system" class="pane"></div>
+		</div>
+		<div id="container"></div>
+
+		<script type="module">
+			import * as THREE from '../build/three.module.js';
+
+			import Stats from './jsm/libs/stats.module.js';
+
+
+			import {setUpApp, setUpSystemGUI, setUpProject, gui} from './js/gui.js'
+			import {makeMaterial, solidMaterial, makePointMaterial, skyMaterial, mat} from './js/material.js';
+			import {state, constants} from './js/state.js';
+			import {app} from './js/app.js';
+
+			import { LineSegmentsGeometry } from './jsm/lines/LineSegmentsGeometry.js';
+			// import * as ium from "https://cdn.skypack.dev/three-instanced-uniforms-mesh@0.45.0"
+			// import { InstancedUniformsMesh } from '../node_modules/three-instanced-uniforms-mesh/src/index.js'
+
+			const instanced = (...x) => new THREE.InstancedMesh(...x);
+
+			let composer, stats;
+
+			window.onChange = {
+
+				// toggle point/ball visibility when vertex type changes
+				frameType: function() {
+					const value = this.unit.frame.type > 0;
+
+					this.obj.group.traverse(o=>{
+						if (o.userData.type === 'wire') o.visible = !value;
+						else if (o.userData.type === 'tube') o.visible = value;
+					})
+				},
+
+				// toggle point/ball visibility when vertex type changes
+				vertexType: function() {
+
+					const value = this.unit.point.type > 0;
+
+					this.obj.group.traverse(o=>{
+						if (o.userData.type === 'point') o.visible = !value;
+						else if (o.userData.type === 'ball') o.visible = value;
+					})
+
+				},
+
+				geometry: function() {
+
+					const {obj: {wire, solid, point, ball, tube}, unit} = this;
+					let geom;
+
+
+					if (unit.geometry === 'Custom') geom = unit.obj
+
+					else {
+						// copy default params for the geometry (terminal boolean to turn off endcaps)
+						geom = new THREE[`${unit.geometry}BufferGeometry`](...unit.geomParams, true);
+					}
+
+					// set wire geometry
+					const edges = new THREE.EdgesGeometry(geom);
+					const lsg = new LineSegmentsGeometry();
+					lsg.fromEdgesGeometry(edges);
+					wire.geometry = lsg;
+
+					// set point and solid geometry
+					solid.geometry = point.geometry = geom;
+
+					// set ball geometry 
+					const unitVertices = app.verticesFromPositions(geom.getAttribute('position').array);
+					this.obj.ball = instanced(ball.geometry, ball.material, unitVertices.length);
+					this.obj.ball.userData.type = 'ball';
+					unitVertices.forEach((xyz,i)=>{
+
+						const translation = new THREE.Matrix4()
+							.makeTranslation(...xyz)
+
+						this.obj.ball.setMatrixAt(i, translation)
+
+					})
+
+					// set tube geometry. take pairwise points from wire geometry
+					// to calculate transform matrices, to set to the instancedMesh
+					const instanceStart = lsg.getAttribute('instanceStart').array;
+
+					this.obj.tube = instanced(
+						tube.geometry,
+						tube.material, 
+						instanceStart.length/6
+					);
+
+
+					this.obj.tube.userData.type = 'tube';
+					// todo: can pack these into the instancematrix instead,
+					// since we're not using those anyway
+					this.obj.tube.geometry.attributes.instanceStart = lsg.getAttribute('instanceStart');
+					this.obj.tube.geometry.attributes.instanceEnd = lsg.getAttribute('instanceEnd');
+
+					for (var i = 0; i<instanceStart.length; i+=6) {
+
+						// const [start, end] = [
+						// 	[instanceStart[i],instanceStart[i+1],instanceStart[i+2]],
+						// 	[instanceStart[i+3],instanceStart[i+4],instanceStart[i+5]]
+						// ];
+
+						this.obj.tube
+							.setMatrixAt(
+								i/6, 
+								new THREE.Matrix4()
+									// .set(...start, 0, 
+									// 	...end, 0,
+									// 	0,0,1,0,
+									// 	0,0,0,1
+									// )
+							)
+
+					};
+
+					app.buildSystem.call(this);
+				},
+
+				systems: function() {
+
+					gui.systemDropdown?.dispose();
+					gui.systemDropdown = gui.systemsList
+						.addInput(
+							this,
+							'activeSystem',
+							{
+								index: 0,
+								label: 'editing',
+								options: Object.fromEntries(
+									Object.entries(this.systems)
+										.map(([k,v]) => [v.name, parseFloat(k)])
+								)
+							}
+						)
+						.on('change', setUpSystemGUI)
+
+				}
+			}
+
+			window.state = state;
+			window.constants = constants;
+			window.mat = mat;
+			window.app = app;
+
+			window.clone = obj => JSON.parse(JSON.stringify(obj));
+
+			// convert array of values into a {key: key} object format for Tweakpane select UI's,
+			// with optional overrides
+			window.arrayToObject = (array, override) => {
+				const obj = Object.fromEntries(array.map(k=>[k,k]));
+
+				if (!override) return obj;
+
+				const output = Object.assign(obj, override);
+				return output
+			};
+
+
+			function init() {
+
+				const container = document.getElementById( 'stats' );
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				app.scene = new THREE.Scene();
+
+				onWindowResize();
+				window.addEventListener( 'resize', onWindowResize );
+
+				app.obj.init();
+
+				animate();
+
+				// app > project > systems > system
+				setUpApp();
+				setUpProject();
+
+			}
+
+			window.setUpGroup = function() {
+
+				const group = new THREE.Group();
+
+				// linesegmentsgeometry, linematerial
+				const wire = new THREE.Mesh(
+					new LineSegmentsGeometry(),
+					makeMaterial.call(this)
+				);
+
+				wire.userData.type = 'wire';
+
+				//geometry, meshbasicmaterial
+				const solid = new THREE.Mesh(
+					new THREE.BufferGeometry(),
+					solidMaterial.call(this)
+				);
+
+				solid.userData.type = 'solid';
+
+				const point = new THREE.Points(
+					new THREE.BufferGeometry(),
+					makePointMaterial.call(this)
+				);
+
+				point.userData.type = 'point';
+
+				const ball = new THREE.Mesh(
+					new THREE.SphereBufferGeometry(1, 72, 72),
+					mat.ball.call(this)
+				);
+
+				const tube = new THREE.Mesh(
+					new THREE.CylinderBufferGeometry(1, 1, 1, 36),
+					mat.tube.call(this)
+				);
+
+				app.scene.add(group);
+				this.obj = {wire, solid, point, ball, tube, group}
+			}
+
+			function onWindowResize() {
+
+				const {innerWidth, innerHeight} = window;
+				app.obj.camera.aspect = innerWidth/innerHeight;
+				app.obj.camera.updateProjectionMatrix();
+
+				state.dimensions.value = new THREE.Vector2( innerWidth, innerHeight );
+
+				app.obj.renderer.setSize( innerWidth, innerHeight );
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				stats.update();
+				state.now.value = performance.now();
+
+				app.obj.composer.render();
+				app.obj.sky.rotation.y +=0.01;
+				// if (!app.obj.sky.material.map) return
+				// app.obj.sky.material.map.offset.set(offset, 0)
+				// app.obj.sky.material.needsUpdate = true;
+				// offset++
+			}
+
+
+			init();
+
+		</script>
+
+	</body>
+
+</html>

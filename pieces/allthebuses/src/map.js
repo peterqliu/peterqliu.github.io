@@ -1,4 +1,5 @@
 function pollBuses(initial){
+
 	app.utils.load('vehicles', (resp) => {
 
 		if (resp.length === 0) return
@@ -36,7 +37,7 @@ function pollBuses(initial){
 		}
 
         s.customLayer.updateBuses();
-
+		if (!s.requestsInFlight) app.updateModal();
 	})
 }
 
@@ -124,7 +125,7 @@ function updateRoute(){
 		const {path, stops} = requestRoute(s.activeRoute);
 			
 		app.map.getSource('route')
-			.setData(path)
+			.setData(turf.bezierSpline(path, {sharpness:0.5}))
 
 		app.map.getSource('stops')
 			.setData(stops)
@@ -190,6 +191,7 @@ function requestRoute(routeObj, cb){
 
 		// fall back to generic IB/OB if specific direction not found
 		var routeDirection = route[specific] || route[direction];
+
 		return routeDirection
 	}
 
@@ -233,7 +235,8 @@ const fetchRouteData = (routeId, cb) => {
 
 	        var path = stops.map(stop =>stop.geometry.coordinates);
 	        const {boundingBox:{latMin, latMax, lonMin, lonMax}} = resp;
-
+			let temporaryDistanceTracker = 0;
+				
 			output[routeDirection.id] = {
 				title: routeDirection.name,
 				bounds: [
@@ -251,12 +254,17 @@ const fetchRouteData = (routeId, cb) => {
 				stops: {
 					"type": "FeatureCollection",
 					"features":stops
-				}
+				},
+
+				stopDistances: path
+					.map((stop, index)=>{
+						const segmentLength = app.ruler.distance(path[index-1] || path[0], path[index]);
+						temporaryDistanceTracker+=segmentLength;
+						return temporaryDistanceTracker
+					})
+					.map(d=>d/temporaryDistanceTracker)
 			}
 
-			// add fallbacks
-			// if (routeDirection.id.includes('I_')) output.IB = output[routeDirection.id]
-			// else output.OB = output[routeDirection.id]
 		})
 
 		c.routeData[routeId] = output;

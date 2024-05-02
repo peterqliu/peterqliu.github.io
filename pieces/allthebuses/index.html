@@ -56,7 +56,7 @@
             padding:20px;
             font-size:1.25em;
             border-radius: 5px;   
-            color:#aaa;
+            color:#bbb;
             box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
             pointer-events: none;
             transition:transform 0.1s;
@@ -69,6 +69,12 @@
             line-height: 1.5em;
         }
 
+        .subtitle {
+            font-weight:100;
+            font-size:0.8em;
+            color:#666;
+            line-height: 1.5em;   
+        }
         .IB .highlight {
             color: var(--IB);
         }        
@@ -96,8 +102,8 @@
 
         #spinner {
             z-index: 99;
-            width:5vh;
-            height:5vh;
+            width:15vh;
+            height:15vh;
             margin-left:50vw;
             margin-top:50vh;
             background: #aa3345;
@@ -117,7 +123,6 @@
             position:absolute;
             bottom:0;
             right:0;
-            padding:30px;
             background:white;
             margin:2vh;
             box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
@@ -125,23 +130,32 @@
             font-size:2em;
             z-index: 90;
             max-height:96vh;
-            overflow:hidden;
+            overflow:scroll;
         }
-        .barLabel {
+
+        .view {
+            padding:30px;
+        }
+        .modalSmall {
             font-size: 0.5em;
             color:#aaa;
+        }
+
+        .strong {
+            color:#999
         }
         .bar {
             height: 4px;
             width: 100%;
-            background: var(--OB);
             border-radius: 2px;
-            overflow: hidden;
+            overflow: visible;
             opacity:0.8;
             margin:5px 0px;
+            background: #eee;
+            position:relative;
         }
 
-        .bar div {
+        #inboundBar {
             background:var(--IB);
             float: right;
             text-align: right;
@@ -149,15 +163,35 @@
             height: 100%;
         }
 
+        .stopHash {
+            width:1px;
+            height:4px;
+            border-radius:2px;
+            background:#ccc;
+            /* display:inline; */
+            position:absolute;
+        }
         .marker {
             display: inline-block;
             width: 9px;
             height: 9px;
             border-radius: 50%;
             border-top-right-radius: 0px;
-            transform: rotate(45deg);
-            background: var(--OB);
             margin-left:2px;
+        }
+
+        .ib.marker {
+            background: var(--IB);
+            transform: rotate(45deg);
+        }
+
+        .ob.marker {
+            background: var(--OB);
+            transform: rotate(-135deg);
+        }
+
+        .quiet {
+            opacity:0.75;
         }
         @-webkit-keyframes spinner {
             0% {
@@ -180,7 +214,17 @@
             display:none;
         }
 
+        .route {
+            border-top:1px solid #eee;
+            padding:15px;
+        }
 
+        .lines {
+            /* margin:2vh; */
+        }
+        .line {
+            margin-top:15px;
+        }
     </style>
     <body mode='loading'>
         <div id='loader' class='blurred'>
@@ -189,22 +233,28 @@
         <div id='map'>
             <div id='modal'>
                 <div id='general'>
-                    <div class='title'>Muni, this moment</div>
-                    <div class='bar'>
-                        <div></div>
+                    <div class="view">
+                        <div class='title'>Muni, this moment</div>
+                        <div class='bar' style="background: var(--OB)">
+                            <div id="inboundBar"></div>
+                        </div>
+                        <div class='modalSmall'>
+                            <span class='ob marker'></span>
+                            <span id='ob'></span> Outbound
+                            <span style='float:right'>
+                                <span id='ib'></span> 
+                                Inbound 
+                                <span class='ib marker' 
+                                    style=' margin-right:2px'
+                                ></span>
+                            </span>
+                        </div>
                     </div>
-                    <div class='barLabel'>
-                        <span class='marker'></span>
-                        <span id='ob'></span> Outbound
-                        <span style='float:right'>
-                            <span id='ib'></span> 
-                            Inbound 
-                            <span class='marker' 
-                                style='transform: rotate(-135deg); background: var(--IB); margin-right:2px'
-                            ></span>
-                        </span>
-                    </div>
+
+                    <div id='routeList'>
+                    </div>       
                 </div>
+         
                 <div id='routeFocus'>
                     <div class='title'></div>
                 </div>
@@ -217,147 +267,12 @@
     <script src='../credentials.js'></script>
 
     <script src='src/map.js'></script>
+    <script src="https://unpkg.com/cheap-ruler@3.0.1/cheap-ruler.min.js"></script>
 
+    <script src="src/constants.js"></script>
     <script>
+
         mapboxgl.accessToken = config.token;//'pk.eyJ1IjoicGV0ZXJhZnRlcm1hcGJveCIsImEiOiJjbHZuN3U4cTgwYXA3MmpubmUzZjd6MHZzIn0.td7c9rfhH61htRk5OUWMSg';
-
-        var s = {
-
-            mode: 'inactive',
-            showLabels: false,
-            center: [-122.44, 37.77],
-            zoom: 13,
-            pitch:0,
-            activeRoute: false,
-            routeDrawStart: Date.now(),
-
-            initScene: false,
-
-            highlightedBus: {
-                uuid: null, 
-                routeId: null,
-                startTime: null,
-                markerObj: null
-            }
-        }
-
-        var c = {
-            fullBounds:[
-                [-122.51981158087418,37.73448595445758],
-                [-122.35330876278951,37.830708228670474]
-            ],
-            labelZoomThreshold:14,
-            animationDuration: 500,
-            markerScale: 0.000002,
-            emptyGeojson: {type:"FeatureCollection",features:[]},
-            color: {
-                'IB':'rgba(170, 51, 69, 1)',
-                'OB': 'rgba(65, 166, 178, 1)',
-                'weak':'#BAB49D'
-            },
-            sceneTranslate: mapboxgl.MercatorCoordinate.fromLngLat(
-                s.center,
-                0
-            ),
-            routeData:{
-
-            },
-            customLayer: {
-
-                id: '3d-model',
-                type: 'custom',
-                renderingMode: '3d',
-                onAdd: (map, gl) => buildRenderer(gl, ()=>{}),
-
-                render: (gl, matrix) => {
-
-                    var m = new THREE.Matrix4().fromArray(matrix);
-                    var l = new THREE.Matrix4()
-                        .makeTranslation(
-                            c.sceneTranslate.x,
-                            c.sceneTranslate.y,
-                            c.sceneTranslate.z
-                        )
-
-                    s.customLayer.camera.projectionMatrix = m.multiply(l);
-                    if (s.animatingBuses) s.customLayer.animateBus();
-                    s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
-
-                }
-            },
-            material: {
-                inactive: new THREE.MeshBasicMaterial( { 
-                    color: 0xBAB49D, 
-                    opacity:0.5, 
-                    transparent:true, 
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                }),
-                inactiveHover: new THREE.MeshBasicMaterial( { 
-                    color: 0xBAB49D, 
-                    opacity:0.75, 
-                    transparent:true,                    
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                }),
-                IB: new THREE.MeshBasicMaterial( { 
-                    color: 0xaa3345,            
-                    opacity:0.75, 
-                    transparent:true,
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                } ),
-                OB: new THREE.MeshBasicMaterial( { 
-                    color: 0x41a6b2,            
-                    opacity:0.75, 
-                    transparent:true,
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                } ),
-
-                text: new THREE.MeshBasicMaterial( { 
-                    color: 0xf0eed9, 
-                    side: THREE.BackSide,
-                    // transparent:true,
-                    opacity:0.7,
-                    // depthWrite:false,
-                    // depthTest: false 
-                } )
-            },
-
-            geometry: {
-                bus: null,
-                label: {}
-            } 
-        }
-
-        c.style = {
-            focus:[
-                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
-                ['stops', 'circle-stroke-width', {stops:[[12,1], [22,20]]}],
-                ['stops', 'circle-radius', {stops:[[12,1], [22,20]]}],
-                // ['buses', 'circle-color', c.color.weak],
-                ['bus_labels', 'text-opacity', 1]
-            ],
-            active:[
-                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
-                ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,20]]}],
-                ['stops', 'circle-radius', 0],
-                // ['buses', 'circle-color', c.color.weak],
-                ['bus_labels', 'text-opacity', 0]
-            ],
-            inactive:[
-                ['route', 'line-width', 0],
-                ['stops', 'circle-stroke-width', 0],
-                ['stops', 'circle-radius', 0],
-                ['buses', 'circle-color', {
-                    'property': 'direction',
-                    'type':'categorical',
-                    'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
-                }],
-                ['bus_labels', 'text-opacity', 0]
-            ]
-        }
 
         const app = {
 
@@ -385,6 +300,91 @@
                 c.geometry.bus.matrixAutoUpdate = false;
             },
 
+            ruler: new CheapRuler(s.center[1], 'meters'),
+
+            updateModal: function() {
+                
+                const routeSet = {};
+                s.buses
+                    .map(({route, direction, dir:{id, dirName}, lon, lat})=>({...route, direction, id, dirName, lngLat:[lon, lat]}))
+                    .forEach(({name, direction, id, lngLat, dirName})=>{
+                        if (!routeSet[name]) routeSet[name] = {IB:0, OB:0, lines:{}}
+                        if (!routeSet[name].lines[id]) {
+                            const [line, dir, variant] = id.split('_');
+                            routeSet[name].lines[id] = {dirName, direction, buses: [], data: c.routeData[line][id]}
+                        };
+
+                        const pathPoints = routeSet[name].lines[id].data.path.geometry.coordinates;
+                        routeSet[name].lines[id].buses.push(app.ruler.pointOnLine(pathPoints, lngLat).t)
+                        routeSet[name][direction]++
+                    })
+
+                console.log(routeSet)
+
+                // route entry
+                const routes = d3.select('#routeList')
+                    .selectAll('.route')
+                    .data(Object.keys(routeSet).sort().map(route=>({route, ...routeSet[route]})))
+                    .enter()
+                    .append('div')
+                    .classed('route', true);
+
+                routes
+                    .append('div')
+                    .classed('subtitle', true)
+                    .text(d=>d.route);
+
+
+                // lines per route
+                const lines = routes
+                    .append('div')
+                    .attr('class', 'lines')
+                    .selectAll('.line')
+                    .data(d=>{
+                        return Object.entries(d.lines)
+                    })
+
+                    .enter()
+                    .append('div')
+                    .classed('line', true);
+
+                // stop hashes
+                const stopMarkers = lines.append('div')
+                    .classed('bar', true)
+                    .selectAll('.stopHash')
+                    .data(([id, data])=>{
+                        return data.data.stopDistances
+                    })
+                    .enter()
+                    .append('div')
+                    .classed('stopHash', true)
+                    .attr('style', d=>`margin-left:${d*100}%`)
+
+                const busMarkers = lines.select('.bar')
+                    .selectAll('.marker')
+                    .data(([id, data])=>data.buses.map(b=>({b, direction:data.direction})))
+                    .enter()
+                    .append('div')
+                    .attr('class', d=>`quiet ${d.direction.toLowerCase()} marker`)
+                    .style('margin-top', '-2px')
+                    .style('position', 'absolute')
+                    .style('margin-left', d=>`${(d.direction==='IB' ? d.b : 1-d.b)*100}%`)
+
+                lines.append('div')
+                    .html(([id, data])=>{
+                        const [line, direction, variant] = id.split('_');
+                        return `<span class="strong">${parseFloat(direction) ? 'Inbound' : 'Outbound'}</span> to ${app.format.dirName(data.dirName)}`
+                    })
+                    .classed('modalSmall', true)
+
+                if (s.mode === 'inactive') {
+                    d3.select()
+                }
+
+                else {
+
+                }
+            },
             getPrediction: (route, stop, cb) => {
                 const url = `stopcodes/1${stop}/predictions`;
 
@@ -396,6 +396,38 @@
 
             },
 
+            format: {
+                time: (seconds) => {
+                    let prediction;
+                    if (!seconds) prediction = 'no current prediction'
+                    else if (seconds>180) return `${Math.round(seconds/60)} minutes`
+                    else if (seconds>60) {
+                        const [minutes, secondRemainder] = [Math.floor(seconds/60), Math.round(seconds%60)];
+                        return `${minutes}:${secondRemainder<10 ? 0 :''}${secondRemainder}`
+                    }
+                    else if (seconds>5) return `${Math.round(seconds)} seconds`
+                    else return `approaching now`
+                },
+
+                occupancyString(raw) {
+                    return raw.toLowerCase().replace('room ', '')
+                },
+
+                speed(kph) {
+                    return kph ? 'moving at ' +Math.round(kph*0.621371) +' mph' : 'momentarily stopped'
+                },
+                
+                dirName(raw) {
+                    let formatted = raw.replace(' from', ', from').replace('+', '&')
+                    if (formatted.length>30) formatted = formatted
+                        .replace(/Avenue/g, '')
+                        .replace(/Street/g, '')
+
+                        .replace('Ave', '')
+                        .replace('St ', '')
+                    return formatted
+                }
+            },
             formatTime: (seconds) => {
                 let prediction;
                 if (!seconds) prediction = 'no current prediction'
@@ -407,6 +439,7 @@
                 else if (seconds>5) return `${Math.round(seconds)} seconds`
                 else return `approaching now`
             },
+
             setState: (key, value) => {
 
                 if (key === 'activeRoute'){
@@ -486,6 +519,7 @@
             clearPopup: () => {
                 app.popup.remove()
             },
+            
             utils: {
 
                 degreeify: radians =>{
@@ -498,9 +532,13 @@
                 load: (queryString, cb) => {
                     const url = 'https://webservices.umoiq.com/api/pub/v1/agencies/sfmta-cis/';
                     const token = '?key=0be8ebd0284ce712a63f29dcaf7798c4';
+                    s.requestsInFlight++;
                     return fetch([url, queryString, token].join(''))
                         .then(response => response.json())
-                        .then(data=> cb(data))
+                        .then(data=> {
+                            s.requestsInFlight--
+                            cb(data)
+                        })
                 },
 
                 getDirection: str => {
@@ -594,7 +632,7 @@
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <script src='src/customlayer.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
-
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 </head>
 
 </html>

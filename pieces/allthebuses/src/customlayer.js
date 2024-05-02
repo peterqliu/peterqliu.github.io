@@ -149,7 +149,6 @@ s.customLayer = {
                 
                 app.map.triggerRepaint();
 
-				// bus.children[0].rotation.set(0,0, bus.userData.lastBearing+bus.userData.bearingDelta*progress)
 			}
 					
 		}
@@ -165,8 +164,6 @@ s.customLayer = {
 	},
 
 	highlightMarker: (newBus) => {
-
-		// if (!newBus) return
 
 		const hB = s.highlightedBus;
 		let {markerObj,uuid} = hB;
@@ -215,15 +212,16 @@ s.customLayer = {
 			hB.markerObj = newBus;
 			
 			// set popup for hovered bus
-			const {route:{id}, direction, lon, lat, dir} = newBus.userData;
+			const {route:{id}, direction, lon, lat, dir, kph, occupancyDescription, linkedVehicleIds} = newBus.userData;
 			const relevantRoute = c.routeData[id];
 			const subhead = relevantRoute[dir.id]?.title || relevantRoute.title;
+			const {format:{occupancyString, speed}} = app;
 			s.customLayer.setPopup(
 				[lon, lat],
 				[
 					c.routeData[id].title, // route name
-					`<span class="highlight">${direction === 'IB' ? 'Inbound' : 'Outbound'}</span> to ${subhead}
-					<br>${relevantRoute.description}
+					`#${linkedVehicleIds} ${speed(kph)}, ${occupancyString(occupancyDescription)}
+					<br><span class="highlight">${direction === 'IB' ? 'Inbound' : 'Outbound'}</span> to ${subhead}
 					`
 				],
 
@@ -274,8 +272,8 @@ s.customLayer = {
 			app.getPrediction(routeId, id, (predictions)=>{
 
 				let [{seconds, occupancy}, ...futureBuses] = predictions;
-				const formattedOccupancy = occupancy.toLowerCase().replace('room ', '')
-				var prediction = `Next bus in <span class='highlight'>${app.formatTime(seconds)}</span> (${formattedOccupancy})`;
+				const formattedOccupancy =app.format.occupancyString(occupancy)
+				var prediction = `Next bus in <span class='highlight'>${app.format.time(seconds)}</span> (${formattedOccupancy})`;
 
 				if (!seconds) prediction = 'no current prediction'
 

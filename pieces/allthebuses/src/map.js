@@ -1,29 +1,27 @@
 function pollBuses(initial){
-
-	app.utils.load('http://restbus.info/api/agencies/sfmuni-sandbox/vehicles', (resp) => {
+	app.utils.load('vehicles', (resp) => {
 
 		if (resp.length === 0) return
 		console.log('poll')
 		s.lastPollTime = Date.now();
 
-
 		resp
-			.filter(item =>item.directionId)
+			.filter(item =>item.dir?.id)
 			.forEach(line=>{
-				if (!c.routeData[line.routeId]) {
-					c.routeData[line.routeId] = 'pending'
-					fetchRouteData(line.routeId)
+				if (!c.routeData[line.route.id]) {
+					c.routeData[line.route.id] = 'pending'
+					fetchRouteData(line.route.id)
 				}
 			})
 
 
 		s.buses = resp
-			.filter(item => item.directionId)
+			.filter(item =>item.dir?.id)
 			.map(item => {
-				var id = item.directionId;
+				const {dir:{id}} = item;
 				item.direction = app.utils.getDirection(id)
-				return item
-			});
+					return item
+				});
 
 		app.updateModalBar();
 
@@ -123,20 +121,18 @@ function updateRoute(){
 
 	if (s.activeRoute)  {
 
-		const route = requestRoute(s.activeRoute);
-
-		if (route) {
+		const {path, stops} = requestRoute(s.activeRoute);
 			
-			app.map.getSource('route')
-				.setData(route.path)
+		app.map.getSource('route')
+			.setData(path)
 
-			app.map.getSource('stops')
-				.setData(route.stops)
+		app.map.getSource('stops')
+			.setData(stops)
 
-			s.routeDrawStart = Date.now()
-			drawRoute()
+		s.routeDrawStart = Date.now()
+		drawRoute()
 
-		}
+		
 	}
 }
 
@@ -181,9 +177,9 @@ function drawRoute(){
 // retrieves route from constants (can be abstracted away)
 function requestRoute(routeObj, cb){
 
+	const [line, direction, specific] = routeObj;
 	// routeObj is [line, generic direction, specific direction]
-	const route = c.routeData[routeObj[0]]
-	const direction = routeObj[1];
+	const route = c.routeData[line]
 
 	if (!route) {
 		console.log('not yet downloaded')
@@ -193,7 +189,7 @@ function requestRoute(routeObj, cb){
 	else {
 
 		// fall back to generic IB/OB if specific direction not found
-		var routeDirection = route[routeObj[2]] || route[direction];
+		var routeDirection = route[specific] || route[direction];
 		return routeDirection
 	}
 
@@ -204,9 +200,10 @@ function requestRoute(routeObj, cb){
 const fetchRouteData = (routeId, cb) => {
 
 
-	app.utils.load('http://restbus.info/api/agencies/sfmuni-sandbox/routes/'+routeId, (resp) => {
-		
-		var output = {title: resp.title}
+	app.utils.load('routes/'+routeId, (resp) => {
+		// console.log(resp)
+		var output = {title: resp.title, description: resp.description}
+
 		// per direction, reconstruct route from stops
 		resp.directions.forEach(routeDirection => {
 
@@ -215,14 +212,14 @@ const fetchRouteData = (routeId, cb) => {
 	        	whitelist[stop.id] = stop
 	        })
 	        // .map(stop=>stop.id);
-
+			// console.log(whitelist)
 	        var stops = routeDirection.stops
 				.filter(stop => whitelist[stop]) // keep only stops that are in the general list
 				.map(stop => {
 					return {
 						"type": "Feature",
 						"properties": {
-							name: whitelist[stop].title, 
+							name: whitelist[stop].name, 
 							id: whitelist[stop].id,
 							routeId: routeId,
 							direction: app.utils.getDirection(routeDirection.id)
@@ -235,13 +232,13 @@ const fetchRouteData = (routeId, cb) => {
 				})
 
 	        var path = stops.map(stop =>stop.geometry.coordinates);
-	        const bounds = resp.bounds;
+	        const {boundingBox:{latMin, latMax, lonMin, lonMax}} = resp;
 
 			output[routeDirection.id] = {
-				title: routeDirection.title,
+				title: routeDirection.name,
 				bounds: [
-					[bounds.sw.lon, bounds.sw.lat],
-					[bounds.ne.lon, bounds.ne.lat]
+					[lonMin, latMin],
+					[lonMax, latMax]
 				],
 				path: {
 					"type": "Feature",
@@ -258,8 +255,8 @@ const fetchRouteData = (routeId, cb) => {
 			}
 
 			// add fallbacks
-			if (routeDirection.id.includes('I_')) output.IB = output[routeDirection.id]
-			else output.OB = output[routeDirection.id]
+			// if (routeDirection.id.includes('I_')) output.IB = output[routeDirection.id]
+			// else output.OB = output[routeDirection.id]
 		})
 
 		c.routeData[routeId] = output;

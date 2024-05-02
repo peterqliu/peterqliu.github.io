@@ -55,6 +55,8 @@ s.customLayer = {
 
 	addBus: d => {
 
+		const {route:{id}} = d;
+
  		//build bus marker
  		const currentMarkerMaterial = s.mode === 'inactive' ? d.direction : 'inactive'
 		const marker = new THREE.Mesh( 
@@ -62,16 +64,13 @@ s.customLayer = {
 			c.material[currentMarkerMaterial] 
 		) ;   
 
-
-
 		// build bus text
 		var geomLookup = c.geometry.label[d.routeId];
 
 		if (!geomLookup) {
-
-			const textGeom = new THREE.TextGeometry( d.routeId, {
+			const textGeom = new THREE.TextGeometry( id, {
 				font: c.font,
-				size: 1/Math.pow(1.25, d.routeId.length),
+				size: 1/Math.pow(1.25, id.length),
 				height:0,
 				curveSegments: 24
 			} );
@@ -81,7 +80,7 @@ s.customLayer = {
 			textGeom.bb = textGeom.boundingBox;
 
 			textGeom.matrixAutoUpdate = false;
-			c.geometry.label[d.routeId] = geomLookup = textGeom
+			c.geometry.label[id] = geomLookup = textGeom
 		}
 
 
@@ -90,7 +89,7 @@ s.customLayer = {
 		if (!s.showLabels) text.scale.set(0.00001,0.00001,0.00001);
 
 		text.rotation.x = Math.PI
-		text.position.x = -0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (d.routeId.match(/1/g) || []).length / (d.routeId.length+3))
+		text.position.x = -0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3))
 		text.position.y = (geomLookup.bb.max.y - geomLookup.bb.min.y) * 0.5;
 		text.position.z = 0.001
 
@@ -116,15 +115,13 @@ s.customLayer = {
 		if (!animate) busObj.position.copy(newPosition);
 
 		busObj.userData = {
-			routeId: data.routeId,
+			routeId: data.route.id,
 			lastPosition: busObj.position.clone(),
-			// lastBearing: busObj.rotation.z,
-			// bearingDelta: s.utils.radify(data.heading-45) - busObj.rotation.z		
 		}
 
 		busObj.userData.positionDelta = newPosition.sub(busObj.userData.lastPosition)
 		
-		const marker = busObj.children[0];
+		const [marker] = busObj.children;
 		marker.rotation.z = app.utils.radify(data.heading-135);
 		marker.userData = data;
 
@@ -169,19 +166,28 @@ s.customLayer = {
 
 	highlightMarker: (newBus) => {
 
+		// if (!newBus) return
+
 		const hB = s.highlightedBus;
-		const mouseout = !newBus || newBus.uuid !== hB.uuid;
+		let {markerObj,uuid} = hB;
+		const mouseout = !newBus || newBus.uuid !== uuid;
 
-		const updateHovered = newBus && newBus.uuid !== hB.uuid ? true : false;
-		const deactivateHovered = mouseout && hB.markerObj ? true : false;
+		const updateHovered = newBus && newBus.uuid !== uuid;
+		const unhovering = mouseout && markerObj;
 
-		if (deactivateHovered) {
+		const {mode, activeRoute, mesh:{markers}} = s;
+
+		// if (unhovering) console.log('unhover')
+		// if (updateHovered) console.log('updatehover')
+
+		const sameRouteAndDirection = markerObj?.userData.route.id === activeRoute[0] && markerObj?.userData.dir.id === activeRoute[2]
+
+		// if moving off of a hovered marker
+		if (unhovering) {
 
 			// in focus mode, mousing out only resets the size of one hovered marker
-			if (s.mode === 'focus') {
-
-				const sameRouteAndDirection = hB.markerObj.userData.routeId === s.activeRoute[0] && hB.markerObj.userData.direction === s.activeRoute[1]
-				
+			if (mode === 'focus') {
+					
 				if (!sameRouteAndDirection) {
 					hB.markerObj.material = c.material.inactive;
 					hB.markerObj.parent.position.z = Math.random()/100000000;
@@ -194,7 +200,7 @@ s.customLayer = {
 
 			else app.setState('mode', 'inactive')
 
-			hB.markerObj.scale.set(1,1,1);
+			markerObj.scale.set(1,1,1);
 			hB.markerObj = hB.uuid = null;
 		
 			app.clearPopup()
@@ -207,53 +213,46 @@ s.customLayer = {
 			hB.uuid = newBus.uuid;
 			newBus.scale.set(1.2,1.2,1.2)
 			hB.markerObj = newBus;
-
+			
 			// set popup for hovered bus
-			const hoveredMarkerData = newBus.userData;
-			const relevantRoute = c.routeData[hoveredMarkerData.routeId]
-			const subhead = relevantRoute[hoveredMarkerData.directionId] ? relevantRoute[hoveredMarkerData.directionId].title : relevantRoute[hoveredMarkerData.direction].title
-
+			const {route:{id}, direction, lon, lat, dir} = newBus.userData;
+			const relevantRoute = c.routeData[id];
+			const subhead = relevantRoute[dir.id]?.title || relevantRoute.title;
 			s.customLayer.setPopup(
+				[lon, lat],
 				[
-					hoveredMarkerData.lon, 
-					hoveredMarkerData.lat
-				],
-				[
-					c.routeData[hoveredMarkerData.routeId].title, // route name
-					subhead
-						.replace('Outbound', '<span class="highlight">Outbound</span>')
-						.replace('Inbound', '<span class="highlight">Inbound</span>')
-
+					c.routeData[id].title, // route name
+					`<span class="highlight">${direction === 'IB' ? 'Inbound' : 'Outbound'}</span> to ${subhead}
+					<br>${relevantRoute.description}
+					`
 				],
 
-				newBus.userData.direction
+				direction
 			)
 
-			if (s.mode === 'focus') {
-				const nonActiveRouteAndDirection = hB.markerObj.userData.routeId !== s.activeRoute[0] || hB.markerObj.userData.direction !== s.activeRoute[1]
+			// if (s.mode === 'focus') {
+			// 	// const nonActiveRouteAndDirection = markerObj.userData.routeId !== s.activeRoute[0] || markerObj.userData.direction !== s.activeRoute[1]
+			// 	console.log('focus updatehover', sameRouteAndDirection, activeRoute, newBus)
+			// 	// if (!sameRouteAndDirection) newBus.material = c.material.inactiveHover;
+			// }
 
-				if (nonActiveRouteAndDirection) newBus.material = c.material.inactiveHover;
-			}
-
-			else {
-
+			if (s.mode !== 'focus') {
+				app.setState('mode', 'active')
+				app.setState('activeRoute', newBus.userData);
 				// fade out other markers
 
-				for (bus of s.mesh.markers) {
+				for (bus of markers) {
 
-					const sameRouteAndDirection = bus.userData.routeId === newBus.userData.routeId && bus.userData.direction === newBus.userData.direction
+					const sameRouteAndDirection = bus.userData.route.id === s.activeRoute[0] && bus.userData.dir.id === s.activeRoute[2]
 					if (!sameRouteAndDirection) bus.material = c.material.inactive;
 					else bus.parent.position.z = 0.0000001;
 				}
-
-				app.setState('mode', 'active')
-				app.setState('activeRoute', newBus.userData);
 
 			}
 
 		}
 
-        if (updateHovered || deactivateHovered) {
+        if (updateHovered || unhovering) {
 			document.querySelector('.mapboxgl-canvas').style.cursor = updateHovered ? 'pointer' : 'default'
         	app.map.triggerRepaint()
         };
@@ -264,28 +263,31 @@ s.customLayer = {
 
 		if (newStop) {
 
-			const lngLat = newStop.geometry.coordinates
-			const props = newStop.properties
-			if (props.name === s.highlightedStop) return
+			const {geometry:{coordinates}, properties:{name, id, direction, routeId}} = newStop;
+			if (name === s.highlightedStop) return
 
 			s.customLayer.setPopup(
-				lngLat, 
-				[props.name, props.direction === 'IB' ? 'Inbound' : 'Outbound']
+				coordinates, 
+				[name, direction === 'IB' ? 'Inbound' : 'Outbound']
 			)
 
-			app.getPrediction(props.routeId, props.id, (time)=>{
+			app.getPrediction(routeId, id, (predictions)=>{
 
-				var prediction;
+				let [{seconds, occupancy}, ...futureBuses] = predictions;
+				const formattedOccupancy = occupancy.toLowerCase().replace('room ', '')
+				var prediction = `Next bus in <span class='highlight'>${app.formatTime(seconds)}</span> (${formattedOccupancy})`;
 
-				if (!time) prediction = 'no current prediction'
-				else if (time.seconds>99) prediction = `Next bus in <span class='highlight'>${time.minutes} minute${time.minutes>1 ? 's' : ''}</span>`
-				else if (time.seconds>5) prediction = `Next bus in <span class='highlight'>${time.seconds} seconds</span>`
-				else prediction = `Next bus <span class='highlight'>approaching now</span>`
+				if (!seconds) prediction = 'no current prediction'
 
+
+				if (futureBuses.length) {
+					const additionalPredictions = futureBuses.map(p=>app.formatTime(p.seconds)).join(', ');
+					prediction +=`<br>then ${additionalPredictions}`
+				}
 				s.customLayer.setPopup(
-					lngLat, 
-					[props.name, prediction],
-					props.direction
+					coordinates, 
+					[name, prediction],
+					direction
 				)
 			});
 
@@ -297,8 +299,9 @@ s.customLayer = {
 	},
 
 
-	setPopup: (lngLat, content, direction, offsetMultiplier) => {
-		const markup = `<div class='title'>${content[0]}</div><div class='${direction}'>${content[1]}</div>`
+	setPopup: (lngLat, content, dir, offsetMultiplier) => {
+		const [title, direction] = content;
+		const markup = `<div class='title'>${title}</div><div class='${dir}'>${direction}</div>`
 		app.popup.options.offset = 25 * Math.pow(1.25, Math.max(0, app.map.getZoom()-13))
 		app.popup.setLngLat(lngLat)
 			.setHTML(markup)
@@ -318,11 +321,6 @@ s.customLayer = {
 			zoom:15
 		})
 
-		//fetch predictions for whole route, and update modal UI
-		app.getRoutePredictions(s.activeRoute, d=>{
-			app.updateModalRouteFocus(d.stops.features)
-		})
-
 		app.setState('mode', 'focus')
 
 		// draw route only if in focused mode (bc not drawn on hover)
@@ -332,7 +330,7 @@ s.customLayer = {
 
 		for (bus of s.mesh.markers) {
 
-			const sameRouteAndDirection = bus.userData.routeId === hB.markerObj.userData.routeId && bus.userData.direction === hB.markerObj.userData.direction
+			const sameRouteAndDirection = bus.userData.route.id === s.activeRoute[0] && bus.userData.dir.id === s.activeRoute[2]
 			if (!sameRouteAndDirection) bus.material = c.material.inactive;
 			else {
 				bus.material = c.material[bus.userData.direction];

@@ -56,7 +56,7 @@
             padding:20px;
             font-size:1.25em;
             border-radius: 5px;   
-            color:#999;
+            color:#aaa;
             box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
             pointer-events: none;
             transition:transform 0.1s;
@@ -161,11 +161,11 @@
         }
         @-webkit-keyframes spinner {
             0% {
-                transform: translateX(-50%) translateY(-50%) rotate(45deg);
+                transform: translateX(-50%) translateY(-50%) rotate(0deg);
             }
 
             100% {
-                transform: translateX(-50%) translateY(-50%) rotate(405deg) ;
+                transform: translateX(-50%) translateY(-50%) rotate(450deg) ;
             }
         }
 
@@ -184,7 +184,6 @@
     </style>
     <body mode='loading'>
         <div id='loader' class='blurred'>
-            <!-- <div id='spinner' style='transform:rotateY(180deg); background:blue'></div> -->
             <div id='spinner' ></div>
         </div>
         <div id='map'>
@@ -215,10 +214,12 @@
 
         <img src='src/zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
     </body>
+    <script src='../credentials.js'></script>
+
     <script src='src/map.js'></script>
 
     <script>
-        mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
+        mapboxgl.accessToken = config.token;//'pk.eyJ1IjoicGV0ZXJhZnRlcm1hcGJveCIsImEiOiJjbHZuN3U4cTgwYXA3MmpubmUzZjd6MHZzIn0.td7c9rfhH61htRk5OUWMSg';
 
         var s = {
 
@@ -381,48 +382,37 @@
                 markerShape.lineTo(x+1, y+1);
 
                 c.geometry.bus = new THREE.ShapeGeometry( markerShape );
-                c.geometry.bus.matrixAutoUpdate() = false;
+                c.geometry.bus.matrixAutoUpdate = false;
             },
 
             getPrediction: (route, stop, cb) => {
-                const url = `http://restbus.info/api/agencies/sfmuni-sandbox/routes/${route}/stops/${stop}/predictions`;
+                const url = `stopcodes/1${stop}/predictions`;
 
                 app.utils.load(url, (r)=>{
-                    // if (e) return
-                    cb(r[0] ? r[0].values[0] : undefined);
+                    const routeMatch = r.find(prediction=>prediction.route.id===route);
+                    const predictions = routeMatch.values.map(v=>({seconds:(v.timestamp-Date.now())/1000, occupancy:v.occupancyDescription}))
+                    cb(predictions || undefined);
                 })
 
             },
 
-            getRoutePredictions: (routeDir, cb) => {
-
-                const route = requestRoute(routeDir);
-                const tuple = route.stops.features
-                    .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
-
-                const tupleEndpoint = `http://restbus.info/api/agencies/sfmuni-sandbox/tuples/${tuple}/predictions`
-                app.utils.load(
-                    tupleEndpoint, 
-                    d=>{
-                        const output = d.map((stop, index)=>{
-                            route.stops.features[index].properties.prediction = stop.values[0].seconds
-
-                            return {
-                                title: stop.stop.title,
-                                prediction:stop.values[0].seconds
-                            }
-                        })
-
-                        cb(route)
-                    }
-                )
-
+            formatTime: (seconds) => {
+                let prediction;
+                if (!seconds) prediction = 'no current prediction'
+                else if (seconds>180) return `${Math.round(seconds/60)} minutes`
+                else if (seconds>60) {
+                    const [minutes, secondRemainder] = [Math.floor(seconds/60), Math.round(seconds%60)];
+                    return `${minutes}:${secondRemainder<10 ? 0 :''}${secondRemainder}`
+                }
+                else if (seconds>5) return `${Math.round(seconds)} seconds`
+                else return `approaching now`
             },
             setState: (key, value) => {
 
                 if (key === 'activeRoute'){
 
-                    var newRoute = value ? [value.routeId,value.direction,value.directionId] : false
+                    const {route, direction, dir} = value;
+                    var newRoute = value ? [route.id, direction, dir.id] : false
 
                     //if already highlighting
                     if (s.activeRoute){
@@ -479,7 +469,9 @@
             map: new mapboxgl.Map({
                 container: 'map', // container id
                 antialiased:true,
-                style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
+                style: 'mapbox://styles/mapbox/light-v11',
+
+                // style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
                 center: s.center, // starting position
                 // minZoom: 12,
                 zoom: s.zoom // starting zoom
@@ -503,9 +495,10 @@
 
                 radify: deg => 2*Math.PI * deg/360,
 
-                load: (url, cb) => {
-                    const lambdaFn = 'https://pnvf7oppjd3jzo3wvcslnfshri0qxynb.lambda-url.us-west-2.on.aws/?url=';
-                    return fetch(`${lambdaFn}${url}`)
+                load: (queryString, cb) => {
+                    const url = 'https://webservices.umoiq.com/api/pub/v1/agencies/sfmta-cis/';
+                    const token = '?key=0be8ebd0284ce712a63f29dcaf7798c4';
+                    return fetch([url, queryString, token].join(''))
                         .then(response => response.json())
                         .then(data=> cb(data))
                 },
@@ -552,7 +545,7 @@
                             .queryRenderedFeatures(e.point, {layers:['stops']})[0];
 
                         cL.highlightStop(hoveredStop)
-                        if (!hoveredStop)  app.popup.remove()
+                        if (!hoveredStop) app.popup.remove()
 
                     }
                     

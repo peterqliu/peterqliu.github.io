@@ -7,12 +7,15 @@
     <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
 
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.css' rel='stylesheet' />
     <style>
 
         :root {
             --IB: rgba(170, 51, 69, 1);
             --OB: rgba(65, 166, 178, 1);
+            --inactive: hsl(48deg,17.4%,85%);
+            --inactiveWeak: hsl(48deg,30%,98%);
+            --inactiveTranslucent: hsla(48deg,30%,75%, 0.25);
         }
 
         body { 
@@ -21,7 +24,13 @@
             font-family: 'Open Sans', Verdana, sans-serif;
             overflow:hidden;
         }
+        .relative {
+            position: relative;
+        }
 
+        .absolute {
+            position:absolute;
+        }
         #map, #overlay { 
             position:absolute; 
             top:0; 
@@ -37,10 +46,12 @@
             margin:1%;
             cursor:pointer;
             display:none;
-            transition:all 0.1s;
+            transition:transform 0.1s;
             transform-origin: center;
         }
-
+        body[mode="focus"] #back {
+            display:block;
+        }
         #back:hover {
             transform:scale(1.25);
             opacity:1;
@@ -52,6 +63,9 @@
             font-family: inherit
         }
 
+        .mapboxgl-popup {
+            z-index: 99;
+        }
         .mapboxgl-popup-content {
             padding:20px;
             font-size:1.25em;
@@ -71,28 +85,33 @@
 
         .subtitle {
             font-weight:100;
-            font-size:0.8em;
+            font-size:0.75em;
             color:#666;
             line-height: 1.5em;   
         }
-        .IB .highlight {
+        .IB.highlight {
             color: var(--IB);
         }        
+        .IB.directionText:after {
+            content: 'Inbound'
+        }        
 
-        .OB .highlight {
+        .OB.highlight {
             color: var(--OB);
         }
-
+        .OB.directionText:after {
+            content: 'Outbound'
+        }      
 
         #loader {
             z-index: 99;
             width:100%;
             height:100%;
             /*display: none;*/
-            backdrop-filter: blur(50px);
+            backdrop-filter: blur(10px);
             position: absolute;
             pointer-events: none;
-            transition:opacity 2s;
+            transition:opacity 0.25s;
         }
 
 /*        .blurred + #map{
@@ -102,8 +121,8 @@
 
         #spinner {
             z-index: 99;
-            width:15vh;
-            height:15vh;
+            width:10vh;
+            height:10vh;
             margin-left:50vw;
             margin-top:50vh;
             background: #aa3345;
@@ -155,14 +174,39 @@
             position:relative;
         }
 
+        .fr {
+            float: right;
+        }
+
         #inboundBar {
             background:var(--IB);
-            float: right;
             text-align: right;
             width: 40%;
             height: 100%;
         }
 
+        .direction {
+            position:relative;
+            margin-top:8px;
+        }
+
+        .directionBar {
+            background-color: var(--inactiveTranslucent);
+            border-radius:4.5px;
+            height:9px;
+        }
+
+        .directionLabel *:first-child:before {
+            content:'← '
+        }
+
+        .directionLabel *:last-child:after {
+            content:' →'
+        }
+        .barExtent {
+            width: calc(100% - 9px);
+            padding-right:9px;
+        }
         .stopHash {
             width:1px;
             height:4px;
@@ -171,35 +215,98 @@
             /* display:inline; */
             position:absolute;
         }
-        .marker {
+
+
+        /* marker styling is applied to an :after pseudoselector, where its styling transforms also apply.
+        this lets us stack on translation transforms to the element proper, without adding a nested element */
+
+        .marker:after {
             display: inline-block;
+            content:'.';
+            font-size:0em;
             width: 9px;
             height: 9px;
             border-radius: 50%;
             border-top-right-radius: 0px;
-            margin-left:2px;
         }
 
-        .ib.marker {
+        .ib.marker:after {
             background: var(--IB);
+        }
+
+        .ob.marker:after {
+            background: var(--OB);
+        }
+
+        .barExtent .marker {
+            width:calc(100% - 9px);
+        }
+
+        .left.marker:after {
             transform: rotate(45deg);
         }
 
-        .ob.marker {
-            background: var(--OB);
-            transform: rotate(-135deg);
+        .right.marker:after {
+            transform: rotate(45deg);
         }
 
-        .quiet {
-            opacity:0.75;
+        .down.marker:after {
+            transform: translateY(-50%) rotate(135deg)
         }
+        .big.marker:after {
+            width: 22px;
+            height: 22px;
+        }
+
+        #routeBuses .marker {
+            position:absolute;
+            left:14px;
+            top:0;
+        }
+
+        .animateTransform {
+            transition:transform 1s;
+        }
+        
+        .routeStop .subtitle{
+            margin:0px 25px;
+        }
+        .routeStop:before {
+            content: '.';
+            font-size: 0em;
+            width:10px;
+            background:var(--inactive);
+            height: 200%;
+            position: absolute;
+            left: 20px;
+            top: -50%;
+            border-radius:5px;
+            opacity:0.5;
+        }
+
+        .routeStop:first-child:before {
+            top:calc(50% - 5px);
+        }
+
+        .routeStop:last-child:before {
+            transform:translateY(calc( -75% + 5px));
+            top:0;
+        }
+
+        
+        .quiet {
+            opacity:0.6;
+        }
+
         @-webkit-keyframes spinner {
             0% {
                 transform: translateX(-50%) translateY(-50%) rotate(0deg);
             }
-
+            50% {
+                /* transform: scale(0.8) translateX(-50%) translateY(-50%) rotate(450deg) ; */
+            }
             100% {
-                transform: translateX(-50%) translateY(-50%) rotate(450deg) ;
+                transform: translateX(-50%) translateY(-50%) rotate(720deg) ;
             }
         }
 
@@ -214,11 +321,25 @@
             display:none;
         }
 
-        .route {
-            border-top:1px solid #eee;
-            padding:15px;
+        .listEntry {
+            border-top: 1px solid var(--inactive);
+            background: var(--inactiveWeak);
+            padding: 16px 20px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
 
+        .listEntry:hover {
+            background:white;
+        }
+        .listEntry .notation {
+            position: absolute;
+            top: 25%;
+            transform: translateY(25%);
+            right: 20px;
+            text-align: right;
+        }
         .lines {
             /* margin:2vh; */
         }
@@ -236,15 +357,15 @@
                     <div class="view">
                         <div class='title'>Muni, this moment</div>
                         <div class='bar' style="background: var(--OB)">
-                            <div id="inboundBar"></div>
+                            <div id="inboundBar" class="fr"></div>
                         </div>
                         <div class='modalSmall'>
-                            <span class='ob marker'></span>
+                            <span class='left ob marker'></span>
                             <span id='ob'></span> Outbound
-                            <span style='float:right'>
+                            <span class="fr">
                                 <span id='ib'></span> 
                                 Inbound 
-                                <span class='ib marker' 
+                                <span class='right ib marker' 
                                     style=' margin-right:2px'
                                 ></span>
                             </span>
@@ -256,7 +377,17 @@
                 </div>
          
                 <div id='routeFocus'>
-                    <div class='title'></div>
+                    <div class='view'>
+                        <div class='title' id="routeName"></div>
+                        <div class='subtitle'>
+                            <span id="directionText" class="directionText highlight"></span> to
+                            <span id="routeDir"></span>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div id="routeStops"></div>
+                        <div id="routeBuses"></div>    
+                    </div>
                 </div>
 
             </div>            
@@ -268,19 +399,25 @@
 
     <script src='src/map.js'></script>
     <script src="https://unpkg.com/cheap-ruler@3.0.1/cheap-ruler.min.js"></script>
-
     <script src="src/constants.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
+    <script src='src/modal.js'></script>
     <script>
 
-        mapboxgl.accessToken = config.token;//'pk.eyJ1IjoicGV0ZXJhZnRlcm1hcGJveCIsImEiOiJjbHZuN3U4cTgwYXA3MmpubmUzZjd6MHZzIn0.td7c9rfhH61htRk5OUWMSg';
+        mapboxgl.accessToken = config.token;
 
         const app = {
 
             init: () => {
+                console.log('init');
+                const {pollBuses} = app;
+
                 pollBuses(true)
                 setInterval(()=>pollBuses(), 5000)
 
-                // build shape primitive and load font
+
+
+                // build marker primitive and load font
                 const loader = new THREE.FontLoader();
 
                 loader.load( 'src/Open Sans_Regular.json', font => {
@@ -300,91 +437,50 @@
                 c.geometry.bus.matrixAutoUpdate = false;
             },
 
-            ruler: new CheapRuler(s.center[1], 'meters'),
+            pollBuses: (initial) => {
 
-            updateModal: function() {
-                
-                const routeSet = {};
-                s.buses
-                    .map(({route, direction, dir:{id, dirName}, lon, lat})=>({...route, direction, id, dirName, lngLat:[lon, lat]}))
-                    .forEach(({name, direction, id, lngLat, dirName})=>{
-                        if (!routeSet[name]) routeSet[name] = {IB:0, OB:0, lines:{}}
-                        if (!routeSet[name].lines[id]) {
-                            const [line, dir, variant] = id.split('_');
-                            routeSet[name].lines[id] = {dirName, direction, buses: [], data: c.routeData[line][id]}
-                        };
+                app.utils.load('vehicles', (resp) => {
 
-                        const pathPoints = routeSet[name].lines[id].data.path.geometry.coordinates;
-                        routeSet[name].lines[id].buses.push(app.ruler.pointOnLine(pathPoints, lngLat).t)
-                        routeSet[name][direction]++
-                    })
+                    if (resp.length === 0) return
+                    console.log('poll');
+                    const {requestsInFlight, mode} = s;
+                    s.lastPollTime = Date.now();
 
-                console.log(routeSet)
-
-                // route entry
-                const routes = d3.select('#routeList')
-                    .selectAll('.route')
-                    .data(Object.keys(routeSet).sort().map(route=>({route, ...routeSet[route]})))
-                    .enter()
-                    .append('div')
-                    .classed('route', true);
-
-                routes
-                    .append('div')
-                    .classed('subtitle', true)
-                    .text(d=>d.route);
+                    resp
+                        .filter(item =>item.dir?.id)
+                        .forEach(line=>{
+                            if (!c.routeData[line.route.id]) {
+                                c.routeData[line.route.id] = 'pending'
+                                fetchRouteData(line.route.id)
+                            }
+                        })
 
 
-                // lines per route
-                const lines = routes
-                    .append('div')
-                    .attr('class', 'lines')
-                    .selectAll('.line')
-                    .data(d=>{
-                        return Object.entries(d.lines)
-                    })
+                    s.buses = resp
+                        .filter(item =>item.dir?.id)
+                        .map(item => {
+                            const {dir:{id}} = item;
+                            item.direction = app.utils.getDirection(id)
+                                return item
+                            });
 
-                    .enter()
-                    .append('div')
-                    .classed('line', true);
+                    app.updateModalBar();
 
-                // stop hashes
-                const stopMarkers = lines.append('div')
-                    .classed('bar', true)
-                    .selectAll('.stopHash')
-                    .data(([id, data])=>{
-                        return data.data.stopDistances
-                    })
-                    .enter()
-                    .append('div')
-                    .classed('stopHash', true)
-                    .attr('style', d=>`margin-left:${d*100}%`)
+                    if (initial) {
+                        if (app.map.loaded()) setupMap()
+                        else app.map.on('load', () => setupMap())
+                    }
 
-                const busMarkers = lines.select('.bar')
-                    .selectAll('.marker')
-                    .data(([id, data])=>data.buses.map(b=>({b, direction:data.direction})))
-                    .enter()
-                    .append('div')
-                    .attr('class', d=>`quiet ${d.direction.toLowerCase()} marker`)
-                    .style('margin-top', '-2px')
-                    .style('position', 'absolute')
-                    .style('margin-left', d=>`${(d.direction==='IB' ? d.b : 1-d.b)*100}%`)
+                    else s.animatingBuses = true;
 
-                lines.append('div')
-                    .html(([id, data])=>{
-                        const [line, direction, variant] = id.split('_');
-                        return `<span class="strong">${parseFloat(direction) ? 'Inbound' : 'Outbound'}</span> to ${app.format.dirName(data.dirName)}`
-                    })
-                    .classed('modalSmall', true)
+                    s.customLayer.updateBuses();
 
-                if (s.mode === 'inactive') {
-                    d3.select()
-                }
-
-                else {
-
-                }
+                    if (mode==='focus') modal.routeView.updateBuses();
+                    if (!requestsInFlight) modal.systemView.updateRoutes();
+                })
             },
+            ruler: new CheapRuler(s.center[1], 'feet'),
+
             getPrediction: (route, stop, cb) => {
                 const url = `stopcodes/1${stop}/predictions`;
 
@@ -409,6 +505,9 @@
                     else return `approaching now`
                 },
 
+                distance: (feet) => {
+                    return feet > 999 ? `${(feet/5280).toFixed(2)} mi`:`${feet.toFixed(0)} ft`;
+                },
                 occupancyString(raw) {
                     return raw.toLowerCase().replace('room ', '')
                 },
@@ -418,67 +517,84 @@
                 },
                 
                 dirName(raw) {
-                    let formatted = raw.replace(' from', ', from').replace('+', '&')
-                    if (formatted.length>30) formatted = formatted
+                    if (!raw) return ''
+
+                    // abbreviate
+                    let formatted = raw
+                        .replace(' from', ', from')
+                        .replace('+', '&')
                         .replace(/Avenue/g, '')
                         .replace(/Street/g, '')
 
-                        .replace('Ave', '')
-                        .replace('St ', '')
+                    // remove if too long
+                    if (formatted.length>20) formatted = formatted
+                        .replace(' Ave', '')
+                        .replace(' St ', '')
                     return formatted
+                },
+
+                // for an array of stops, format intersection labels such that the repeating street comes second
+                sameStreetSecond(array, mapFn, outputFn) {
+
+                    let previousStop = null;
+                    let nameArray = array.map(mapFn);
+                    let conjunctionString = ' & ';
+                    
+                    const formattedArray = nameArray.map(name=>{
+
+                        if (name.includes(conjunctionString)) {
+
+                            const split = name.split(conjunctionString);
+                            if (previousStop?.includes(split[0])) {
+                                previousStop = name;
+                                return split.reverse().join(conjunctionString);
+                            }
+
+                            else {
+                                previousStop = name;
+                                return name
+                            }
+                        }
+
+                        else {
+                            previousStop = null;
+                            return name
+                        }
+                    })
+
+                    return array.map((d,i)=>outputFn(d, formattedArray[i]))
                 }
-            },
-            formatTime: (seconds) => {
-                let prediction;
-                if (!seconds) prediction = 'no current prediction'
-                else if (seconds>180) return `${Math.round(seconds/60)} minutes`
-                else if (seconds>60) {
-                    const [minutes, secondRemainder] = [Math.floor(seconds/60), Math.round(seconds%60)];
-                    return `${minutes}:${secondRemainder<10 ? 0 :''}${secondRemainder}`
-                }
-                else if (seconds>5) return `${Math.round(seconds)} seconds`
-                else return `approaching now`
             },
 
             setState: (key, value) => {
-
+                
                 if (key === 'activeRoute'){
-
-                    const {route, direction, dir} = value;
-                    var newRoute = value ? [route.id, direction, dir.id] : false
-
-                    //if already highlighting
-                    if (s.activeRoute){
-
-                        if (newRoute){
-                            if (newRoute !== s.activeRoute) s.activeRoute = newRoute
-                        }
-
-                        else s.activeRoute = newRoute
-                    }
-
-                    //if no previous highlight
-                    else if (newRoute) s.activeRoute = newRoute
-
-
+                    s.activeBus = value;
+                    const {route, direction, dir, vehiclePosition:{pathTag}} = value;
+                    var newRoute = value ? [route.id, direction, dir.id, pathTag] : false
+                    s.activeRoute = newRoute;
+                    if (s.mode==='focus') modal.routeView.updateStops();
+                        
                     updateRoute();
                 }
 
+                // inactive, active, focus modes
                 else if (key === 'mode') {
 
+                    if ([s.mode,value].includes('focus')) modal.element.scrollTop = 0;
+
                     s.mode = value;
-                    // document.querySelector('body').setAttribute('mode', value)
-                    
+                    console.warn(key, value)
+                    document.querySelector('body')
+                        .setAttribute('mode', value)
+                        
                     // apply map styling for current mode
                     c.style[value].forEach(style => {
-                        app.map.setPaintProperty(style[0], style[1], style[2])
+                        app.map.setPaintProperty(...style)
                     })
 
-                    // update back button visibility
-                    document.querySelector('#back').style.display = value === 'focus' ? 'block' : 'none'
-
                     if (value === 'inactive') s.customLayer.restoreBusMarkerColors()
-                    // else if (value === 'focus')
+                    
                 }
 
 
@@ -494,7 +610,9 @@
                             .on('mousemove', (e)=>{app.on.mouseMove(e)} )
                             .on('click', s.customLayer.onClick)
                             .on('zoom', app.on.zoom) 
-                    }
+                            .on('zoom', app.on.zoomEnd) 
+
+                        }
 
                 }
             },
@@ -502,9 +620,8 @@
             map: new mapboxgl.Map({
                 container: 'map', // container id
                 antialiased:true,
-                style: 'mapbox://styles/mapbox/light-v11',
 
-                // style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
+                style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
                 center: s.center, // starting position
                 // minZoom: 12,
                 zoom: s.zoom // starting zoom
@@ -513,7 +630,7 @@
             popup: new mapboxgl.Popup({ 
                 closeButton: false, 
                 offset:25, 
-                maxWidth:'none' 
+                maxWidth:400 
             }),
 
             clearPopup: () => {
@@ -574,8 +691,7 @@
                     const viewDirection = mousePosition.clone().sub(cameraPosition).normalize();        
 
                     cL.raycaster.set(cameraPosition, viewDirection)
-                    const intersect = cL.raycaster.intersectObjects( s.mesh.markers)[0];
-                    
+                    const [intersect] = cL.raycaster.intersectObjects( s.mesh.markers);
                     cL.highlightMarker(intersect ? intersect.object : undefined)
                 
                     if (s.mode === 'focus' && !intersect) {
@@ -590,7 +706,9 @@
                 },
 
                 zoom: () =>{
-                    const shouldShowLabels = app.map.getZoom() >= c.labelZoomThreshold;
+                    const z = app.map.getZoom();
+                    const {labelZoomThreshold} = c;
+                    const shouldShowLabels = z >= labelZoomThreshold;
                     
                     if (shouldShowLabels !== s.showLabels) {
                         console.log('changing')
@@ -598,6 +716,14 @@
                         s.mesh.labels.forEach(label => label.scale.set(scale, scale, scale));
                         s.showLabels = shouldShowLabels;
                     }
+
+                    c.material.OB.uniforms.highZoomSizeAttenuation.value = shouldShowLabels ? Math.pow(0.5, z-c.labelZoomThreshold) : 1;
+                },
+
+                zoomEnd: ()=>{
+                    s.mesh.markers.forEach(m=>{
+                        m.geometry.boundingSphere.radius = 1.4142135623730951*s.highZoomSizeAttenuation.value
+                    })
                 }
             },
 
@@ -631,7 +757,6 @@
 
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <script src='src/customlayer.js'></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 </head>
 

@@ -1,45 +1,3 @@
-function pollBuses(initial){
-
-	app.utils.load('vehicles', (resp) => {
-
-		if (resp.length === 0) return
-		console.log('poll')
-		s.lastPollTime = Date.now();
-
-		resp
-			.filter(item =>item.dir?.id)
-			.forEach(line=>{
-				if (!c.routeData[line.route.id]) {
-					c.routeData[line.route.id] = 'pending'
-					fetchRouteData(line.route.id)
-				}
-			})
-
-
-		s.buses = resp
-			.filter(item =>item.dir?.id)
-			.map(item => {
-				const {dir:{id}} = item;
-				item.direction = app.utils.getDirection(id)
-					return item
-				});
-
-		app.updateModalBar();
-
-		if (initial) {
-			if (app.map.loaded()) setupMap()
-			else app.map.on('load', () => setupMap())
-		}
-
-		else {
-			s.animatingBuses = true;
-			// s.customLayer.updateBuses();
-		}
-
-        s.customLayer.updateBuses();
-		if (!s.requestsInFlight) app.updateModal();
-	})
-}
 
 function setupMap(){
 
@@ -49,38 +7,38 @@ function setupMap(){
 	})
 
 	app.map
-	.addLayer({
-		'id':'buses',
-		'type': 'circle',
-		'source': 'buses',
-		'paint':{
-			'circle-radius':20,
-			'circle-opacity':0,
-			'circle-color':{
-				'property': 'direction',
-				'type':'categorical',
-				'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
-			}
-		}
-	})
-	.addLayer({
-		'id':'bus_labels',
-		'type': 'symbol',
-		'source': 'buses',
-		'paint':{
-			'text-color':'white',
-			// 'text-opacity':0
-		},
-		'layout':{
-			'text-field':'{routeId}',
-			// 'text-rotate': {
-			// 	'type':'identity',
-			// 	'property': 'heading'
-			// },
+	// .addLayer({
+	// 	'id':'buses',
+	// 	'type': 'circle',
+	// 	'source': 'buses',
+	// 	'paint':{
+	// 		'circle-radius':20,
+	// 		'circle-opacity':0,
+	// 		'circle-color':{
+	// 			'property': 'direction',
+	// 			'type':'categorical',
+	// 			'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
+	// 		}
+	// 	}
+	// })
+	// .addLayer({
+	// 	'id':'bus_labels',
+	// 	'type': 'symbol',
+	// 	'source': 'buses',
+	// 	'paint':{
+	// 		'text-color':'white',
+	// 		// 'text-opacity':0
+	// 	},
+	// 	'layout':{
+	// 		'text-field':'{routeId}',
+	// 		// 'text-rotate': {
+	// 		// 	'type':'identity',
+	// 		// 	'property': 'heading'
+	// 		// },
 
-			'text-allow-overlap': true
-		}
-	})
+	// 		'text-allow-overlap': true
+	// 	}
+	// })
 	.addLayer({
 		'id': 'route',
 		'type':'line',
@@ -90,7 +48,8 @@ function setupMap(){
 			'lineMetrics': true
 		},
 		'paint':{
-			'line-width': 5
+			'line-width': 5,
+			'line-color': 'rgba(255,255,255,0)'
 		}
 	})
 	.addLayer({
@@ -122,10 +81,10 @@ function updateRoute(){
 
 	if (s.activeRoute)  {
 
-		const {path, stops} = requestRoute(s.activeRoute);
-			
+		const {path, stops} = s.activeRouteGeometry;
+		// console.log(turf.bezierSpline(path))
 		app.map.getSource('route')
-			.setData(turf.bezierSpline(path, {sharpness:0.5}))
+			.setData(path)
 
 		app.map.getSource('stops')
 			.setData(stops)
@@ -139,113 +98,93 @@ function updateRoute(){
 
 function drawRoute(){
 	
+	const {routeDrawStart, activeRoute:[first, direction]} = s;
 	var now = Date.now();
-	var elapsedTime = Math.max(Date.now() - s.routeDrawStart,1);
-	var direction = s.activeRoute[1]
+	var elapsedTime = now - routeDrawStart;
 
+	const {animationDuration} = c;
 	var color = c.color[direction];
-	var transparentColor = color.replace(', 1)', ', 0)')
-
 	var style;
 
-	if (elapsedTime <= c.animationDuration){
+	if (elapsedTime <= animationDuration){
 
+		const progress = elapsedTime/animationDuration;
 		style = [
 	        'interpolate',
 	        ['linear'],
 	        ['line-progress'],
-	        0, color,
-	        elapsedTime/c.animationDuration, color,
-	        elapsedTime/(c.animationDuration-1), transparentColor
+	        progress, color,
+	        Math.min(1, progress+0.00001), `rgba(255,255,255,0)`
 	    ]
-
-	    requestAnimationFrame(()=>drawRoute(direction))
+	    requestAnimationFrame(()=>drawRoute())
 	}
 
-	else {
-		style = [
-	        'interpolate',
-	        ['linear'],
-	        ['line-progress'],
-	        0, color,
-	        1, color
-	    ]
-	}
+	else style = color
 
 	app.map.setPaintProperty('route', 'line-gradient', style)
 }
 
-// retrieves route from constants (can be abstracted away)
-function requestRoute(routeObj, cb){
 
-	const [line, direction, specific] = routeObj;
-	// routeObj is [line, generic direction, specific direction]
-	const route = c.routeData[line]
-
-	if (!route) {
-		console.log('not yet downloaded')
-		return false
-	}
-
-	else {
-
-		// fall back to generic IB/OB if specific direction not found
-		var routeDirection = route[specific] || route[direction];
-
-		return routeDirection
-	}
-
-
-}
-
-//API call to populate route data
+// API call to populate route data
 const fetchRouteData = (routeId, cb) => {
-
 
 	app.utils.load('routes/'+routeId, (resp) => {
 		// console.log(resp)
-		var output = {title: resp.title, description: resp.description}
+		const {title, description, directions, stops} = resp;
+		var output = {title, description};
 
 		// per direction, reconstruct route from stops
-		resp.directions.forEach(routeDirection => {
+		directions.forEach(routeDirection => {
 
-	        var whitelist = {}
+			const {id, name} = routeDirection;
+	        var whitelist = {};
+
 	        resp.stops.forEach(stop=>{
 	        	whitelist[stop.id] = stop
 	        })
-	        // .map(stop=>stop.id);
-			// console.log(whitelist)
+			
+
 	        var stops = routeDirection.stops
-				.filter(stop => whitelist[stop]) // keep only stops that are in the general list
+				// .filter(stop => whitelist[stop]) // keep only stops that are in the general list
 				.map(stop => {
+					const {name, id, lon, lat} = whitelist[stop];
 					return {
 						"type": "Feature",
 						"properties": {
-							name: whitelist[stop].name, 
-							id: whitelist[stop].id,
-							routeId: routeId,
+							name, 
+							id,
+							routeId,
 							direction: app.utils.getDirection(routeDirection.id)
 						},
 						"geometry": {
 							"type": "Point",
-							"coordinates": [whitelist[stop].lon, whitelist[stop].lat]
+							"coordinates": [lon, lat]
 						}
 					}
 				})
 
+			app.format.sameStreetSecond(
+				stops, 
+				s=>s.properties.name, 
+				(s, formatted) => {s.properties.name = formatted; return s}
+			);
+
 	        var path = stops.map(stop =>stop.geometry.coordinates);
-	        const {boundingBox:{latMin, latMax, lonMin, lonMax}} = resp;
+	        const {boundingBox:{latMin, latMax, lonMin, lonMax}, paths} = resp;
+
+			paths.forEach(({id, points})=>c.pathData[id]=points.map(({lat, lon})=>([lon, lat])));
+
 			let temporaryDistanceTracker = 0;
 				
-			output[routeDirection.id] = {
-				title: routeDirection.name,
+			output[id] = {
+				title: name,
 				bounds: [
 					[lonMin, latMin],
 					[lonMax, latMax]
 				],
 				path: {
 					"type": "Feature",
-					"properties": {direction:app.utils.getDirection(routeDirection.id)},
+					"properties": {direction:app.utils.getDirection(id)},
 					"geometry": {
 					"type": "LineString",
 					"coordinates": path

@@ -19,7 +19,6 @@ s.customLayer = {
 		const extantBuses = Object.keys(s.customLayer.buses);
 		var updatedBuses = s.buses.map(bus=>bus.id);
 
-		// console.log(updatedBuses.length, ' on record')
 		s.buses.forEach(bus=>{
 
 			const busExists = s.customLayer.buses[bus.id];
@@ -75,6 +74,7 @@ s.customLayer = {
 				curveSegments: 24
 			} );
 
+
 			// center text
 			textGeom.computeBoundingBox();
 			textGeom.bb = textGeom.boundingBox;
@@ -83,15 +83,19 @@ s.customLayer = {
 			c.geometry.label[id] = geomLookup = textGeom
 		}
 
-
+		geomLookup.translate(
+			-0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3)),
+			-(geomLookup.bb.max.y - geomLookup.bb.min.y) * 0.5,
+			-0.001
+		)
 		const text = new THREE.Mesh(geomLookup, c.material.text);
 
 		if (!s.showLabels) text.scale.set(0.00001,0.00001,0.00001);
 
 		text.rotation.x = Math.PI
-		text.position.x = -0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3))
-		text.position.y = (geomLookup.bb.max.y - geomLookup.bb.min.y) * 0.5;
-		text.position.z = 0.001
+		// text.position.x = -0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3))
+		// text.position.y = (geomLookup.bb.max.y - geomLookup.bb.min.y) * 0.5;
+		// text.position.z = 0.001
 
 		// group text and marker, scale, and position
  		const group = new THREE.Group()
@@ -221,18 +225,12 @@ s.customLayer = {
 				[
 					c.routeData[id].title, // route name
 					`#${linkedVehicleIds} ${speed(kph)}, ${occupancyString(occupancyDescription)}
-					<br><span class="highlight">${direction === 'IB' ? 'Inbound' : 'Outbound'}</span> to ${subhead}
+					<div><span class="${direction} highlight directionText"></span> to ${subhead}</div>
 					`
 				],
 
 				direction
 			)
-
-			// if (s.mode === 'focus') {
-			// 	// const nonActiveRouteAndDirection = markerObj.userData.routeId !== s.activeRoute[0] || markerObj.userData.direction !== s.activeRoute[1]
-			// 	console.log('focus updatehover', sameRouteAndDirection, activeRoute, newBus)
-			// 	// if (!sameRouteAndDirection) newBus.material = c.material.inactiveHover;
-			// }
 
 			if (s.mode !== 'focus') {
 				app.setState('mode', 'active')
@@ -272,14 +270,15 @@ s.customLayer = {
 			app.getPrediction(routeId, id, (predictions)=>{
 
 				let [{seconds, occupancy}, ...futureBuses] = predictions;
-				const formattedOccupancy =app.format.occupancyString(occupancy)
-				var prediction = `Next bus in <span class='highlight'>${app.format.time(seconds)}</span> (${formattedOccupancy})`;
+				const {format} = app;
+				const formattedOccupancy = app.format.occupancyString(occupancy);
+
+				var prediction = `Next bus in <span class='${direction} highlight'>${format.time(seconds)}</span> (${formattedOccupancy})`;
 
 				if (!seconds) prediction = 'no current prediction'
 
-
 				if (futureBuses.length) {
-					const additionalPredictions = futureBuses.map(p=>app.formatTime(p.seconds)).join(', ');
+					const additionalPredictions = futureBuses.map(({seconds})=>format.time(seconds)).join(', ');
 					prediction +=`<br>then ${additionalPredictions}`
 				}
 				s.customLayer.setPopup(
@@ -300,7 +299,7 @@ s.customLayer = {
 	setPopup: (lngLat, content, dir, offsetMultiplier) => {
 		const [title, direction] = content;
 		const markup = `<div class='title'>${title}</div><div class='${dir}'>${direction}</div>`
-		app.popup.options.offset = 25 * Math.pow(1.25, Math.max(0, app.map.getZoom()-13))
+		// app.popup.options.offset = 15 * Math.pow(1.25, Math.max(0, app.map.getZoom()-13))
 		app.popup.setLngLat(lngLat)
 			.setHTML(markup)
 			.addTo(app.map)
@@ -344,7 +343,6 @@ s.customLayer = {
 const buildRenderer = (gl) => {
 
 	const startTime = performance.now()
-
 	const cL = s.customLayer;
 
 	cL.renderer = new THREE.WebGLRenderer({
@@ -354,8 +352,9 @@ const buildRenderer = (gl) => {
 	    antialias: true
 	});
 
-	cL.renderer.setPixelRatio( window.devicePixelRatio );
-	cL.renderer.setSize(window.innerWidth, window.innerHeight)
+	const {devicePixelRatio, innerHeight, innerWidth} = window;
+	cL.renderer.setPixelRatio( devicePixelRatio );
+	cL.renderer.setSize(innerWidth, innerHeight)
 	cL.renderer.autoClear = false;
 
 	app.setState('initScene', true);

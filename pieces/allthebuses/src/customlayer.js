@@ -8,9 +8,30 @@ s.customLayer = {
 	scene: new THREE.Scene(),
 	raycaster: new THREE.Raycaster(),
 
+	buildRenderer: (gl) => {
+
+		const startTime = performance.now()
+		const cL = s.customLayer;
+	
+		cL.renderer = new THREE.WebGLRenderer({
+			canvas: app.map.getCanvas(),
+			alpha:true,
+			context:gl,
+			antialias: true
+		});
+	
+		const {devicePixelRatio, innerHeight, innerWidth} = window;
+		cL.renderer.setPixelRatio( devicePixelRatio );
+		cL.renderer.setSize(innerWidth, innerHeight)
+		cL.renderer.autoClear = false;
+	
+		app.setState('initScene', true);
+		console.log('scene initialized in ', performance.now()- startTime)
+	},
+
 	render: () =>{
-		if (!app.map.isMoving()) s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
-		// requestAnimationFrame(s.customLayer.render)
+		const {customLayer:{renderer, scene, camera}} = s;
+		if (!app.map.isMoving()) renderer.render(scene, camera);
 	},
 
 	updateBuses: () => {
@@ -178,9 +199,6 @@ s.customLayer = {
 
 		const {mode, activeRoute, mesh:{markers}} = s;
 
-		// if (unhovering) console.log('unhover')
-		// if (updateHovered) console.log('updatehover')
-
 		const sameRouteAndDirection = markerObj?.userData.route.id === activeRoute[0] && markerObj?.userData.dir.id === activeRoute[2]
 
 		// if moving off of a hovered marker
@@ -216,22 +234,24 @@ s.customLayer = {
 			hB.markerObj = newBus;
 			
 			// set popup for hovered bus
-			const {route:{id}, direction, lon, lat, dir, kph, occupancyDescription, linkedVehicleIds} = newBus.userData;
-			const relevantRoute = c.routeData[id];
-			const subhead = relevantRoute[dir.id]?.title || relevantRoute.title;
-			const {format:{occupancyString, speed}} = app;
+			const {route, direction, lon, lat, dir, kph, occupancyDescription, id, vehicleType} = newBus.userData;
+			const routeId = route.id;
+			const {title, [dir.id]: directionTitle} = c.routeData[routeId];
+			const subhead = directionTitle?.title || title;
+			const {format:{occupancyString, speed, _vehicleType}} = app;
+
 			s.customLayer.setPopup(
 				[lon, lat],
 				[
-					c.routeData[id].title, // route name
-					`#${linkedVehicleIds} ${speed(kph)}, ${occupancyString(occupancyDescription)}
-					<div><span class="${direction} highlight directionText"></span> to ${subhead}</div>
+					title, // route name
+					`<div><span class="${direction} highlight directionText"></span> to ${subhead}</div>
+					${_vehicleType(vehicleType)} #${id} ${speed(kph)}, ${occupancyString(occupancyDescription)}
 					`
 				],
 
 				direction
 			)
-
+			console.log(newBus)
 			if (s.mode !== 'focus') {
 				app.setState('mode', 'active')
 				app.setState('activeRoute', newBus.userData);
@@ -319,15 +339,18 @@ s.customLayer = {
 		})
 
 		app.setState('mode', 'focus')
+		app.setState('activeRoute', hB.markerObj.userData)
 
-		// draw route only if in focused mode (bc not drawn on hover)
-		if (s.mode === 'focus') app.setState('activeRoute', hB.markerObj.userData)
+	},
+
+	setActiveRoute: () => {
+		const {mesh:{markers}, customLayer, activeRoute} = s;
 
 		// fade out other markers
 
-		for (bus of s.mesh.markers) {
-
-			const sameRouteAndDirection = bus.userData.route.id === s.activeRoute[0] && bus.userData.dir.id === s.activeRoute[2]
+		for (bus of markers) {
+			const {userData} = bus;
+			const sameRouteAndDirection = userData.route.id === activeRoute[0] && userData.dir.id === activeRoute[2]
 			if (!sameRouteAndDirection) bus.material = c.material.inactive;
 			else {
 				bus.material = c.material[bus.userData.direction];
@@ -335,28 +358,7 @@ s.customLayer = {
 			}
 		}
 
-		s.customLayer.highlightMarker()
+		customLayer.highlightMarker()
 	}
 }
 
-// init
-const buildRenderer = (gl) => {
-
-	const startTime = performance.now()
-	const cL = s.customLayer;
-
-	cL.renderer = new THREE.WebGLRenderer({
-	    canvas: app.map.getCanvas(),
-	    alpha:true,
-	    context:gl,
-	    antialias: true
-	});
-
-	const {devicePixelRatio, innerHeight, innerWidth} = window;
-	cL.renderer.setPixelRatio( devicePixelRatio );
-	cL.renderer.setSize(innerWidth, innerHeight)
-	cL.renderer.autoClear = false;
-
-	app.setState('initScene', true);
-	console.log('scene initialized in ', performance.now()- startTime)
-}

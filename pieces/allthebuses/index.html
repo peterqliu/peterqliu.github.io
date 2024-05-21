@@ -5,6 +5,7 @@
     <title>allthebuses</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
+    <link href="https://api.mapbox.com/mapbox-assembly/v1.5.1/assembly.min.css" rel="stylesheet">
 
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.css' rel='stylesheet' />
@@ -19,18 +20,12 @@
         }
 
         body { 
-            margin:0; 
-            padding:0; 
+            /* margin:0; 
+            padding:0;  */
             font-family: 'Open Sans', Verdana, sans-serif;
             overflow:hidden;
         }
-        .relative {
-            position: relative;
-        }
 
-        .absolute {
-            position:absolute;
-        }
         #map, #overlay { 
             position:absolute; 
             top:0; 
@@ -42,8 +37,6 @@
 
         #back {
             z-index: 99;
-            opacity:0.8;
-            margin:1%;
             cursor:pointer;
             display:none;
             transition:transform 0.1s;
@@ -80,7 +73,7 @@
             font-weight:100;
             font-size:1.5em;
             color:#666;
-            line-height: 1.5em;
+            line-height: 1.25em;
         }
 
         .subtitle {
@@ -143,18 +136,14 @@
             bottom:0;
             right:0;
             background:white;
-            margin:2vh;
             box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
             border-radius:10px;
             font-size:2em;
             z-index: 90;
             max-height:96vh;
-            overflow:scroll;
+            overflow:hidden;
         }
 
-        .view {
-            padding:30px;
-        }
         .modalSmall {
             font-size: 0.5em;
             color:#aaa;
@@ -174,10 +163,6 @@
             position:relative;
         }
 
-        .fr {
-            float: right;
-        }
-
         #inboundBar {
             background:var(--IB);
             text-align: right;
@@ -187,7 +172,6 @@
 
         .direction {
             position:relative;
-            margin-top:8px;
         }
 
         .directionBar {
@@ -197,12 +181,14 @@
         }
 
         .directionLabel *:first-child:before {
-            content:'← '
+            content:'← ';
+            color: var(--OB)
         }
 
         .directionLabel *:last-child:after {
             content:' →'
         }
+
         .barExtent {
             width: calc(100% - 9px);
             padding-right:9px;
@@ -268,9 +254,9 @@
             transition:transform 1s;
         }
         
-        .routeStop .subtitle{
+        /* .routeStop .subtitle{
             margin:0px 25px;
-        }
+        } */
         .routeStop:before {
             content: '.';
             font-size: 0em;
@@ -311,14 +297,14 @@
         }
 
         #routeFocus {
-            display:none;
+            display:none !important;
         }
         body[mode='focus'] #routeFocus {
-            display:block;
+            display:flex !important;
         }
 
         body[mode='focus'] #general {
-            display:none;
+            display:none !important;
         }
 
         .listEntry {
@@ -340,21 +326,16 @@
             right: 20px;
             text-align: right;
         }
-        .lines {
-            /* margin:2vh; */
-        }
-        .line {
-            margin-top:15px;
-        }
+
     </style>
     <body mode='loading'>
         <div id='loader' class='blurred'>
             <div id='spinner' ></div>
         </div>
         <div id='map'>
-            <div id='modal'>
-                <div id='general'>
-                    <div class="view">
+            <div id='modal' class="mr18 mb18">
+                <div id='general' class="flex flex--column" style="max-height: 96vh;">
+                    <div class="px30 py30">
                         <div class='title'>Muni, this moment</div>
                         <div class='bar' style="background: var(--OB)">
                             <div id="inboundBar" class="fr"></div>
@@ -372,19 +353,19 @@
                         </div>
                     </div>
 
-                    <div id='routeList'>
+                    <div id='routeList' class="flex-child-grow overflow-scroll">
                     </div>       
                 </div>
          
-                <div id='routeFocus'>
-                    <div class='view'>
-                        <div class='title' id="routeName"></div>
+                <div id='routeFocus' class="flex flex--column" style="max-height: 96vh;">
+                    <div class='px30 py30'>
+                        <div class='title wmax360' id="routeName"></div>
                         <div class='subtitle'>
                             <span id="directionText" class="directionText highlight"></span> to
                             <span id="routeDir"></span>
                         </div>
                     </div>
-                    <div class="relative">
+                    <div class="overflow-scroll relative">
                         <div id="routeStops"></div>
                         <div id="routeBuses"></div>    
                     </div>
@@ -393,7 +374,7 @@
             </div>            
         </div>
 
-        <img src='src/zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
+        <img src='src/zoomout.svg'id='back' class="mt12 ml12 opacity75" onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
     </body>
     <script src='../credentials.js'></script>
 
@@ -410,15 +391,14 @@
 
             init: () => {
                 console.log('init');
-                const {pollBuses} = app;
+                const {FontLoader, Shape, ShapeGeometry} = THREE;
 
-                pollBuses(true)
-                setInterval(()=>pollBuses(), 5000)
-
+                app.setState('buses')
+                setInterval(()=>app.setState('buses'), 5000)
 
 
                 // build marker primitive and load font
-                const loader = new THREE.FontLoader();
+                const loader = new FontLoader();
 
                 loader.load( 'src/Open Sans_Regular.json', font => {
 
@@ -429,56 +409,15 @@
 
                 const x = 0, y = 0;
 
-                const markerShape = new THREE.Shape();
+                const markerShape = new Shape();
                 markerShape.arc(0, 0, 1, Math.PI/2, 0, false);
                 markerShape.lineTo(x+1, y+1);
 
-                c.geometry.bus = new THREE.ShapeGeometry( markerShape );
+                c.geometry.bus = new ShapeGeometry( markerShape );
                 c.geometry.bus.matrixAutoUpdate = false;
             },
 
-            pollBuses: (initial) => {
 
-                app.utils.load('vehicles', (resp) => {
-
-                    if (resp.length === 0) return
-                    console.log('poll');
-                    const {requestsInFlight, mode} = s;
-                    s.lastPollTime = Date.now();
-
-                    resp
-                        .filter(item =>item.dir?.id)
-                        .forEach(line=>{
-                            if (!c.routeData[line.route.id]) {
-                                c.routeData[line.route.id] = 'pending'
-                                fetchRouteData(line.route.id)
-                            }
-                        })
-
-
-                    s.buses = resp
-                        .filter(item =>item.dir?.id)
-                        .map(item => {
-                            const {dir:{id}} = item;
-                            item.direction = app.utils.getDirection(id)
-                                return item
-                            });
-
-                    app.updateModalBar();
-
-                    if (initial) {
-                        if (app.map.loaded()) setupMap()
-                        else app.map.on('load', () => setupMap())
-                    }
-
-                    else s.animatingBuses = true;
-
-                    s.customLayer.updateBuses();
-
-                    if (mode==='focus') modal.routeView.updateBuses();
-                    if (!requestsInFlight) modal.systemView.updateRoutes();
-                })
-            },
             ruler: new CheapRuler(s.center[1], 'feet'),
 
             getPrediction: (route, stop, cb) => {
@@ -493,6 +432,7 @@
             },
 
             format: {
+
                 time: (seconds) => {
                     let prediction;
                     if (!seconds) prediction = 'no current prediction'
@@ -508,12 +448,13 @@
                 distance: (feet) => {
                     return feet > 999 ? `${(feet/5280).toFixed(2)} mi`:`${feet.toFixed(0)} ft`;
                 },
+
                 occupancyString(raw) {
                     return raw.toLowerCase().replace('room ', '')
                 },
 
                 speed(kph) {
-                    return kph ? 'moving at ' +Math.round(kph*0.621371) +' mph' : 'momentarily stopped'
+                    return kph ? 'moving at ' +Math.round(kph*0.621371) +' mph' : 'currently stopped'
                 },
                 
                 dirName(raw) {
@@ -531,6 +472,19 @@
                         .replace(' Ave', '')
                         .replace(' St ', '')
                     return formatted
+                },
+
+                _vehicleType(raw) {
+                    const [type, code] = raw.split('_');
+
+                    switch (type) {
+
+                        case 'LRV': return 'Light Rail';
+                        case 'Motor Coach': return 'Bus';
+                        case 'Electric Trolley': return 'Trolley';
+                        case 'Historic Street Car': return 'Streetcar';
+                        default: return type
+                    }
                 },
 
                 // for an array of stops, format intersection labels such that the repeating street comes second
@@ -564,16 +518,71 @@
 
                     return array.map((d,i)=>outputFn(d, formattedArray[i]))
                 }
+
             },
 
             setState: (key, value) => {
                 
+                if (key === 'buses'){
+                    const initialLoad = !s.buses;
+
+                    app.utils.load('vehicles', (resp) => {
+
+                        if (resp.length === 0) return
+                        console.log('poll');
+                        const {requestsInFlight, mode, debug} = s;
+                        const {map, utils} = app;
+
+                        s.lastPollTime = Date.now();
+                        if (debug) resp = resp.slice(0,12)
+
+                        const buses = resp
+                            .filter(item =>item.dir?.id)
+                        
+                        buses
+                            .forEach(line=>{
+                                if (!c.routeData[line.route.id]) {
+                                    c.routeData[line.route.id] = 'pending'
+                                    fetchRouteData(line.route.id)
+                                }
+                            })
+
+
+                        s.buses = buses
+                            .map(item => {
+                                const {dir:{id}} = item;
+                                item.direction = utils.getDirection(id)
+                                return item
+                            });
+
+                        
+                        app.updateModalBar();
+
+                        if (initialLoad) {
+                            if (map.loaded()) setupMap()
+                            else map.on('load', () => setupMap())
+                        }
+
+                        else s.animatingBuses = true;
+
+                        s.customLayer.updateBuses();
+
+                        const {routeView, systemView} = modal;
+                        if (mode==='focus') routeView.updateBuses();
+                        if (!requestsInFlight) systemView.updateRoutes();
+                        })
+
+                }
+
                 if (key === 'activeRoute'){
                     s.activeBus = value;
                     const {route, direction, dir, vehiclePosition:{pathTag}} = value;
                     var newRoute = value ? [route.id, direction, dir.id, pathTag] : false
                     s.activeRoute = newRoute;
-                    if (s.mode==='focus') modal.routeView.updateStops();
+                    if (s.mode==='focus') {
+                        modal.routeView.updateStops();
+                        s.customLayer.setActiveRoute();
+                    };
                         
                     updateRoute();
                 }
@@ -675,30 +684,33 @@
             },
 
             on: {
+
                 mouseMove: e => {
 
                     const cL = s.customLayer;
-
-                    const mouse = new THREE.Vector3(
+                    const {customLayer} = s;
+                    const {raycaster, highlightMarker, highlightStop} = customLayer;
+                    const {Vector3, Matrix4} = THREE;
+                    const mouse = new Vector3(
                         ( e.point.x / window.innerWidth ) * 2 - 1,
                         - ( e.point.y / window.innerHeight ) * 2 + 1,
                         1
                     )
 
-                    const camInverseProjection = new THREE.Matrix4().getInverse(cL.camera.projectionMatrix);
-                    const cameraPosition = new THREE.Vector3().applyMatrix4(camInverseProjection);
+                    const camInverseProjection = new Matrix4().getInverse(cL.camera.projectionMatrix);
+                    const cameraPosition = new Vector3().applyMatrix4(camInverseProjection);
                     const mousePosition = mouse.applyMatrix4(camInverseProjection);
                     const viewDirection = mousePosition.clone().sub(cameraPosition).normalize();        
 
-                    cL.raycaster.set(cameraPosition, viewDirection)
+                    raycaster.set(cameraPosition, viewDirection)
                     const [intersect] = cL.raycaster.intersectObjects( s.mesh.markers);
-                    cL.highlightMarker(intersect ? intersect.object : undefined)
+                    highlightMarker(intersect ? intersect.object : undefined)
                 
                     if (s.mode === 'focus' && !intersect) {
                         const hoveredStop = app.map
                             .queryRenderedFeatures(e.point, {layers:['stops']})[0];
 
-                        cL.highlightStop(hoveredStop)
+                        highlightStop(hoveredStop)
                         if (!hoveredStop) app.popup.remove()
 
                     }
@@ -740,12 +752,7 @@
 
                 d3.select('#routeFocus .title')
                     .text(c.routeData[s.activeRoute[0]].title)
-                // d3.select('#routeFocus')
-                //     .selectAll('.stop')
-                //     .data(stops)
-                //     .enter()
-                //     .append('div')
-                //     .text(d=>d.properties.name+','+d.properties.prediction)
+
             }
         }
 

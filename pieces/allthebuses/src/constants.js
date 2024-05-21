@@ -54,7 +54,7 @@ var c = {
         id: '3d-model',
         type: 'custom',
         renderingMode: '3d',
-        onAdd: (map, gl) => buildRenderer(gl, ()=>{}),
+        onAdd: (map, gl) => s.customLayer.buildRenderer(gl),
 
         render: (gl, matrix) => {
 
@@ -68,6 +68,18 @@ var c = {
             s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
 
         }
+    },
+
+    // from https://www.sfmta.com/reports/2014-sfmta-transit-fleet-management-plan
+    busCapacities: {
+        MC30: 45,
+        MC40: 63,
+        MC60: 94,
+        TC40: 63,
+        TC60: 94,
+        LRV: 119,
+        VC1: 60,
+        cableCar:63 // doesn't seem to have a designation in data
     },
     material: {
         inactive: new THREE.ShaderMaterial( { 

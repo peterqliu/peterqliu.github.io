@@ -1,78 +1,43 @@
 
 function setupMap(){
 
-	app.map.addSource('buses', {
-		'type': 'geojson',
-		'data': c.emptyGeojson
-	})
+	const {emptyGeojson, customLayer} = c;
 
 	app.map
-	// .addLayer({
-	// 	'id':'buses',
-	// 	'type': 'circle',
-	// 	'source': 'buses',
-	// 	'paint':{
-	// 		'circle-radius':20,
-	// 		'circle-opacity':0,
-	// 		'circle-color':{
-	// 			'property': 'direction',
-	// 			'type':'categorical',
-	// 			'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
-	// 		}
-	// 	}
-	// })
-	// .addLayer({
-	// 	'id':'bus_labels',
-	// 	'type': 'symbol',
-	// 	'source': 'buses',
-	// 	'paint':{
-	// 		'text-color':'white',
-	// 		// 'text-opacity':0
-	// 	},
-	// 	'layout':{
-	// 		'text-field':'{routeId}',
-	// 		// 'text-rotate': {
-	// 		// 	'type':'identity',
-	// 		// 	'property': 'heading'
-	// 		// },
-
-	// 		'text-allow-overlap': true
-	// 	}
-	// })
-	.addLayer({
-		'id': 'route',
-		'type':'line',
-		'source':{
-			'type': 'geojson',
-			'data': c.emptyGeojson,
-			'lineMetrics': true
-		},
-		'paint':{
-			'line-width': 5,
-			'line-color': 'rgba(255,255,255,0)'
-		}
-	})
-	.addLayer({
-		'id': 'stops',
-		'type':'circle',
-		'source':{
-			'type': 'geojson',
-			'data': c.emptyGeojson
-		},
-		'paint':{
-			'circle-stroke-color': {
-				'property': 'direction',
-				'type':'categorical',
-				'stops':[['IB', '#aa3345'], ['OB', '#41a6b2']]
+		.addLayer({
+			'id': 'route',
+			'type':'line',
+			'source':{
+				'type': 'geojson',
+				'data': emptyGeojson,
+				'lineMetrics': true
 			},
-			'circle-color':'#fff',
-			'circle-radius':0,
-			'circle-stroke-width': 0
-		}
-	})	
-	.addLayer(c.customLayer)
+			'paint':{
+				'line-width': 5,
+				'line-color': 'rgba(255,255,255,0)'
+			}
+		})
+		.addLayer({
+			'id': 'stops',
+			'type':'circle',
+			'source':{
+				'type': 'geojson',
+				'data': emptyGeojson
+			},
+			'paint':{
+				'circle-stroke-color': {
+					'property': 'direction',
+					'type':'categorical',
+					'stops':[['IB', '#aa3345'], ['OB', '#41a6b2']]
+				},
+				'circle-color':'#fff',
+				'circle-radius':0,
+				'circle-stroke-width': 0
+			}
+		})	
+		.addLayer(customLayer)
 
-	// console.log('map setup complete')
+	console.log('map setup complete')
 
 }
 

@@ -59,13 +59,14 @@ var c = {
         render: (gl, matrix) => {
 
             var m = new THREE.Matrix4().fromArray(matrix);
+            const {customLayer:{camera, animateBus, scene, renderer}, animatingBuses} = s;
             const {sceneTranslate:{x,y,z}} = c;
             var l = new THREE.Matrix4()
                 .makeTranslation(x,y,z)
 
             s.customLayer.camera.projectionMatrix = m.multiply(l);
-            if (s.animatingBuses) s.customLayer.animateBus();
-            s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
+            if (animatingBuses) animateBus();
+            renderer.render(scene, camera);
 
         }
     },
@@ -75,12 +76,14 @@ var c = {
         MC30: 45,
         MC40: 63,
         MC60: 94,
+        ET40: 63,
         TC40: 63,
         TC60: 94,
         LRV: 119,
         VC1: 60,
-        cableCar:63 // doesn't seem to have a designation in data
+        CABLECAR:63 // doesn't seem to have a designation in data
     },
+
     material: {
         inactive: new THREE.ShaderMaterial( { 
             // opacity:0.5, 

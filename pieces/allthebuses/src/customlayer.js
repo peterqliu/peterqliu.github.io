@@ -36,40 +36,38 @@ s.customLayer = {
 
 	updateBuses: () => {
         start = Date.now()
-
-		const extantBuses = Object.keys(s.customLayer.buses);
+		const {customLayer:{buses, scene, moveBus, addBus}} = s;
+		const extantBuses = Object.keys(buses);
 		var updatedBuses = s.buses.map(bus=>bus.id);
 
 		s.buses.forEach(bus=>{
 
-			const busExists = s.customLayer.buses[bus.id];
-			
-			// add new buses
-			if (!busExists) s.customLayer.addBus(bus);
-			
+			const busExists = buses[bus.id];
 			// move existing buses
-			else s.customLayer.moveBus(bus, busExists, true)
+			if (busExists) moveBus(bus, busExists, true)
+
+			// add new buses
+			else addBus(bus);
 			
 		})
 
 		extantBuses.forEach(bus => {
 			if (!updatedBuses.includes(bus)) {
-				const busToRemove = s.customLayer.buses[bus];
-				s.customLayer.scene.remove(busToRemove)
+				const busToRemove = buses[bus];
+				scene.remove(busToRemove)
 				// console.log('removing')
-				delete s.customLayer.buses[bus]
+				delete buses[bus]
 			}
 		})
 
 		s.mesh = {
-			markers: s.customLayer.scene.children.map(bus=>bus.children[0]),
-			labels: s.customLayer.scene.children.map(bus=>bus.children[1])
+			markers: scene.children.map(bus=>bus.children[0]),
+			labels: scene.children.map(bus=>bus.children[1])
 		}
 
 		// console.log('updatebus complete', Date.now()-start)
 		app.map.triggerRepaint();
 
-		// console.log(s.customLayer.scene.children.length, ' in scene', Object.keys(s.customLayer.buses).length, ' on record')
 	},
 
 
@@ -251,7 +249,7 @@ s.customLayer = {
 
 				direction
 			)
-			console.log(newBus)
+
 			if (s.mode !== 'focus') {
 				app.setState('mode', 'active')
 				app.setState('activeRoute', newBus.userData);

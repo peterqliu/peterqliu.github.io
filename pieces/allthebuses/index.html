@@ -82,16 +82,23 @@
             color:#666;
             line-height: 1.5em;   
         }
+
+        path.IB,
         .IB.highlight {
             color: var(--IB);
+            stroke: var(--IB);
+
         }        
         .IB.directionText:after {
             content: 'Inbound'
-        }        
+        }    
 
+        path.OB,
         .OB.highlight {
             color: var(--OB);
+            stroke: var(--OB);
         }
+
         .OB.directionText:after {
             content: 'Outbound'
         }      
@@ -182,7 +189,6 @@
 
         .directionLabel *:first-child:before {
             content:'← ';
-            color: var(--OB)
         }
 
         .directionLabel *:last-child:after {
@@ -262,21 +268,22 @@
             font-size: 0em;
             width:10px;
             background:var(--inactive);
-            height: 200%;
+            height: calc(100% + 1px);
             position: absolute;
             left: 20px;
             top: -50%;
-            border-radius:5px;
             opacity:0.5;
         }
 
         .routeStop:first-child:before {
             top:calc(50% - 5px);
+            border-radius: 5px;
         }
 
         .routeStop:last-child:before {
             transform:translateY(calc( -75% + 5px));
             top:0;
+            border-radius: 5px;
         }
 
         
@@ -313,7 +320,6 @@
             padding: 16px 20px;
             cursor: pointer;
             position: relative;
-            overflow: hidden;
         }
 
         .listEntry:hover {
@@ -321,12 +327,23 @@
         }
         .listEntry .notation {
             position: absolute;
-            top: 25%;
+            top: -26%;
             transform: translateY(25%);
             right: 20px;
             text-align: right;
+            background: var(--inactiveWeak)
         }
 
+        .graph {
+            width:400px;
+            border-left: 1px solid var(--inactive);
+            border-bottom: 1px solid var(--inactive);
+        }
+
+        path {
+            fill:none;
+            stroke-width:1;
+        }
     </style>
     <body mode='loading'>
         <div id='loader' class='blurred'>
@@ -352,6 +369,31 @@
                             </span>
                         </div>
                     </div>
+                    <div>Live</div>
+                    <div>Past 24h</div>
+                    <div>
+                        <div class="listEntry">
+                            <div class="subtitle">Utilization</div>
+                            <div class="modalSmall"><span class="IB highlight">Gross capacity</span>, <span class="OB highlight">ridership</span>, % occupancy</div>
+
+                            <svg id="past24" class="graph mt6" preserveAspectRatio="xMinYMin meet">
+                                <path id="capacity" class="IB"></path>
+                                <path id="riding" class="OB"></path>
+                            </svg>
+                            <div class="xaxis">
+                                <span class="midnight inline-block modalSmall">☽</span>
+                            </div>
+                        </div>
+                        <div class="listEntry">
+                            <div class="subtitle">Route blend</div>
+                        </div>
+                        <div class="listEntry">
+                            <div class="subtitle">People flow</div>
+                        </div>
+                        <div class="listEntry">
+                            <div class="subtitle">Gross mileage</div>
+                        </div>
+                    </div>
 
                     <div id='routeList' class="flex-child-grow overflow-scroll">
                     </div>       
@@ -365,7 +407,7 @@
                             <span id="routeDir"></span>
                         </div>
                     </div>
-                    <div class="overflow-scroll relative">
+                    <div class="routeView overflow-scroll relative">
                         <div id="routeStops"></div>
                         <div id="routeBuses"></div>    
                     </div>
@@ -381,7 +423,7 @@
     <script src='src/map.js'></script>
     <script src="https://unpkg.com/cheap-ruler@3.0.1/cheap-ruler.min.js"></script>
     <script src="src/constants.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
+    <script src="https://d3js.org/d3.v4.js"></script>
     <script src='src/modal.js'></script>
     <script>
 
@@ -415,6 +457,8 @@
 
                 c.geometry.bus = new ShapeGeometry( markerShape );
                 c.geometry.bus.matrixAutoUpdate = false;
+
+                modal.trendView.updateUtilization()
             },
 
 
@@ -630,7 +674,7 @@
                 container: 'map', // container id
                 antialiased:true,
 
-                style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
+                style: 'mapbox://styles/peterqliu/clwh14gga00b001rbfwr02chk',
                 center: s.center, // starting position
                 // minZoom: 12,
                 zoom: s.zoom // starting zoom
@@ -680,7 +724,25 @@
                     const yMercatorDelta = 0.5 - 0.5 * Math.log(Math.tan(Math.PI * (1/4 + lngLat[1]/360)))/Math.PI - c.sceneTranslate.y
 
                     return new THREE.Vector3(xMercatorDelta, yMercatorDelta, Math.random()/10000000)
+                },
+
+                getCurrentHourInTimeZone: function() {
+                    
+                    // Create a new Date object representing the current date and time
+                    const now = new Date();
+
+                    // Format the date using the Intl.DateTimeFormat object with the specified time zone
+                    const options = { hour: 'numeric', hour12: false, timeZone: 'America/Los_Angeles' };
+                    const formatter = new Intl.DateTimeFormat('en-US', options);
+
+                    // Extract the hour from the formatted date string
+                    const formattedDate = formatter.format(now);
+                    const currentHour = parseInt(formattedDate);
+
+                    return currentHour;
                 }
+
+
             },
 
             on: {
@@ -764,7 +826,12 @@
 
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <script src='src/customlayer.js'></script>
-    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+    <script type="module" src="https://esm.town/v/peterqliu/browserify"></script>  
+
+    <!-- <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script> -->
+    <!-- <script src="https://gist.githubusercontent.com/peterqliu/aee38b4a38be313f5010a37064356089/raw/22c7ffed99bf5ce7ba5a87ada2f2be4b5f3979af/index.js"></script> -->
+  
+
 </head>
 
 </html>

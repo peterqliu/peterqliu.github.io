@@ -35,16 +35,21 @@ s.customLayer = {
 	},
 
 	updateBuses: () => {
+
         start = Date.now()
-		const {customLayer:{buses, scene, moveBus, addBus}} = s;
+		const {customLayer:{buses, scene, moveBus, addBus, restoreBusMarkerColors}} = s;
 		const extantBuses = Object.keys(buses);
 		var updatedBuses = s.buses.map(bus=>bus.id);
 
 		s.buses.forEach(bus=>{
 
-			const busExists = buses[bus.id];
-			// move existing buses
-			if (busExists) moveBus(bus, busExists, true)
+			const markerExists = buses[bus.id];
+
+			// move existing buses, and update color if direction changed
+			if (markerExists) {
+				restoreBusMarkerColors(markerExists)
+				moveBus(bus, markerExists, true)
+			}
 
 			// add new buses
 			else addBus(bus);
@@ -65,68 +70,67 @@ s.customLayer = {
 			labels: scene.children.map(bus=>bus.children[1])
 		}
 
-		// console.log('updatebus complete', Date.now()-start)
 		app.map.triggerRepaint();
 
 	},
 
-
 	addBus: d => {
 
 		const {route:{id}} = d;
+		const {TextGeometry, Mesh, Group} = THREE;
+		const {customLayer, mode} = s;
+		const {geometry, material, font} = c;
 
  		//build bus marker
- 		const currentMarkerMaterial = s.mode === 'inactive' ? d.direction : 'inactive'
-		const marker = new THREE.Mesh( 
-			c.geometry.bus, 
-			c.material[currentMarkerMaterial] 
+ 		const currentMarkerMaterial = mode === 'inactive' ? d.direction : 'inactive'
+		const marker = new Mesh( 
+			geometry.bus, 
+			material[currentMarkerMaterial] 
 		) ;   
 
 		// build bus text
-		var geomLookup = c.geometry.label[d.routeId];
+		var geomLookup = geometry.label[d.routeId];
 
 		if (!geomLookup) {
-			const textGeom = new THREE.TextGeometry( id, {
-				font: c.font,
+			const textGeom = new TextGeometry( id, {
+				font: font,
 				size: 1/Math.pow(1.25, id.length),
 				height:0,
 				curveSegments: 24
 			} );
-
 
 			// center text
 			textGeom.computeBoundingBox();
 			textGeom.bb = textGeom.boundingBox;
 
 			textGeom.matrixAutoUpdate = false;
-			c.geometry.label[id] = geomLookup = textGeom
+
+			textGeom.translate(
+				-0.5 * ((textGeom.bb.max.x-textGeom.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3)),
+				-(textGeom.bb.max.y - textGeom.bb.min.y) * 0.5,
+				-0.001
+			)
+
+			geometry.label[id] = geomLookup = textGeom
 		}
 
-		geomLookup.translate(
-			-0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3)),
-			-(geomLookup.bb.max.y - geomLookup.bb.min.y) * 0.5,
-			-0.001
-		)
-		const text = new THREE.Mesh(geomLookup, c.material.text);
+		const text = new Mesh(geomLookup, material.text);
 
 		if (!s.showLabels) text.scale.set(0.00001,0.00001,0.00001);
 
 		text.rotation.x = Math.PI
-		// text.position.x = -0.5 * ((geomLookup.bb.max.x-geomLookup.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3))
-		// text.position.y = (geomLookup.bb.max.y - geomLookup.bb.min.y) * 0.5;
-		// text.position.z = 0.001
 
 		// group text and marker, scale, and position
- 		const group = new THREE.Group()
+ 		const group = new Group()
 
 		group.add(marker)
 		group.add(text)
 		group.scale.set(0.000002,0.000002,0.000002)
 
-		s.customLayer.moveBus(d, group)
+		customLayer.moveBus(d, group)
 
-		s.customLayer.scene.add( group );
-		s.customLayer.buses[d.id] = group;
+		customLayer.scene.add( group );
+		customLayer.buses[d.id] = group;
 
 		return group
 	}, 
@@ -148,25 +152,26 @@ s.customLayer = {
 		marker.rotation.z = app.utils.radify(data.heading-135);
 		marker.userData = data;
 
-		
-
 	},
 
 	animateBus: () => {
 		
-		const progress = (Date.now()-s.lastPollTime)/1000;
-
-		if (s.animatingBuses === false || progress > 1) s.animatingBuses = false
+		const {lastPollTime, animatingBuses, customLayer} = s;
+		const progress = (Date.now()-lastPollTime)/1000;
+		if (animatingBuses === false || progress > 1) s.animatingBuses = false
 
 		else {
 			// sine function for eased movement
 			const smoothed = Math.sin(progress * Math.PI/2)
 
-			for (id of Object.keys(s.customLayer.buses)){
+			for (id of Object.keys(customLayer.buses)){
 
-				const bus = s.customLayer.buses[id];
-				const newPos = bus.userData.lastPosition.clone();
-				const totalChange = bus.userData.positionDelta.clone();
+				const bus = customLayer.buses[id];
+				const {userData:{lastPosition, positionDelta}} = bus;
+
+
+				const newPos = lastPosition.clone();
+				const totalChange = positionDelta.clone();
 				newPos.add(totalChange.multiplyScalar(smoothed));
 				bus.position.set(newPos.x, newPos.y, bus.position.z) // keep z during animation to avoid flickering from Math.random
                 
@@ -178,11 +183,20 @@ s.customLayer = {
 
 	},
 
-	restoreBusMarkerColors: () => {
+	restoreBusMarkerColors: (bus) => {
 
+		if (bus) {
+			bus.material = newColor(bus)
+			return 
+		}
+		
 		for (bus of s.mesh.markers) {
-			bus.material = c.material[bus.userData.direction];
+			bus.material = newColor(bus)
 			bus.parent.position.z = Math.random()/100000000
+		}
+
+		function newColor(bus) {
+			return c.material[bus.userData.direction];
 		}
 	},
 

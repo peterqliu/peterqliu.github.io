@@ -59,6 +59,11 @@
         .mapboxgl-popup {
             z-index: 99;
         }
+
+        #modal:hover  ~ .mapboxgl-popup {
+            display:none;
+        }
+
         .mapboxgl-popup-content {
             padding:20px;
             font-size:1.25em;
@@ -633,20 +638,21 @@
 
                 // inactive, active, focus modes
                 else if (key === 'mode') {
+                    const {mode, customLayer:{restoreBusMarkerColors}} = s;
 
-                    if ([s.mode,value].includes('focus')) modal.element.scrollTop = 0;
+                    if ([mode,value].includes('focus')) modal.element.scrollTop = 0;
 
                     s.mode = value;
                     console.warn(key, value)
                     document.querySelector('body')
                         .setAttribute('mode', value)
-                        
-                    // apply map styling for current mode
+
+                        // apply map styling for current mode
                     c.style[value].forEach(style => {
                         app.map.setPaintProperty(...style)
                     })
 
-                    if (value === 'inactive') s.customLayer.restoreBusMarkerColors()
+                    if (value === 'inactive') restoreBusMarkerColors()
                     
                 }
 

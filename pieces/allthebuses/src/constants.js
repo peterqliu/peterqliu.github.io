@@ -25,13 +25,15 @@ var s = {
         routeId: null,
         startTime: null,
         markerObj: null
-    }
+    },
+
 }
 var c = {
     fullBounds:[
         [-122.51981158087418,37.73448595445758],
         [-122.35330876278951,37.830708228670474]
     ],
+    graph: {width:400, height:179},
     labelZoomThreshold:14,
     animationDuration: 500,
     markerScale: 0.000002,

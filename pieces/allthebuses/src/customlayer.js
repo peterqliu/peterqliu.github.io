@@ -290,7 +290,6 @@ s.customLayer = {
 	highlightStop: (newStop) => {
 
 		if (newStop) {
-
 			const {geometry:{coordinates}, properties:{name, id, direction, routeId}} = newStop;
 			if (name === s.highlightedStop) return
 
@@ -343,10 +342,12 @@ s.customLayer = {
 
 		// if no highlighted bus, stop here
 		if (!hB.markerObj) return
-
+		const {lon, lat} = hB.markerObj.userData;
+		console.log(modal.element.clientWidth)
 		// zoom in on bus
 		app.map.easeTo({
-			center: [hB.markerObj.userData.lon, hB.markerObj.userData.lat], 
+			center: [lon, lat], 
+			padding:{right: 2*modal.element.clientWidth},
 			zoom:15
 		})
 

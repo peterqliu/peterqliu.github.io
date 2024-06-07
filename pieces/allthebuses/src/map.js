@@ -78,7 +78,7 @@ function drawRoute(){
 	        'interpolate',
 	        ['linear'],
 	        ['line-progress'],
-	        progress, color,
+	        Math.min(progress, 0.99999), color,
 	        Math.min(1, progress+0.00001), `rgba(255,255,255,0)`
 	    ]
 	    requestAnimationFrame(()=>drawRoute())

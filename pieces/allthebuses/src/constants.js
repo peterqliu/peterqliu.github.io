@@ -6,7 +6,10 @@ var s = {
     zoom: 13,
     pitch:0,
     activeRoute: false,
+    activeTab: 0,
+    diff: [],
     get activeRouteGeometry(){
+        
         const {activeRoute:[line, direction, specific, pathTag]} = s;
         const route = c.routeData[line]
 		// fall back to generic IB/OB if specific direction not found
@@ -28,29 +31,39 @@ var s = {
     },
 
 }
+
 var c = {
     fullBounds:[
-        [-122.51981158087418,37.73448595445758],
-        [-122.35330876278951,37.830708228670474]
+        [-122.519811,37.734485],
+        [-122.353308,37.830708]
     ],
+
+    lineAnimation: {
+        waves:1,
+        animationDuration: 6000,
+        dashes: 1,
+        gapLength:1/50,
+        startTime: Date.now()
+    },
+
     graph: {width:400, height:179},
     labelZoomThreshold:14,
     animationDuration: 500,
     markerScale: 0.000002,
     emptyGeojson: {type:"FeatureCollection",features:[]},
     color: {
-        'IB':'rgb(170, 51, 69)',
-        'OB': 'rgb(65, 166, 178)',
-        'weak':'#BAB49D'
+        'IB':'rgba(170, 51, 69, 1)',
+        'OB': 'rgba(65, 166, 178, 1)',
+        'weak':'#BAB49D',
+        'background':'rgba(255, 254, 249, 1)'
     },
     sceneTranslate: mapboxgl.MercatorCoordinate.fromLngLat(
         s.center,
         0
     ),
     pathData: {},
-    routeData:{
-
-    },
+    stopData: {},
+    routeData:{},
     customLayer: {
 
         id: '3d-model',
@@ -209,31 +222,48 @@ var c = {
 }
 
 c.style = {
+    ddsColor: {
+        'property': 'direction',
+        'type':'categorical',
+        'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
+    },
+    systemRoutes: {stops:[[12,0.5], [22,20]]},
     focus:[
         ['route', 'line-width', {stops:[[12,1], [22,20]]}],
+        ['focusRouteAnimation', 'line-width', {stops:[[12,1], [22,20]]}],
         ['stops', 'circle-stroke-width', {stops:[[12,1], [22,20]]}],
         ['stops', 'circle-radius', {stops:[[12,1], [22,20]]}],
-        // ['buses', 'circle-color', c.color.weak],
-        // ['bus_labels', 'text-opacity', 1]
     ],
     active:[
         ['route', 'line-width', {stops:[[12,1], [22,20]]}],
         ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,20]]}],
         ['stops', 'circle-radius', 0],
-        // ['buses', 'circle-color', c.color.weak],
-        // ['bus_labels', 'text-opacity', 0]
     ],
     inactive:[
         ['route', 'line-width', 0],
         ['stops', 'circle-stroke-width', 0],
         ['stops', 'circle-radius', 0],
-        // ['buses', 'circle-color', {
-        //     'property': 'direction',
-        //     'type':'categorical',
-        //     'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
-        // }],
-        // ['bus_labels', 'text-opacity', 0]
-    ]
+    ],
+    tabMode: {
+        0: [
+            ['systemViewRoutes', 'visibility', 'none'],
+            ['systemViewRoutesAnimation', 'visibility', 'none'],
+            ['systemViewRoutes-labels', 'visibility', 'none'],
+            ['3d-model', 'visibility', 'visible'],
+        ],
+        1: [
+            ['systemViewRoutes', 'visibility', 'visible'],
+            ['systemViewRoutesAnimation', 'visibility', 'visible'],
+            ['systemViewRoutes-labels', 'visibility', 'visible'],
+            ['3d-model', 'visibility', 'none'],
+        ],
+        2: [
+            ['systemViewRoutes', 'visibility', 'none'],
+            ['systemViewRoutesAnimation', 'visibility', 'none'],
+            ['systemViewRoutes-labels', 'visibility', 'none'],
+            ['3d-model', 'visibility', 'visible'],
+        ],
+    }
 }
 
 function tweakShader(s, rgba) {

@@ -15,33 +15,38 @@
             <div id='spinner' ></div>
         </div>
         <div id='map'>
-            <div id='modal' class="mr18 mb18">
+            <div id='modal' class="top right mr18 mt18">
                 <div id='general' class="flex flex--column" style="max-height: 96vh;">
-                    <div class="px30 py30">
-                        <div class='title'>Muni, this moment</div>
-                        <div class='bar' style="background: var(--OB)">
-                            <div id="inboundBar" class="fr"></div>
-                        </div>
-                        <div class='modalSmall'>
-                            <span class='left ob marker'></span>
-                            <span id='ob'></span> Outbound
-                            <span class="fr">
-                                <span id='ib'></span> 
-                                Inbound 
-                                <span class='right ib marker' 
-                                    style=' margin-right:2px'
-                                ></span>
-                            </span>
-                        </div>
+                    <div class="header px30 pt30 pb12">
+                        Muni, this moment
                     </div>
-                    <div class="grid  border-b border--gray-light cursor-pointer">
-                        <div class="tab w-1/3 align-center subtitle pb12 opacity25">Vehicles</div>
-                        <div class="tab w-1/3 align-center subtitle pb12 opacity25">System</div>
-                        <div class="tab w-1/3 align-center subtitle pb12">24h Trends</div>
+                    <div class="px30 color-gray grid body txt-uppercas border-b border--gray-lighter cursor-pointer">
+                        <div class="tab w-1/3 align-l pb12 opacity50">Vehicles</div>
+                        <div class="tab w-1/3 align-center pb12 opacity50">Routes</div>
+                        <div class="tab w-1/3 align-r pb12">24h Trends</div>
                     </div>
-
                     <div class="flex-child-grow overflow-scroll">
-                        <div id='' class="tabView" style="display:none"></div>    
+                        <div class="tabView overflow" style="display:none">
+                            <div id='' class="border-b border--gray-lighter">
+                                <div class='listEntry modalSmall'>
+                                    <span class='left ob marker'></span>
+                                    <span id='ob'></span> Outbound
+                                    <span class="fr">
+                                        <span id='ib'></span> 
+                                        Inbound 
+                                        <span class='right ib marker' 
+                                            style=' margin-right:2px'
+                                        ></span>
+                                    </span>
+                                    <div class='bar' style="background: var(--OB)">
+                                        <div id="inboundBar" class="fr"></div>
+                                    </div>    
+                                </div>                    
+                            </div>    
+                            <div id="ticker" class="overflow-scroll hmax240"></div>
+    
+                        </div>
+
                         <div id='routeList' class="tabView" style="display:none"></div>    
                         <div class="tabView" id="trend" style="display:non">
                             <div class="listEntry px30">
@@ -49,16 +54,21 @@
                                 <!-- UTILIZATION -->
                                 <span class="subtitle">Utilization</span>
                                 <!-- <span class="fr modalSmall txt-underline utilization percentToggle">Show percentage</span> -->
-                                <div class="modalSmall"><span class="OB highlight">Ridership (estimated)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
+                                <div class="body"><span class="OB highlight">Ridership (estimated)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
                                 <div class="relative mt12" id="utilization">
 
                                 </div>
 
-                                <div class="modalSmall mt18">Fluctuations in <span class="IB highlight">capacity</span> and <span class="OB highlight">ridership</span> (10-minute increments)</div>
+                                <div class="body mt36">Marginal change (10-minute increments)</div>
                                 <div class="relative mt18" id="utilizationFlux">
                                 </div>
                             </div>
                             <div class="listEntry px30">
+                                <div class="subtitle">Vehicle occupancy</div>
+                                <div class="modalSmall">Relative fullness of vehicles, across the system</div>
+                                <div class="relative mt18" id="occupancy"></div>
+                            </div>
+                            <div class="listEntry px30 none">
                                 <div class="subtitle">Rider distribution</div>
                                 <div class="modalSmall">Click to inspect route distribution at that time</div>
 
@@ -88,12 +98,10 @@
                                 </div>
 
                             </div>
-                            <div class="listEntry">
+                            <div class="listEntry none">
                                 <div class="subtitle">People flow</div>
                             </div>
-                            <div class="listEntry">
-                                <div class="subtitle">Vehicle occupancy</div>
-                            </div>
+
                         </div>
                     </div>
    
@@ -101,11 +109,13 @@
          
                 <div id='routeFocus' class="flex flex--column" style="max-height: 96vh">
                     <div class='px30 py30  border-b border--gray-lighter'>
-                        <div class='title wmax360' id="routeName"></div>
+                        <div class="body cursor-pointer" onclick='app.setState("mode", "inactive"); app._map.fitBounds(c.fullBounds, {duration:500})'>< Back</div>
+                        <div class='header wmax360' id="routeName"></div>
                         <div class='subtitle'>
                             <span id="directionText" class="directionText highlight"></span> to
                             <span id="routeDir"></span>
                         </div>
+                        <span id="description" class="body"></span>
                     </div>
                     <div class="routeView overflow-scroll relative">
                         <div id="routeStops" class="relative">
@@ -118,7 +128,7 @@
             </div>            
         </div>
 
-        <img src='src/zoomout.svg'id='back' class="mt12 ml12 opacity75" onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
+        <!-- <img src='src/zoomout.svg'id='back' class="mt12 ml12 opacity75" onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/> -->
     </body>
     <script src='../credentials.js'></script>
 
@@ -129,16 +139,14 @@
     <script src='src/modal.js'></script>
     <script>
 
-        mapboxgl.accessToken = config.token;
+        mapboxgl.accessToken = "pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNseTF5ZTA3ajB3bTkya3B6cDFvMXAwamgifQ.ec6yQ6lGg54CelkIK98Qmg"//config.token;
 
         const app = {
 
-            init: () => {
+            init: async () => {
+
                 console.log('init');
                 const {FontLoader, Shape, ShapeGeometry} = THREE;
-
-                app.setState('buses')
-                setInterval(()=>app.setState('buses'), 5000)
 
 
                 // build marker primitive and load font
@@ -160,11 +168,91 @@
                 c.geometry.bus = new ShapeGeometry( markerShape );
                 c.geometry.bus.matrixAutoUpdate = false;
 
-                modal.trendView.update();
+                const res = await Promise.all([
+                    fetch("https://peterqliu-getblob.web.val.run?blob=allthebuses-routeData"),
+                    fetch("https://peterqliu-getblob.web.val.run?blob=allthebuses-stopData"),
+                    fetch("https://peterqliu-getblob.web.val.run/?blob=allthebuses-varPaths")
+                ]);
+                const data = await Promise.all(res.map(r => r.json()));
+                c.routeData = data[0];
+                c.stopData = data[1];
+                c.pathData = data[2];
+
+                // const ls = turf.lineString(c.pathData['9_1_var0']) 
+                // window.gj =turf.featureCollection([
+                //     ls,
+                //     turf.lineString(turf.lineOffset(ls, 0.001))
+                // ]);
+
+                // console.log(gj)
+                // app._map.addLayer({
+                //     id: 'lines',
+                //     type: 'line',
+                //     source: {
+                //         data: gj,
+                //         type: 'geojson'
+                //     }
+                // })
+
+                // app._map.on('click', e=>{
+                //      const w = app._map.queryRenderedFeatures(e.point, {layers:['systemViewRoutes']});
+                //      console.log(w)
+                // })
+                app.setState('buses')
+                setInterval(()=>app.setState('buses'), 5000)
+                modal.trendTab.update();
                 modal.init();
+                Object.keys(c.routeData)
+                    .forEach(k=>{
+                        const r = c.routeData[k];
+                        let missingStops = false;
+                        Object.values(r)
+                            .forEach(variant=>{
+                                if (missingStops) return
+                                if (variant.stopIds) variant.stopIds.forEach(id=>{
+                                    if (!c.stopData[id]) missingStops= true;
+                                })
+                            })
+
+                        if (missingStops) {
+                            console.log(k, missingStops)
+                            fetchRouteData(k, route=>{
+                                let toServer = {}
+
+                                route.stops.forEach(s=>{
+                                    const {name, lon, lat, id} = s;
+                                    if (!c.stopData[id]) {
+                                        // console.log(id)
+                                        toServer[id] = c.stopData[id] = {lngLat:[lon, lat], name};
+                                    }
+
+                                })
+                                app.updateServer.stopData(toServer)
+
+                            })
+                        }
+                    })
             },
 
+            updateServer: {
+                routeData: function(data){
+                    console.warn('updating server routedata!', data)
+                    fetch("https://peterqliu-routeData.web.val.run", {
+                        method: "POST",
+                        body: JSON.stringify(data || c.routeData)
+                    });
+                },
 
+                stopData: function(data){
+                    console.warn('updating server stopdata!', data)
+
+                    fetch("https://peterqliu-stopData.web.val.run", {
+                        method: "POST",
+                        body: JSON.stringify(data || c.stopData)
+                    });
+                }
+            },
+            
             ruler: new CheapRuler(s.center[1], 'feet'),
 
             getPrediction: (route, stop, cb) => {
@@ -175,6 +263,61 @@
                     const predictions = routeMatch.values.map(v=>({seconds:(v.timestamp-Date.now())/1000, occupancy:v.occupancyDescription}))
                     cb(predictions || undefined);
                 })
+
+            },
+
+            diffBusState: function(newState) {
+            
+                let busesObject;
+                if (!s.buses) return 
+
+                busesObject = Object.fromEntries(s.buses.map(b=>([b.id, b])));
+
+                
+                let events = [];
+                
+                newState.forEach(bus=>{
+                    
+                    if (!busesObject) return
+                    const {id, route, direction, vehiclePosition:{currentStopTag, atCurrentStop}} = bus;
+                    const previousState = busesObject[id];
+
+                    if (previousState) busesObject[id].read = true;
+                    if (!previousState) events.push({...bus, event:'online'})
+
+                    // same bus, new route
+                    else if (route.id !== previousState.route.id) events.push({...bus, event:'newRoute'})
+
+                    // same route, new direction
+                    else if (direction !== previousState.direction) events.push({...bus, event:'switchDirection'})
+                    
+
+                    // new stop arrivals
+                    else if (atCurrentStop && (!previousState.vehiclePosition.atCurrentStop) && previousState.vehiclePosition.currentStopTag === currentStopTag) {
+                        events.push({...bus, event:'arrival'})
+                    }
+
+                })
+
+                Object.values(busesObject)
+                    .filter(b=>!b.read)
+                    .forEach(b=>{events.push({...b, event:'offline'})})
+
+                s.diff = events
+                    .map(bus => {
+                        const {event, id, direction, route, vehicleType, vehiclePosition:{currentStopTag}, dir:{dirName}, lon, lat} = bus;
+                        return {
+                            event,
+                            id, 
+                            direction,  
+                            dirName,
+                            vehicleType,
+                            route,
+                            lngLat: [lon, lat], 
+                            stopName:c.stopData[currentStopTag].name.replaceAll(' St ', ' ').replaceAll(' Ave ', ' ').replaceAll(' Blvd', ' '),
+                            tickerKey: Math.random()
+                        }
+                    })
 
             },
 
@@ -223,6 +366,8 @@
                     if (formatted.length>20) formatted = formatted
                         .replace(' Ave', '')
                         .replace(' St ', '')
+                        .replace(' Blvd ', '')
+                        .replace(/St$/, '')
                     return formatted
                 },
 
@@ -231,7 +376,7 @@
 
                     switch (type) {
 
-                        case 'LRV': return 'Light Rail';
+                        case 'LRV': return 'Light rail';
                         case 'Motor Coach': return 'Bus';
                         case 'Electric Trolley': return 'Trolley';
                         case 'Historic Street Car': return 'Streetcar';
@@ -272,51 +417,54 @@
                         }
                     })
 
-                    return array.map((d,i)=>outputFn(d, formattedArray[i]))
+                    return array.map((d,i) => outputFn(d, formattedArray[i]))
                 }
 
             },
 
             setState: (key, value) => {
+
+                const {_map, utils, updateModalBar, diffBusState} = app;
                 
                 if (key === 'buses'){
+
                     const initialLoad = !s.buses;
 
-                    app.utils.load('vehicles', (resp) => {
+                    utils.load('vehicles', (resp) => {
 
                         if (resp.length === 0) return
                         console.log('poll');
-                        const {requestsInFlight, mode, debug} = s;
-                        const {map, utils} = app;
 
+                        const {requestsInFlight, mode, debug} = s;
+                        const {routeData} = c;
                         s.lastPollTime = Date.now();
-                        if (debug) resp = resp.slice(0,12)
+                        
+                        if (debug) resp = resp.slice(0,12);
 
                         const buses = resp
                             .filter(item =>item.dir?.id)
-                        
-                        buses
-                            .forEach(line=>{
-                                if (!c.routeData[line.route.id]) {
-                                    c.routeData[line.route.id] = 'pending'
-                                    fetchRouteData(line.route.id)
-                                }
-                            })
-
-
-                        s.buses = buses
                             .map(item => {
+
+                                if (!routeData[item.route.id]) {
+                                    routeData[item.route.id] = 'pending'
+                                    fetchRouteData(item.route.id)
+                                }
+
                                 const {dir:{id}} = item;
                                 item.direction = utils.getDirection(id)
                                 return item
                             });
 
+                        diffBusState(buses);
+                        modal.vehicleTab.updateTicker();
+                        s.buses = buses;
                         
-                        app.updateModalBar();
+
+                        updateModalBar();
 
                         if (initialLoad) {
-                            if (map.loaded()) setupMap()
-                            else map.on('load', () => setupMap())
+                            if (_map.loaded()) setupMap()
+                            else _map.on('load', () => setupMap())
                         }
 
                         else s.animatingBuses = true;
@@ -326,7 +474,8 @@
                         const {routeView, systemView} = modal;
                         if (mode==='focus') routeView.updateBuses();
                         if (!requestsInFlight) systemView.updateRoutes();
-                        })
+                    
+                    })
 
                 }
 
@@ -346,7 +495,8 @@
                 // inactive, active, focus modes
                 else if (key === 'mode') {
                     const {mode, customLayer:{restoreBusMarkerColors}} = s;
-
+                    const {style:{[value]:styles}} = c;
+                    
                     if ([mode,value].includes('focus')) modal.element.scrollTop = 0;
 
                     s.mode = value;
@@ -354,16 +504,31 @@
                     document.querySelector('body')
                         .setAttribute('mode', value)
 
-                        // apply map styling for current mode
-                    c.style[value].forEach(style => {
-                        app.map.setPaintProperty(...style)
+                    // apply map styling for current mode
+                    styles.forEach(style => {
+                        app._map.setPaintProperty(...style)
                     })
 
                     if (value === 'inactive') restoreBusMarkerColors()
                     
+                    app.clearPopup();
                 }
 
+                else if (key === 'activeTab') {
+                    s.activeTab = value;
 
+                    d3.selectAll('.tabView')
+                    .style('display', (d,tabViewIndex)=>tabViewIndex === value ? 'block' : 'none');
+                
+                    d3.selectAll('.tab')
+                        .classed('opacity50', (d,tabIndex)=> value !== tabIndex);
+
+                    c.style.tabMode[value]
+                        .forEach(visibility=>app._map.setLayoutProperty(...visibility))
+
+                    animateDash();
+                }
+                
                 else if (key.includes('init')) {
 
                     s[key] = value;
@@ -372,7 +537,7 @@
 
                         document.querySelector('#loader').style.opacity = 0
 
-                        app.map
+                        app._map
                             .on('mousemove', (e)=>{app.on.mouseMove(e)} )
                             .on('click', s.customLayer.onClick)
                             .on('zoom', app.on.zoom) 
@@ -383,7 +548,7 @@
                 }
             },
 
-            map: new mapboxgl.Map({
+            _map: new mapboxgl.Map({
                 container: 'map', // container id
                 antialiased:true,
 
@@ -469,6 +634,19 @@
                     })
 
                     return deltas
+                },
+
+                sumArray(array) {
+                    let sum = 0;
+
+                    array.forEach(n=>sum+=(n||0))
+                    return sum
+                },
+
+                crossCutNestedArray(array) {
+                    return array[0].map((v, subarrayIndex)=>{
+                        return array.map(subarray=>subarray[subarrayIndex])
+                    })
                 }
             },
 
@@ -477,37 +655,49 @@
                 mouseMove: e => {
 
                     const cL = s.customLayer;
-                    const {customLayer} = s;
-                    const {raycaster, highlightMarker, highlightStop} = customLayer;
+                    const {customLayer, mode, activeTab, highlightedStop, mesh:{markers}} = s;
+                    if (activeTab == 1) return
+                    const {raycaster, camera, highlightMarker, highlightStop} = customLayer;
                     const {Vector3, Matrix4} = THREE;
+                    const {x, y} = e.point;
+                    const {innerWidth, innerHeight} = window;
                     const mouse = new Vector3(
-                        ( e.point.x / window.innerWidth ) * 2 - 1,
-                        - ( e.point.y / window.innerHeight ) * 2 + 1,
+                        ( x / innerWidth ) * 2 - 1,
+                        - ( y / innerHeight ) * 2 + 1,
                         1
                     )
 
-                    const camInverseProjection = new Matrix4().getInverse(cL.camera.projectionMatrix);
+                    const camInverseProjection = new Matrix4().getInverse(camera.projectionMatrix);
                     const cameraPosition = new Vector3().applyMatrix4(camInverseProjection);
                     const mousePosition = mouse.applyMatrix4(camInverseProjection);
                     const viewDirection = mousePosition.clone().sub(cameraPosition).normalize();        
 
                     raycaster.set(cameraPosition, viewDirection)
-                    const [intersect] = cL.raycaster.intersectObjects( s.mesh.markers);
+                    const [intersect] = raycaster.intersectObjects( markers);
                     highlightMarker(intersect ? intersect.object : undefined)
                 
-                    if (s.mode === 'focus' && !intersect) {
-                        const hoveredStop = app.map
-                            .queryRenderedFeatures(e.point, {layers:['stops']})[0];
+                    if (mode === 'focus' && !intersect) {
+                        
+                        const [hoveredStop] = app._map
+                            .queryRenderedFeatures(e.point, {layers:['stops']});
 
-                        highlightStop(hoveredStop)
-                        if (!hoveredStop) app.popup.remove()
+                        if (hoveredStop) {
+                            const {geometry:{coordinates}, properties:{id, name}} = hoveredStop;
+                            highlightStop({lngLat:coordinates, id, name:c.stopData[id].name})
+                        }
+
+                        else {
+                            if (highlightStop) s.highlightedStop = null;
+                            app.popup.remove()
+                        }
 
                     }
                     
                 },
 
                 zoom: () =>{
-                    const z = app.map.getZoom();
+
+                    const z = app._map.getZoom();
                     const {labelZoomThreshold} = c;
                     const shouldShowLabels = z >= labelZoomThreshold;
                     
@@ -530,11 +720,26 @@
 
             updateModalBar: () => {
 
+                const {vehicleTab:{IB, OB, riderCount, capacityCount}} = modal;
+                // update direction bar
                 const IBCount = s.buses.filter(bus=>bus.direction === 'IB').length
-                document.querySelector('#ob').innerHTML = s.buses.length - IBCount;
-                document.querySelector('#ib').innerHTML = IBCount;
-
+                OB.innerHTML = s.buses.length - IBCount;
+                IB.innerHTML = IBCount;
                 document.querySelector('.bar div').style.width = 100 * IBCount / s.buses.length + '%';
+
+                // update ridership
+                const {occupancy:{capacity, ratio}} = c;
+                let riders = 0;
+                let fleetCapacity = 0;
+                s.buses.forEach(bus => {
+
+                    const {occupancyStatus, vehicleType} = bus;
+                    const busType = vehicleType.split('_')[1];
+                    riders += capacity[busType] * ratio[occupancyStatus];
+                    fleetCapacity += capacity[busType];
+
+                })
+                // console.log(riders, fleetCapacity)
             },
 
             updateModalRouteFocus: (stops) => {
@@ -552,6 +757,7 @@
 
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <script src='src/customlayer.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <script type="module" src="https://esm.town/v/peterqliu/browserify"></script>  
 
 </head>

@@ -14,7 +14,7 @@ s.customLayer = {
 		const cL = s.customLayer;
 	
 		cL.renderer = new THREE.WebGLRenderer({
-			canvas: app.map.getCanvas(),
+			canvas: app._map.getCanvas(),
 			alpha:true,
 			context:gl,
 			antialias: true
@@ -26,51 +26,74 @@ s.customLayer = {
 		cL.renderer.autoClear = false;
 	
 		app.setState('initScene', true);
-		console.log('scene initialized in ', performance.now()- startTime)
+		console.log('scene initialized in ', performance.now() - startTime)
 	},
 
 	render: () =>{
 		const {customLayer:{renderer, scene, camera}} = s;
-		if (!app.map.isMoving()) renderer.render(scene, camera);
+		if (!app._map.isMoving()) renderer.render(scene, camera);
+	},
+
+	// conditionally update bus color depending on app view state
+	updateBusColor: function(bus) {
+		const {activeTab, mode, customLayer:{buses}} = s;
+		const {id, direction, event} = bus;
+
+		if (mode ==='inactive') {
+			const [busMarker] = buses[id].children;
+			busMarker.material = c.material[direction];
+		}
+
 	},
 
 	updateBuses: () => {
 
-        start = Date.now()
-		const {customLayer:{buses, scene, moveBus, addBus, restoreBusMarkerColors}} = s;
-		const extantBuses = Object.keys(buses);
-		var updatedBuses = s.buses.map(bus=>bus.id);
+		const {activeTab, diff, customLayer:{buses, scene, moveBus, addBus}} = s;
 
-		s.buses.forEach(bus=>{
+		// on first run, just add all buses to scene
+		if (!Object.keys(s.customLayer.buses).length) s.buses.forEach(addBus)
 
-			const markerExists = buses[bus.id];
+		else {
 
-			// move existing buses, and update color if direction changed
-			if (markerExists) {
-				restoreBusMarkerColors(markerExists)
-				moveBus(bus, markerExists, true)
-			}
+			const newBuses = [];
 
-			// add new buses
-			else addBus(bus);
-			
-		})
+			diff
+				.forEach(bus => {
+					
+					const {id, direction, event} = bus;
 
-		extantBuses.forEach(bus => {
-			if (!updatedBuses.includes(bus)) {
-				const busToRemove = buses[bus];
-				scene.remove(busToRemove)
-				// console.log('removing')
-				delete buses[bus]
-			}
-		})
+					// toggle material color for buses switching direction
+					if (event==='switchDirection') {
+						s.customLayer.updateBusColor(bus)
+					}
+
+					// add buses coming online
+					if (event=== 'online') {
+						addBus(bus);
+						newBuses.push(id)
+					}
+
+					// remove buses going offline
+					else if (event=== 'offline') {
+						const busToRemove = buses[id];
+						scene.remove(busToRemove)
+						delete buses[bus]
+					}
+				})
+
+			s.buses.forEach(bus=>{
+				// move existing buses
+				if (!newBuses[bus.id]) moveBus(bus, buses[bus.id], activeTab !==1)
+				
+			})
+		}
 
 		s.mesh = {
 			markers: scene.children.map(bus=>bus.children[0]),
 			labels: scene.children.map(bus=>bus.children[1])
 		}
 
-		app.map.triggerRepaint();
+		app._map.triggerRepaint();
 
 	},
 
@@ -92,6 +115,7 @@ s.customLayer = {
 		var geomLookup = geometry.label[d.routeId];
 
 		if (!geomLookup) {
+
 			const textGeom = new TextGeometry( id, {
 				font: font,
 				size: 1/Math.pow(1.25, id.length),
@@ -108,7 +132,7 @@ s.customLayer = {
 			textGeom.translate(
 				-0.5 * ((textGeom.bb.max.x-textGeom.bb.min.x) + (id.match(/1/g) || []).length / (id.length+3)),
 				-(textGeom.bb.max.y - textGeom.bb.min.y) * 0.5,
-				-0.001
+				-0.1
 			)
 
 			geometry.label[id] = geomLookup = textGeom
@@ -175,7 +199,7 @@ s.customLayer = {
 				newPos.add(totalChange.multiplyScalar(smoothed));
 				bus.position.set(newPos.x, newPos.y, bus.position.z) // keep z during animation to avoid flickering from Math.random
                 
-                app.map.triggerRepaint();
+                app._map.triggerRepaint();
 
 			}
 					
@@ -190,9 +214,9 @@ s.customLayer = {
 			return 
 		}
 		
-		for (bus of s.mesh.markers) {
-			bus.material = newColor(bus)
-			bus.parent.position.z = Math.random()/100000000
+		for (b of s.mesh.markers) {
+			b.material = newColor(b)
+			b.parent.position.z = Math.random()/100000000
 		}
 
 		function newColor(bus) {
@@ -203,14 +227,14 @@ s.customLayer = {
 	highlightMarker: (newBus) => {
 
 		const hB = s.highlightedBus;
-		let {markerObj,uuid} = hB;
+		let {markerObj, uuid} = hB;
 		const mouseout = !newBus || newBus.uuid !== uuid;
 
 		const updateHovered = newBus && newBus.uuid !== uuid;
 		const unhovering = mouseout && markerObj;
 
-		const {mode, activeRoute, mesh:{markers}} = s;
-
+		const {mode, activeRoute, buses, customLayer, mesh:{markers}} = s;
+		const {_map, clearPopup, setState} = app;
 		const sameRouteAndDirection = markerObj?.userData.route.id === activeRoute[0] && markerObj?.userData.dir.id === activeRoute[2]
 
 		// if moving off of a hovered marker
@@ -234,15 +258,16 @@ s.customLayer = {
 			markerObj.scale.set(1,1,1);
 			hB.markerObj = hB.uuid = null;
 		
-			app.clearPopup()
+			clearPopup()
 		
 		}
 
 		// if there's a new active marker, highlight it
+
 		if (updateHovered) {
 
 			hB.uuid = newBus.uuid;
-			newBus.scale.set(1.2,1.2,1.2)
+			newBus.scale.set(1.2,1.2,1.2);
 			hB.markerObj = newBus;
 			
 			// set popup for hovered bus
@@ -252,7 +277,21 @@ s.customLayer = {
 			const subhead = directionTitle?.title || title;
 			const {format:{occupancyString, speed, _vehicleType}} = app;
 
-			s.customLayer.setPopup(
+			if (mode !== 'focus') {
+
+				setState('mode', 'active');
+				setState('activeRoute', newBus.userData);
+				
+				buses.forEach(({id, dir})=>{
+					const sameRouteAndDirection =  dir.id === s.activeRoute[2];
+					const [busMarker] = customLayer.buses[id].children;
+					if (!sameRouteAndDirection) busMarker.material = c.material.inactive;
+					else busMarker.parent.position.z = 0.0000001;
+				})
+
+			}
+
+			customLayer.setPopup(
 				[lon, lat],
 				[
 					title, // route name
@@ -263,77 +302,79 @@ s.customLayer = {
 
 				direction
 			)
-
-			if (s.mode !== 'focus') {
-				app.setState('mode', 'active')
-				app.setState('activeRoute', newBus.userData);
-				// fade out other markers
-
-				for (bus of markers) {
-
-					const sameRouteAndDirection = bus.userData.route.id === s.activeRoute[0] && bus.userData.dir.id === s.activeRoute[2]
-					if (!sameRouteAndDirection) bus.material = c.material.inactive;
-					else bus.parent.position.z = 0.0000001;
-				}
-
-			}
-
 		}
 
         if (updateHovered || unhovering) {
 			document.querySelector('.mapboxgl-canvas').style.cursor = updateHovered ? 'pointer' : 'default'
-        	app.map.triggerRepaint()
+        	_map.triggerRepaint()
         };
+
+	},
+
+	updateMarkerColor: function() {
 
 	},
 
 	highlightStop: (newStop) => {
 
 		if (newStop) {
-			const {geometry:{coordinates}, properties:{name, id, direction, routeId}} = newStop;
-			if (name === s.highlightedStop) return
 
+			const {activeRoute:[route, direction]} = s;
+			const {
+				lngLat,
+				id,
+				name
+			} = newStop;
+
+			if (id === s.highlightedStop) return
 			s.customLayer.setPopup(
-				coordinates, 
+				lngLat, 
 				[name, direction === 'IB' ? 'Inbound' : 'Outbound']
 			)
 
-			app.getPrediction(routeId, id, (predictions)=>{
+			app.getPrediction(route, id, predictions=>{
 
-				let [{seconds, occupancy}, ...futureBuses] = predictions;
-				const {format} = app;
-				const formattedOccupancy = app.format.occupancyString(occupancy);
+				let prediction;
 
-				var prediction = `Next bus in <span class='${direction} highlight'>${format.time(seconds)}</span> (${formattedOccupancy})`;
+				if (!predictions.length) prediction = 'no current prediction'
 
-				if (!seconds) prediction = 'no current prediction'
-
-				if (futureBuses.length) {
-					const additionalPredictions = futureBuses.map(({seconds})=>format.time(seconds)).join(', ');
-					prediction +=`<br>then ${additionalPredictions}`
+				else {
+					let [{seconds, occupancy}, ...futureBuses] = predictions;
+					const {format:{occupancyString, time}} = app;
+					const formattedOccupancy = occupancyString(occupancy);
+	
+					prediction = `Next bus in <span class='${direction} highlight'>${time(seconds)}</span> (${formattedOccupancy})`;
+	
+	
+					if (futureBuses.length) {
+						const additionalPredictions = futureBuses.map(({seconds})=>time(seconds)).join(', ');
+						prediction +=`<br>then ${additionalPredictions}`
+					}
 				}
+
 				s.customLayer.setPopup(
-					coordinates, 
+					lngLat, 
 					[name, prediction],
 					direction
 				)
 			});
 
-		}
+			s.highlightedStop = id;
+			app._map.triggerRepaint();
 
-		s.highlightedStop = newStop ? newStop.properties.name : undefined;
-        app.map.triggerRepaint();
+		}
 
 	},
 
 
 	setPopup: (lngLat, content, dir, offsetMultiplier) => {
+
 		const [title, direction] = content;
-		const markup = `<div class='title'>${title}</div><div class='${dir}'>${direction}</div>`
-		// app.popup.options.offset = 15 * Math.pow(1.25, Math.max(0, app.map.getZoom()-13))
+		const markup = `<div class='title'>${title}</div><div class='${dir} body'>${direction}</div>`
+
 		app.popup.setLngLat(lngLat)
 			.setHTML(markup)
-			.addTo(app.map)
+			.addTo(app._map)
 	},
 
 	onClick: () => {
@@ -342,10 +383,10 @@ s.customLayer = {
 
 		// if no highlighted bus, stop here
 		if (!hB.markerObj) return
-		const {lon, lat} = hB.markerObj.userData;
-		console.log(modal.element.clientWidth)
+		const {lon, lat, id} = hB.markerObj.userData;
+
 		// zoom in on bus
-		app.map.easeTo({
+		app._map.easeTo({
 			center: [lon, lat], 
 			padding:{right: 2*modal.element.clientWidth},
 			zoom:15
@@ -353,7 +394,7 @@ s.customLayer = {
 
 		app.setState('mode', 'focus')
 		app.setState('activeRoute', hB.markerObj.userData)
-
+		app.setState('activeTab', 0)
 	},
 
 	setActiveRoute: () => {

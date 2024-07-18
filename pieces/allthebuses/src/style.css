@@ -2,8 +2,11 @@
 :root {
     --IB: rgba(170, 51, 69, 1);
     --OB: rgba(65, 166, 178, 1);
+    --road: rgb(215, 210, 193);
+    --dark: hsl(48deg,17.4%,65%);
     --inactive: hsl(48deg,17.4%,85%);
-    --inactiveWeak: hsl(48deg,30%,98%);
+    --inactiveStrong: hsl(48deg,17.4%,60%);
+    --inactiveWeak: hsl(50, 100%, 99%);
     --inactiveTranslucent: hsla(48deg,30%,75%, 0.25);
 }
 
@@ -48,13 +51,9 @@ canvas {
     z-index: 99;
 }
 
-#modal:hover  ~ .mapboxgl-popup {
-    /* display:none; */
-}
-
 .mapboxgl-popup-content {
     padding:20px;
-    font-size:1.25em;
+    /* font-size:1.25em; */
     border-radius: 5px;   
     color:#bbb;
     box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
@@ -62,26 +61,55 @@ canvas {
     transition:transform 0.1s;
 }
 
+.header {
+    font-weight:100;
+    font-size:3em;
+    color:#666;
+    line-height: 1.25em;    
+}
+
 .title {
     font-weight:100;
-    font-size:1.5em;
+    font-size:2em;
     color:#666;
     line-height: 1.25em;
 }
 
 .subtitle {
     font-weight:100;
-    font-size:0.75em;
+    font-size:1.5em;
     color:#666;
     line-height: 1.5em;   
 }
 
+.body {
+    font-size:1.25em;
+    color: #bbb;
+}
 path.IB,
 .IB.highlight {
     color: var(--IB);
     stroke: var(--IB);
 
 }        
+
+.IB.bgHighlight {
+    background: var(--IB);
+    color:white;
+    padding:2px 5px;
+    font-size:0.9em;
+    border-radius:2px;
+}
+
+.OB.bgHighlight {
+    background: var(--OB);
+    color:white;
+    padding:2px 5px;
+    font-size:0.9em;
+    border-radius:2px;
+}
+
+
 .IB.directionText:after {
     content: 'Inbound'
 }    
@@ -107,11 +135,6 @@ path.OB,
     transition:opacity 0.25s;
 }
 
-/*        .blurred + #map{
-    pointer-events: none
-}*/
-
-
 #spinner {
     z-index: 99;
     width:10vh;
@@ -119,7 +142,6 @@ path.OB,
     margin-left:50vw;
     margin-top:50vh;
     background: #aa3345;
-    transform-origin: center;
     animation-duration: 1.2s;
     animation-iteration-count: infinite;
     transform-origin: center;
@@ -133,25 +155,28 @@ path.OB,
 
 #modal {
     position:absolute;
-    bottom:0;
-    right:0;
+    /* bottom:0;
+    right:0; */
     background:white;
     box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
     border-radius:10px;
-    font-size:2em;
     z-index: 90;
     max-height:96vh;
     overflow:hidden;
 }
 
 .modalSmall {
-    font-size: 0.5em;
-    color:#aaa;
+    /* font-size: 0.5em; */
+    color: var(--inactiveStrong);
     line-height: 1.25em;
 }
 
 .strong {
-    color:#999
+    color: var(--inactiveStrong);
+}
+
+.dark {
+    color: var(--dark);
 }
 .bar {
     height: 4px;
@@ -251,7 +276,7 @@ this lets us stack on translation transforms to the element proper, without addi
 }
 
 .animateTransform {
-    transition:transform 1s;
+    transition:transform 3s;
 }
 
 /* .routeStop .subtitle{
@@ -320,7 +345,7 @@ body[mode='focus'] #general {
 
 .listEntry .notation {
     position: absolute;
-    top: -20%;
+    top: -24%;
     transform: translateY(25%);
     right: 20px;
     text-align: right;
@@ -333,16 +358,30 @@ body[mode='focus'] #general {
 .graph {
     width:400px;
     border-color: var(--inactive);
-    border-left: 1px solid var(--inactive);
+    border-left: 2px solid var(--inactive);
 }
 
 .xaxis {
-    border-top: 1px solid var(--inactive);
+    border-top: 2px solid var(--inactive);
+}
+
+.xaxis .midnight {
+    content:'🌙';
+    filter:brightness(0);
+    transform:translateX(-50%);
+}
+
+.timeLine {
+    border-left: 1px solid var(--inactive);
+}
+
+.transformCenterX {
+    transform:translateX(-50%);
 }
 path {
     fill:none;
-    stroke-width:1;
-    stroke: #aaa;
+    stroke-width:1.5;
+    stroke: var(--inactiveStrong);
 }
 
 .routePath {
@@ -374,8 +413,9 @@ svg:hover .routePath:hover + .routePath {
 }
 
 .hoverLine {
-    border-left:2px solid var(--inactive);
-    opacity:0.75;
+    border-left:3px solid var(--inactive);
+    margin-left:-3px;
+    opacity:0.25;
 
 }
 
@@ -389,5 +429,5 @@ svg:hover .routePath:hover + .routePath {
 
 .dashedUnderline {
     border-bottom:1px dashed;
-    stroke-dasharray:2,3;
+    stroke-dasharray:3,2;
 }

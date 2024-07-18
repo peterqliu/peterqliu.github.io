@@ -5,367 +5,152 @@
     <title>allthebuses</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js'></script>
+    <link href="https://api.mapbox.com/mapbox-assembly/v1.5.1/assembly.min.css" rel="stylesheet">
 
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.54.0/mapbox-gl.css' rel='stylesheet' />
-    <style>
-
-        :root {
-            --IB: rgba(170, 51, 69, 1);
-            --OB: rgba(65, 166, 178, 1);
-        }
-
-        body { 
-            margin:0; 
-            padding:0; 
-            font-family: 'Open Sans', Verdana, sans-serif;
-            overflow:hidden;
-        }
-
-        #map, #overlay { 
-            position:absolute; 
-            top:0; 
-            bottom:0; 
-            width:100%; 
-            background:#B8C8D3;
-        }
-        /*#controls { position:absolute; top:0; left:0; }*/
-
-        #back {
-            z-index: 99;
-            opacity:0.8;
-            margin:1%;
-            cursor:pointer;
-            display:none;
-            transition:all 0.1s;
-            transform-origin: center;
-        }
-
-        #back:hover {
-            transform:scale(1.25);
-            opacity:1;
-        }
-        canvas {
-            cursor:auto;
-        }
-        .mapboxgl-map {
-            font-family: inherit
-        }
-
-        .mapboxgl-popup-content {
-            padding:20px;
-            font-size:1.25em;
-            border-radius: 5px;   
-            color:#999;
-            box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
-            pointer-events: none;
-            transition:transform 0.1s;
-        }
-
-        .title {
-            font-weight:100;
-            font-size:1.5em;
-            color:#666;
-            line-height: 1.5em;
-        }
-
-        .IB .highlight {
-            color: var(--IB);
-        }        
-
-        .OB .highlight {
-            color: var(--OB);
-        }
-
-
-        #loader {
-            z-index: 99;
-            width:100%;
-            height:100%;
-            /*display: none;*/
-            backdrop-filter: blur(50px);
-            position: absolute;
-            pointer-events: none;
-            transition:opacity 2s;
-        }
-
-/*        .blurred + #map{
-            pointer-events: none
-        }*/
-
-
-        #spinner {
-            z-index: 99;
-            width:5vh;
-            height:5vh;
-            margin-left:50vw;
-            margin-top:50vh;
-            background: #aa3345;
-            transform-origin: center;
-            animation-duration: 1.2s;
-            animation-iteration-count: infinite;
-            transform-origin: center;
-            fill-opacity:0.8;
-            border-radius: 50%;
-            border-top-right-radius: 0%;
-            position:absolute;
-            animation-name: spinner;
-
-        }
-
-        #modal {
-            position:absolute;
-            bottom:0;
-            right:0;
-            padding:30px;
-            background:white;
-            margin:2vh;
-            box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
-            border-radius:10px;
-            font-size:2em;
-            z-index: 90;
-            max-height:96vh;
-            overflow:hidden;
-        }
-        .barLabel {
-            font-size: 0.5em;
-            color:#aaa;
-        }
-        .bar {
-            height: 4px;
-            width: 100%;
-            background: var(--OB);
-            border-radius: 2px;
-            overflow: hidden;
-            opacity:0.8;
-            margin:5px 0px;
-        }
-
-        .bar div {
-            background:var(--IB);
-            float: right;
-            text-align: right;
-            width: 40%;
-            height: 100%;
-        }
-
-        .marker {
-            display: inline-block;
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            border-top-right-radius: 0px;
-            transform: rotate(45deg);
-            background: var(--OB);
-            margin-left:2px;
-        }
-        @-webkit-keyframes spinner {
-            0% {
-                transform: translateX(-50%) translateY(-50%) rotate(45deg);
-            }
-
-            100% {
-                transform: translateX(-50%) translateY(-50%) rotate(405deg) ;
-            }
-        }
-
-        #routeFocus {
-            display:none;
-        }
-        body[mode='focus'] #routeFocus {
-            display:block;
-        }
-
-        body[mode='focus'] #general {
-            display:none;
-        }
-
-
-    </style>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="src/style.css">
     <body mode='loading'>
         <div id='loader' class='blurred'>
-            <!-- <div id='spinner' style='transform:rotateY(180deg); background:blue'></div> -->
             <div id='spinner' ></div>
         </div>
         <div id='map'>
-            <div id='modal'>
-                <div id='general'>
-                    <div class='title'>Muni, this moment</div>
-                    <div class='bar'>
-                        <div></div>
+            <div id='modal' class="top right mr18 mt18">
+                <div id='general' class="flex flex--column" style="max-height: 96vh;">
+                    <div class="header px30 pt30 pb12">
+                        Muni, this moment
                     </div>
-                    <div class='barLabel'>
-                        <span class='marker'></span>
-                        <span id='ob'></span> Outbound
-                        <span style='float:right'>
-                            <span id='ib'></span> 
-                            Inbound 
-                            <span class='marker' 
-                                style='transform: rotate(-135deg); background: var(--IB); margin-right:2px'
-                            ></span>
-                        </span>
+                    <div class="px30 color-gray grid body txt-uppercas border-b border--gray-lighter cursor-pointer">
+                        <div class="tab w-1/3 align-l pb12 opacity50">Vehicles</div>
+                        <div class="tab w-1/3 align-center pb12 opacity50">Routes</div>
+                        <div class="tab w-1/3 align-r pb12">24h Trends</div>
                     </div>
+                    <div class="flex-child-grow overflow-scroll">
+                        <div class="tabView overflow" style="display:none">
+                            <div id='' class="border-b border--gray-lighter">
+                                <div class='listEntry modalSmall'>
+                                    <span class='left ob marker'></span>
+                                    <span id='ob'></span> Outbound
+                                    <span class="fr">
+                                        <span id='ib'></span> 
+                                        Inbound 
+                                        <span class='right ib marker' 
+                                            style=' margin-right:2px'
+                                        ></span>
+                                    </span>
+                                    <div class='bar' style="background: var(--OB)">
+                                        <div id="inboundBar" class="fr"></div>
+                                    </div>    
+                                </div>                    
+                            </div>    
+                            <div id="ticker" class="overflow-scroll hmax240"></div>
+    
+                        </div>
+
+                        <div id='routeList' class="tabView" style="display:none"></div>    
+                        <div class="tabView" id="trend" style="display:non">
+                            <div class="listEntry px30">
+
+                                <!-- UTILIZATION -->
+                                <span class="subtitle">Utilization</span>
+                                <!-- <span class="fr modalSmall txt-underline utilization percentToggle">Show percentage</span> -->
+                                <div class="body"><span class="OB highlight">Ridership (estimated)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
+                                <div class="relative mt12" id="utilization">
+
+                                </div>
+
+                                <div class="body mt36">Marginal change (10-minute increments)</div>
+                                <div class="relative mt18" id="utilizationFlux">
+                                </div>
+                            </div>
+                            <div class="listEntry px30">
+                                <div class="subtitle">Vehicle occupancy</div>
+                                <div class="modalSmall">Relative fullness of vehicles, across the system</div>
+                                <div class="relative mt18" id="occupancy"></div>
+                            </div>
+                            <div class="listEntry px30 none">
+                                <div class="subtitle">Rider distribution</div>
+                                <div class="modalSmall">Click to inspect route distribution at that time</div>
+
+                                <div class="relative mt12" id="blend">
+                                    <div class="modalSmall align-t inline-block" id="yLabel"></div>
+                                    <div class="inline-block">
+                                        <div class="relative hoverChildVisible">
+                                            <div class="events-none absolute modalSmall z5 graphNotation none bottom left bg-lighten75 pr12">
+                                                <div id="date"></div>
+                                            </div>
+                                            <div class="absolute h-full hoverLine none events-none"></div>
+                                            <div class="absolute midnight h-full z-neg1" style='border-left:2px dotted #ddd'></div>
+                                            <svg class="graph align-t" preserveAspectRatio="xMinYMin meet">
+                                                <!-- <g></g> -->
+                                            </svg>
+                                        </div>
+                                        <div class="xaxis modalSmall relative">
+                                            <span class="yesterday inline-block fl absolute"></span>
+                                            <span class="midnight inline-block opacity25" style="filter:brightness(0)">🌙</span>
+                                            <span class="today inline-block fr"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="blendAtTime" class="non relative">
+                                    <div class="modalSmall mt12">Rider distribution at this time (scanning vertically, of above cross-section)</div>
+                                    <div id="blendBar" class="mt12 h24 round"></div>
+                                </div>
+
+                            </div>
+                            <div class="listEntry none">
+                                <div class="subtitle">People flow</div>
+                            </div>
+
+                        </div>
+                    </div>
+   
                 </div>
-                <div id='routeFocus'>
-                    <div class='title'></div>
+         
+                <div id='routeFocus' class="flex flex--column" style="max-height: 96vh">
+                    <div class='px30 py30  border-b border--gray-lighter'>
+                        <div class="body cursor-pointer" onclick='app.setState("mode", "inactive"); app._map.fitBounds(c.fullBounds, {duration:500})'>< Back</div>
+                        <div class='header wmax360' id="routeName"></div>
+                        <div class='subtitle'>
+                            <span id="directionText" class="directionText highlight"></span> to
+                            <span id="routeDir"></span>
+                        </div>
+                        <span id="description" class="body"></span>
+                    </div>
+                    <div class="routeView overflow-scroll relative">
+                        <div id="routeStops" class="relative">
+                            <span id="routeTrack" class="absolute round z5 block"></span>
+                        </div>
+                        <div id="routeBuses"></div>    
+                    </div>
                 </div>
 
             </div>            
         </div>
 
-        <img src='src/zoomout.svg'id='back' onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/>
+        <!-- <img src='src/zoomout.svg'id='back' class="mt12 ml12 opacity75" onclick='app.setState("mode", "inactive"); app.map.fitBounds(c.fullBounds, {duration:500})'/> -->
     </body>
+    <script src='../credentials.js'></script>
+
     <script src='src/map.js'></script>
-
+    <script src="https://unpkg.com/cheap-ruler@3.0.1/cheap-ruler.min.js"></script>
+    <script src="src/constants.js"></script>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src='src/modal.js'></script>
     <script>
-        mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
 
-        var s = {
-
-            mode: 'inactive',
-            showLabels: false,
-            center: [-122.44, 37.77],
-            zoom: 13,
-            pitch:0,
-            activeRoute: false,
-            routeDrawStart: Date.now(),
-
-            initScene: false,
-
-            highlightedBus: {
-                uuid: null, 
-                routeId: null,
-                startTime: null,
-                markerObj: null
-            }
-        }
-
-        var c = {
-            fullBounds:[
-                [-122.51981158087418,37.73448595445758],
-                [-122.35330876278951,37.830708228670474]
-            ],
-            labelZoomThreshold:14,
-            animationDuration: 500,
-            markerScale: 0.000002,
-            emptyGeojson: {type:"FeatureCollection",features:[]},
-            color: {
-                'IB':'rgba(170, 51, 69, 1)',
-                'OB': 'rgba(65, 166, 178, 1)',
-                'weak':'#BAB49D'
-            },
-            sceneTranslate: mapboxgl.MercatorCoordinate.fromLngLat(
-                s.center,
-                0
-            ),
-            routeData:{
-
-            },
-            customLayer: {
-
-                id: '3d-model',
-                type: 'custom',
-                renderingMode: '3d',
-                onAdd: (map, gl) => buildRenderer(gl, ()=>{}),
-
-                render: (gl, matrix) => {
-
-                    var m = new THREE.Matrix4().fromArray(matrix);
-                    var l = new THREE.Matrix4()
-                        .makeTranslation(
-                            c.sceneTranslate.x,
-                            c.sceneTranslate.y,
-                            c.sceneTranslate.z
-                        )
-
-                    s.customLayer.camera.projectionMatrix = m.multiply(l);
-                    if (s.animatingBuses) s.customLayer.animateBus();
-                    s.customLayer.renderer.render(s.customLayer.scene, s.customLayer.camera);
-
-                }
-            },
-            material: {
-                inactive: new THREE.MeshBasicMaterial( { 
-                    color: 0xBAB49D, 
-                    opacity:0.5, 
-                    transparent:true, 
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                }),
-                inactiveHover: new THREE.MeshBasicMaterial( { 
-                    color: 0xBAB49D, 
-                    opacity:0.75, 
-                    transparent:true,                    
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                }),
-                IB: new THREE.MeshBasicMaterial( { 
-                    color: 0xaa3345,            
-                    opacity:0.75, 
-                    transparent:true,
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                } ),
-                OB: new THREE.MeshBasicMaterial( { 
-                    color: 0x41a6b2,            
-                    opacity:0.75, 
-                    transparent:true,
-                    side: THREE.DoubleSide,
-                    // depthWrite:false  
-                } ),
-
-                text: new THREE.MeshBasicMaterial( { 
-                    color: 0xf0eed9, 
-                    side: THREE.BackSide,
-                    // transparent:true,
-                    opacity:0.7,
-                    // depthWrite:false,
-                    // depthTest: false 
-                } )
-            },
-
-            geometry: {
-                bus: null,
-                label: {}
-            } 
-        }
-
-        c.style = {
-            focus:[
-                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
-                ['stops', 'circle-stroke-width', {stops:[[12,1], [22,20]]}],
-                ['stops', 'circle-radius', {stops:[[12,1], [22,20]]}],
-                // ['buses', 'circle-color', c.color.weak],
-                ['bus_labels', 'text-opacity', 1]
-            ],
-            active:[
-                ['route', 'line-width', {stops:[[12,1], [22,20]]}],
-                ['stops', 'circle-stroke-width', {stops:[[12, 1], [22,20]]}],
-                ['stops', 'circle-radius', 0],
-                // ['buses', 'circle-color', c.color.weak],
-                ['bus_labels', 'text-opacity', 0]
-            ],
-            inactive:[
-                ['route', 'line-width', 0],
-                ['stops', 'circle-stroke-width', 0],
-                ['stops', 'circle-radius', 0],
-                ['buses', 'circle-color', {
-                    'property': 'direction',
-                    'type':'categorical',
-                    'stops':[['IB', c.color.IB], ['OB', c.color.OB]]
-                }],
-                ['bus_labels', 'text-opacity', 0]
-            ]
-        }
+        mapboxgl.accessToken = "pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNseTF5ZTA3ajB3bTkya3B6cDFvMXAwamgifQ.ec6yQ6lGg54CelkIK98Qmg"//config.token;
 
         const app = {
 
-            init: () => {
-                pollBuses(true)
-                setInterval(()=>pollBuses(), 5000)
+            init: async () => {
 
-                // build shape primitive and load font
-                const loader = new THREE.FontLoader();
+                console.log('init');
+                const {FontLoader, Shape, ShapeGeometry} = THREE;
+
+
+                // build marker primitive and load font
+                const loader = new FontLoader();
 
                 loader.load( 'src/Open Sans_Regular.json', font => {
 
@@ -376,89 +161,374 @@
 
                 const x = 0, y = 0;
 
-                const markerShape = new THREE.Shape();
+                const markerShape = new Shape();
                 markerShape.arc(0, 0, 1, Math.PI/2, 0, false);
                 markerShape.lineTo(x+1, y+1);
 
-                c.geometry.bus = new THREE.ShapeGeometry( markerShape );
-                c.geometry.bus.matrixAutoUpdate() = false;
+                c.geometry.bus = new ShapeGeometry( markerShape );
+                c.geometry.bus.matrixAutoUpdate = false;
+
+                const res = await Promise.all([
+                    fetch("https://peterqliu-getblob.web.val.run?blob=allthebuses-routeData"),
+                    fetch("https://peterqliu-getblob.web.val.run?blob=allthebuses-stopData"),
+                    fetch("https://peterqliu-getblob.web.val.run/?blob=allthebuses-varPaths")
+                ]);
+                const data = await Promise.all(res.map(r => r.json()));
+                c.routeData = data[0];
+                c.stopData = data[1];
+                c.pathData = data[2];
+
+                // const ls = turf.lineString(c.pathData['9_1_var0']) 
+                // window.gj =turf.featureCollection([
+                //     ls,
+                //     turf.lineString(turf.lineOffset(ls, 0.001))
+                // ]);
+
+                // console.log(gj)
+                // app._map.addLayer({
+                //     id: 'lines',
+                //     type: 'line',
+                //     source: {
+                //         data: gj,
+                //         type: 'geojson'
+                //     }
+                // })
+
+                // app._map.on('click', e=>{
+                //      const w = app._map.queryRenderedFeatures(e.point, {layers:['systemViewRoutes']});
+                //      console.log(w)
+                // })
+                app.setState('buses')
+                setInterval(()=>app.setState('buses'), 5000)
+                modal.trendTab.update();
+                modal.init();
+                Object.keys(c.routeData)
+                    .forEach(k=>{
+                        const r = c.routeData[k];
+                        let missingStops = false;
+                        Object.values(r)
+                            .forEach(variant=>{
+                                if (missingStops) return
+                                if (variant.stopIds) variant.stopIds.forEach(id=>{
+                                    if (!c.stopData[id]) missingStops= true;
+                                })
+                            })
+
+                        if (missingStops) {
+                            console.log(k, missingStops)
+                            fetchRouteData(k, route=>{
+                                let toServer = {}
+
+                                route.stops.forEach(s=>{
+                                    const {name, lon, lat, id} = s;
+                                    if (!c.stopData[id]) {
+                                        // console.log(id)
+                                        toServer[id] = c.stopData[id] = {lngLat:[lon, lat], name};
+                                    }
+
+                                })
+                                app.updateServer.stopData(toServer)
+
+                            })
+                        }
+                    })
             },
 
+            updateServer: {
+                routeData: function(data){
+                    console.warn('updating server routedata!', data)
+                    fetch("https://peterqliu-routeData.web.val.run", {
+                        method: "POST",
+                        body: JSON.stringify(data || c.routeData)
+                    });
+                },
+
+                stopData: function(data){
+                    console.warn('updating server stopdata!', data)
+
+                    fetch("https://peterqliu-stopData.web.val.run", {
+                        method: "POST",
+                        body: JSON.stringify(data || c.stopData)
+                    });
+                }
+            },
+            
+            ruler: new CheapRuler(s.center[1], 'feet'),
+
             getPrediction: (route, stop, cb) => {
-                const url = `http://restbus.info/api/agencies/sfmuni-sandbox/routes/${route}/stops/${stop}/predictions`;
+                const url = `stopcodes/1${stop}/predictions`;
 
                 app.utils.load(url, (r)=>{
-                    // if (e) return
-                    cb(r[0] ? r[0].values[0] : undefined);
+                    const routeMatch = r.find(prediction=>prediction.route.id===route);
+                    const predictions = routeMatch.values.map(v=>({seconds:(v.timestamp-Date.now())/1000, occupancy:v.occupancyDescription}))
+                    cb(predictions || undefined);
                 })
 
             },
 
-            getRoutePredictions: (routeDir, cb) => {
+            diffBusState: function(newState) {
+            
+                let busesObject;
+                if (!s.buses) return 
 
-                const route = requestRoute(routeDir);
-                const tuple = route.stops.features
-                    .map(f=>`${s.activeRoute[0]}:${f.properties.id}`).join(',');
+                busesObject = Object.fromEntries(s.buses.map(b=>([b.id, b])));
 
-                const tupleEndpoint = `http://restbus.info/api/agencies/sfmuni-sandbox/tuples/${tuple}/predictions`
-                app.utils.load(
-                    tupleEndpoint, 
-                    d=>{
-                        const output = d.map((stop, index)=>{
-                            route.stops.features[index].properties.prediction = stop.values[0].seconds
+                
+                let events = [];
+                
+                newState.forEach(bus=>{
+                    
+                    if (!busesObject) return
+                    const {id, route, direction, vehiclePosition:{currentStopTag, atCurrentStop}} = bus;
+                    const previousState = busesObject[id];
 
-                            return {
-                                title: stop.stop.title,
-                                prediction:stop.values[0].seconds
-                            }
-                        })
+                    if (previousState) busesObject[id].read = true;
+                    if (!previousState) events.push({...bus, event:'online'})
 
-                        cb(route)
+                    // same bus, new route
+                    else if (route.id !== previousState.route.id) events.push({...bus, event:'newRoute'})
+
+                    // same route, new direction
+                    else if (direction !== previousState.direction) events.push({...bus, event:'switchDirection'})
+                    
+
+                    // new stop arrivals
+                    else if (atCurrentStop && (!previousState.vehiclePosition.atCurrentStop) && previousState.vehiclePosition.currentStopTag === currentStopTag) {
+                        events.push({...bus, event:'arrival'})
                     }
-                )
+
+                })
+
+                Object.values(busesObject)
+                    .filter(b=>!b.read)
+                    .forEach(b=>{events.push({...b, event:'offline'})})
+
+                s.diff = events
+                    .map(bus => {
+                        const {event, id, direction, route, vehicleType, vehiclePosition:{currentStopTag}, dir:{dirName}, lon, lat} = bus;
+                        return {
+                            event,
+                            id, 
+                            direction,  
+                            dirName,
+                            vehicleType,
+                            route,
+                            lngLat: [lon, lat], 
+                            stopName:c.stopData[currentStopTag].name.replaceAll(' St ', ' ').replaceAll(' Ave ', ' ').replaceAll(' Blvd', ' '),
+                            tickerKey: Math.random()
+                        }
+                    })
 
             },
-            setState: (key, value) => {
 
-                if (key === 'activeRoute'){
+            format: {
 
-                    var newRoute = value ? [value.routeId,value.direction,value.directionId] : false
+                time: (seconds) => {
+                    let prediction;
+                    if (!seconds) prediction = 'no current prediction'
+                    else if (seconds>180) return `${Math.round(seconds/60)} minutes`
+                    else if (seconds>60) {
+                        const [minutes, secondRemainder] = [Math.floor(seconds/60), Math.round(seconds%60)];
+                        return `${minutes}:${secondRemainder<10 ? 0 :''}${secondRemainder}`
+                    }
+                    else if (seconds>5) return `${Math.round(seconds)} seconds`
+                    else return `approaching now`
+                },
 
-                    //if already highlighting
-                    if (s.activeRoute){
+                distance: (feet) => {
+                    return feet > 999 ? `${(feet/5280).toFixed(2)} mi`:`${feet.toFixed(0)} ft`;
+                },
 
-                        if (newRoute){
-                            if (newRoute !== s.activeRoute) s.activeRoute = newRoute
+                occupancyString(raw) {
+                    return raw.toLowerCase().replace('room ', '')
+                },
+
+                speed(kph) {
+                    return kph ? 'moving at ' +Math.round(kph*0.621371) +' mph' : 'currently stopped'
+                },
+                
+                graphYAxisExtent(raw, increment) {
+                    increment = increment || 5000;
+                    return Math.sign(raw) * Math.ceil(Math.abs(raw)/increment) * increment;
+                },
+
+                dirName(raw) {
+                    if (!raw) return ''
+
+                    // abbreviate
+                    let formatted = raw
+                        .replace(' from', ', from')
+                        .replace('+', '&')
+                        .replace(/Avenue/g, '')
+                        .replace(/Street/g, '')
+
+                    // remove if too long
+                    if (formatted.length>20) formatted = formatted
+                        .replace(' Ave', '')
+                        .replace(' St ', '')
+                        .replace(' Blvd ', '')
+                        .replace(/St$/, '')
+                    return formatted
+                },
+
+                _vehicleType(raw) {
+                    const [type, code] = raw.split('_');
+
+                    switch (type) {
+
+                        case 'LRV': return 'Light rail';
+                        case 'Motor Coach': return 'Bus';
+                        case 'Electric Trolley': return 'Trolley';
+                        case 'Historic Street Car': return 'Streetcar';
+                        default: return type
+                    }
+                },
+
+                trendPopulation(raw) {
+                    return Math.round(raw)
+                },
+                
+                // for an array of stops, format intersection labels such that the repeating street comes second
+                sameStreetSecond(array, mapFn, outputFn) {
+
+                    let previousStop = null;
+                    let nameArray = array.map(mapFn);
+                    let conjunctionString = ' & ';
+                    
+                    const formattedArray = nameArray.map(name=>{
+
+                        if (name.includes(conjunctionString)) {
+
+                            const split = name.split(conjunctionString);
+                            if (previousStop?.includes(split[0])) {
+                                previousStop = name;
+                                return split.reverse().join(conjunctionString);
+                            }
+
+                            else {
+                                previousStop = name;
+                                return name
+                            }
                         }
 
-                        else s.activeRoute = newRoute
-                    }
+                        else {
+                            previousStop = null;
+                            return name
+                        }
+                    })
 
-                    //if no previous highlight
-                    else if (newRoute) s.activeRoute = newRoute
+                    return array.map((d,i) => outputFn(d, formattedArray[i]))
+                }
 
+            },
 
+            setState: (key, value) => {
+
+                const {_map, utils, updateModalBar, diffBusState} = app;
+                
+                if (key === 'buses'){
+
+                    const initialLoad = !s.buses;
+
+                    utils.load('vehicles', (resp) => {
+
+                        if (resp.length === 0) return
+                        console.log('poll');
+
+                        const {requestsInFlight, mode, debug} = s;
+                        const {routeData} = c;
+                        s.lastPollTime = Date.now();
+                        
+                        if (debug) resp = resp.slice(0,12);
+
+                        const buses = resp
+                            .filter(item =>item.dir?.id)
+                            .map(item => {
+
+                                if (!routeData[item.route.id]) {
+                                    routeData[item.route.id] = 'pending'
+                                    fetchRouteData(item.route.id)
+                                }
+
+                                const {dir:{id}} = item;
+                                item.direction = utils.getDirection(id)
+                                return item
+                            });
+
+                        diffBusState(buses);
+                        modal.vehicleTab.updateTicker();
+                        s.buses = buses;
+                        
+
+                        updateModalBar();
+
+                        if (initialLoad) {
+                            if (_map.loaded()) setupMap()
+                            else _map.on('load', () => setupMap())
+                        }
+
+                        else s.animatingBuses = true;
+
+                        s.customLayer.updateBuses();
+
+                        const {routeView, systemView} = modal;
+                        if (mode==='focus') routeView.updateBuses();
+                        if (!requestsInFlight) systemView.updateRoutes();
+                    
+                    })
+
+                }
+
+                if (key === 'activeRoute'){
+                    s.activeBus = value;
+                    const {route, direction, dir, vehiclePosition:{pathTag}} = value;
+                    var newRoute = value ? [route.id, direction, dir.id, pathTag] : false
+                    s.activeRoute = newRoute;
+                    if (s.mode==='focus') {
+                        modal.routeView.updateStops();
+                        s.customLayer.setActiveRoute();
+                    };
+                        
                     updateRoute();
                 }
 
+                // inactive, active, focus modes
                 else if (key === 'mode') {
+                    const {mode, customLayer:{restoreBusMarkerColors}} = s;
+                    const {style:{[value]:styles}} = c;
+                    
+                    if ([mode,value].includes('focus')) modal.element.scrollTop = 0;
 
                     s.mode = value;
-                    // document.querySelector('body').setAttribute('mode', value)
-                    
+                    console.warn(key, value)
+                    document.querySelector('body')
+                        .setAttribute('mode', value)
+
                     // apply map styling for current mode
-                    c.style[value].forEach(style => {
-                        app.map.setPaintProperty(style[0], style[1], style[2])
+                    styles.forEach(style => {
+                        app._map.setPaintProperty(...style)
                     })
 
-                    // update back button visibility
-                    document.querySelector('#back').style.display = value === 'focus' ? 'block' : 'none'
-
-                    if (value === 'inactive') s.customLayer.restoreBusMarkerColors()
-                    // else if (value === 'focus')
+                    if (value === 'inactive') restoreBusMarkerColors()
+                    
+                    app.clearPopup();
                 }
 
+                else if (key === 'activeTab') {
+                    s.activeTab = value;
 
+                    d3.selectAll('.tabView')
+                    .style('display', (d,tabViewIndex)=>tabViewIndex === value ? 'block' : 'none');
+                
+                    d3.selectAll('.tab')
+                        .classed('opacity50', (d,tabIndex)=> value !== tabIndex);
+
+                    c.style.tabMode[value]
+                        .forEach(visibility=>app._map.setLayoutProperty(...visibility))
+
+                    animateDash();
+                }
+                
                 else if (key.includes('init')) {
 
                     s[key] = value;
@@ -467,19 +537,22 @@
 
                         document.querySelector('#loader').style.opacity = 0
 
-                        app.map
+                        app._map
                             .on('mousemove', (e)=>{app.on.mouseMove(e)} )
                             .on('click', s.customLayer.onClick)
                             .on('zoom', app.on.zoom) 
-                    }
+                            .on('zoom', app.on.zoomEnd) 
+
+                        }
 
                 }
             },
 
-            map: new mapboxgl.Map({
+            _map: new mapboxgl.Map({
                 container: 'map', // container id
                 antialiased:true,
-                style: 'mapbox://styles/peterqliu/cjnnukhkb08fu2so0ywo37ibj',
+
+                style: 'mapbox://styles/peterqliu/clwh14gga00b001rbfwr02chk',
                 center: s.center, // starting position
                 // minZoom: 12,
                 zoom: s.zoom // starting zoom
@@ -488,12 +561,13 @@
             popup: new mapboxgl.Popup({ 
                 closeButton: false, 
                 offset:25, 
-                maxWidth:'none' 
+                maxWidth:400 
             }),
 
             clearPopup: () => {
                 app.popup.remove()
             },
+            
             utils: {
 
                 degreeify: radians =>{
@@ -503,11 +577,16 @@
 
                 radify: deg => 2*Math.PI * deg/360,
 
-                load: (url, cb) => {
-                    const lambdaFn = 'https://pnvf7oppjd3jzo3wvcslnfshri0qxynb.lambda-url.us-west-2.on.aws/?url=';
-                    return fetch(`${lambdaFn}${url}`)
+                load: (queryString, cb) => {
+                    const url = 'https://webservices.umoiq.com/api/pub/v1/agencies/sfmta-cis/';
+                    const token = '?key=0be8ebd0284ce712a63f29dcaf7798c4';
+                    s.requestsInFlight++;
+                    return fetch([url, queryString, token].join(''))
                         .then(response => response.json())
-                        .then(data=> cb(data))
+                        .then(data=> {
+                            s.requestsInFlight--
+                            cb(data)
+                        })
                 },
 
                 getDirection: str => {
@@ -523,43 +602,104 @@
                     const yMercatorDelta = 0.5 - 0.5 * Math.log(Math.tan(Math.PI * (1/4 + lngLat[1]/360)))/Math.PI - c.sceneTranslate.y
 
                     return new THREE.Vector3(xMercatorDelta, yMercatorDelta, Math.random()/10000000)
+                },
+
+
+                getCurrent: function(ms, interval, rewindDay) {
+                    
+                    // Create a new Date object representing the current date and time
+                    const now = new Date(ms||Date.now());
+
+                    if (rewindDay) now.setDate(now.getDate() - rewindDay);
+                    
+                    // Format the date using the Intl.DateTimeFormat object with the specified time zone
+                    const options = { ...interval, hour12: false, timeZone: 'America/Los_Angeles' };
+                    const formatter = new Intl.DateTimeFormat('en-US', options);
+
+                    // Extract the hour from the formatted date string
+                    const formattedDate = formatter.format(now);
+
+                    return formattedDate;
+                },
+
+                derivative: function(array){
+
+                    const deltas = array.map((r,rI)=>{
+                        const frame = [-1, 1].map(n=>array[rI+n])
+                            .filter(d=>d!==undefined);
+
+                        const delta = frame[frame.length-1] - frame[0];
+                        return delta/frame.length;
+
+                    })
+
+                    return deltas
+                },
+
+                sumArray(array) {
+                    let sum = 0;
+
+                    array.forEach(n=>sum+=(n||0))
+                    return sum
+                },
+
+                crossCutNestedArray(array) {
+                    return array[0].map((v, subarrayIndex)=>{
+                        return array.map(subarray=>subarray[subarrayIndex])
+                    })
                 }
             },
 
             on: {
+
                 mouseMove: e => {
 
                     const cL = s.customLayer;
-
-                    const mouse = new THREE.Vector3(
-                        ( e.point.x / window.innerWidth ) * 2 - 1,
-                        - ( e.point.y / window.innerHeight ) * 2 + 1,
+                    const {customLayer, mode, activeTab, highlightedStop, mesh:{markers}} = s;
+                    if (activeTab == 1) return
+                    const {raycaster, camera, highlightMarker, highlightStop} = customLayer;
+                    const {Vector3, Matrix4} = THREE;
+                    const {x, y} = e.point;
+                    const {innerWidth, innerHeight} = window;
+                    const mouse = new Vector3(
+                        ( x / innerWidth ) * 2 - 1,
+                        - ( y / innerHeight ) * 2 + 1,
                         1
                     )
 
-                    const camInverseProjection = new THREE.Matrix4().getInverse(cL.camera.projectionMatrix);
-                    const cameraPosition = new THREE.Vector3().applyMatrix4(camInverseProjection);
+                    const camInverseProjection = new Matrix4().getInverse(camera.projectionMatrix);
+                    const cameraPosition = new Vector3().applyMatrix4(camInverseProjection);
                     const mousePosition = mouse.applyMatrix4(camInverseProjection);
                     const viewDirection = mousePosition.clone().sub(cameraPosition).normalize();        
 
-                    cL.raycaster.set(cameraPosition, viewDirection)
-                    const intersect = cL.raycaster.intersectObjects( s.mesh.markers)[0];
-                    
-                    cL.highlightMarker(intersect ? intersect.object : undefined)
+                    raycaster.set(cameraPosition, viewDirection)
+                    const [intersect] = raycaster.intersectObjects( markers);
+                    highlightMarker(intersect ? intersect.object : undefined)
                 
-                    if (s.mode === 'focus' && !intersect) {
-                        const hoveredStop = app.map
-                            .queryRenderedFeatures(e.point, {layers:['stops']})[0];
+                    if (mode === 'focus' && !intersect) {
+                        
+                        const [hoveredStop] = app._map
+                            .queryRenderedFeatures(e.point, {layers:['stops']});
 
-                        cL.highlightStop(hoveredStop)
-                        if (!hoveredStop)  app.popup.remove()
+                        if (hoveredStop) {
+                            const {geometry:{coordinates}, properties:{id, name}} = hoveredStop;
+                            highlightStop({lngLat:coordinates, id, name:c.stopData[id].name})
+                        }
+
+                        else {
+                            if (highlightStop) s.highlightedStop = null;
+                            app.popup.remove()
+                        }
 
                     }
                     
                 },
 
                 zoom: () =>{
-                    const shouldShowLabels = app.map.getZoom() >= c.labelZoomThreshold;
+
+                    const z = app._map.getZoom();
+                    const {labelZoomThreshold} = c;
+                    const shouldShowLabels = z >= labelZoomThreshold;
                     
                     if (shouldShowLabels !== s.showLabels) {
                         console.log('changing')
@@ -567,31 +707,48 @@
                         s.mesh.labels.forEach(label => label.scale.set(scale, scale, scale));
                         s.showLabels = shouldShowLabels;
                     }
+
+                    c.material.OB.uniforms.highZoomSizeAttenuation.value = shouldShowLabels ? Math.pow(0.5, z-c.labelZoomThreshold) : 1;
+                },
+
+                zoomEnd: ()=>{
+                    s.mesh.markers.forEach(m=>{
+                        m.geometry.boundingSphere.radius = 1.4142135623730951*s.highZoomSizeAttenuation.value
+                    })
                 }
             },
 
             updateModalBar: () => {
 
+                const {vehicleTab:{IB, OB, riderCount, capacityCount}} = modal;
+                // update direction bar
                 const IBCount = s.buses.filter(bus=>bus.direction === 'IB').length
-                document.querySelector('#ob').innerHTML = s.buses.length - IBCount;
-                document.querySelector('#ib').innerHTML = IBCount;
-
+                OB.innerHTML = s.buses.length - IBCount;
+                IB.innerHTML = IBCount;
                 document.querySelector('.bar div').style.width = 100 * IBCount / s.buses.length + '%';
+
+                // update ridership
+                const {occupancy:{capacity, ratio}} = c;
+                let riders = 0;
+                let fleetCapacity = 0;
+                s.buses.forEach(bus => {
+
+                    const {occupancyStatus, vehicleType} = bus;
+                    const busType = vehicleType.split('_')[1];
+                    riders += capacity[busType] * ratio[occupancyStatus];
+                    fleetCapacity += capacity[busType];
+
+                })
+                // console.log(riders, fleetCapacity)
             },
 
             updateModalRouteFocus: (stops) => {
 
                 d3.select('#routeFocus .title')
                     .text(c.routeData[s.activeRoute[0]].title)
-                // d3.select('#routeFocus')
-                //     .selectAll('.stop')
-                //     .data(stops)
-                //     .enter()
-                //     .append('div')
-                //     .text(d=>d.properties.name+','+d.properties.prediction)
+
             }
         }
-
 
         app.init();
     </script>
@@ -600,7 +757,8 @@
 
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,300' rel='stylesheet' type='text/css'>
     <script src='src/customlayer.js'></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3-selection@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script type="module" src="https://esm.town/v/peterqliu/browserify"></script>  
 
 </head>
 

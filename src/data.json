@@ -4,17 +4,6 @@
 		"Algorithms & interactions":
 			[
 				{
-					"name":"Cosmic Reef",
-					"tagline": "generative geometry",
-					"url": "https://www.youtube.com/embed/D2cU6QKCSnQ",
-					"blurb": [
-						"This was a generative art project taking simple geometric primitives to generate a large set of unique pieces. We did this by applying a series of animations, deformations, and color processes, to a recursively nested structure of shapes and systems. Introducing slight variations in each parameter produces a diverse set of pieces.",
-						"Doing this performantly involves in GLSL shaders, which requires devising a higher-order framework of parameters that can encompass the full range of permutations and combinatorials.",
-						"I built the rendering pipeline, as well as the GUI pictured here as a tool to explore and produce interesting compositions. The artist then took those combinations to seed the full set.",
-						"Play with an early version of the tool <a target='_blank' href='./pieces/cr'>here</a>."
-					]	
-				},
-				{
 					"name":"Courier",
 					"tagline": "bikes in the machine",
 					"url": "courier",
@@ -33,6 +22,17 @@
 						"Mapbox's Optimization API solves this, <i>plus</i> the option to specify that certain points must come before others. This became an incredibly nuanced, technical tool in search of a good explanation.",
 						"For us, that surfaced in food delivery service. The user clicks and drags orders from three restaurants around Chicago, which a delivery driver fulfills. Each order must involve a pickup trip to the restaurant before heading to the customer, forming a complex queue that the algorithm handles in real time."
 					]
+				},
+				{
+					"name":"Cosmic Reef",
+					"tagline": "generative geometry",
+					"url": "https://www.youtube.com/embed/D2cU6QKCSnQ",
+					"blurb": [
+						"This was a generative art project taking simple geometric primitives to generate a large set of unique pieces. We did this by applying a series of animations, deformations, and color processes, to a recursively nested structure of shapes and systems. Introducing slight variations in each parameter produces a diverse set of pieces.",
+						"Doing this performantly involves in GLSL shaders, which requires devising a higher-order framework of parameters that can encompass the full range of permutations and combinatorials.",
+						"I built the rendering pipeline, as well as the GUI pictured here as a tool to explore and produce interesting compositions. The artist then took those combinations to seed the full set.",
+						"Play with an early version of the tool <a target='_blank' href='./pieces/cr'>here</a>."
+					]	
 				}
 			],
 

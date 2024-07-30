@@ -52,27 +52,31 @@
                             <div class="listEntry px30">
 
                                 <!-- UTILIZATION -->
-                                <span class="subtitle">Utilization</span>
+                                <span class="subtitle">Capacity utilization</span>
                                 <!-- <span class="fr modalSmall txt-underline utilization percentToggle">Show percentage</span> -->
-                                <div class="body"><span class="OB highlight">Ridership (estimated)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
-                                <div class="relative mt12" id="utilization">
+                                <div class="body"><span class="OB highlight">Ridership (est)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
+                                <div class="relative mt12 mb12" id="utilization">
 
                                 </div>
 
-                                <div class="body mt36">Marginal change (10-minute increments)</div>
+                                <!-- <div class="body mt36">Marginal change (10-minute increments)</div>
                                 <div class="relative mt18" id="utilizationFlux">
-                                </div>
+                                </div> -->
                             </div>
+
+                            <!-- OCCUPANCY -->
                             <div class="listEntry px30">
-                                <div class="subtitle">Vehicle occupancy</div>
-                                <div class="modalSmall">Relative fullness of vehicles, across the system</div>
-                                <div class="relative mt18" id="occupancy"></div>
+                                <div class="subtitle">Occupancy distribution</div>
+                                <div class="body">Vehicle fullness, across the system</div>
+                                <div class="relative mt12" id="occupancy">
+                                </div>
+
                             </div>
                             <div class="listEntry px30 none">
                                 <div class="subtitle">Rider distribution</div>
                                 <div class="modalSmall">Click to inspect route distribution at that time</div>
 
-                                <div class="relative mt12" id="blend">
+                                <div class="relative mt12 mb12" id="blend">
                                     <div class="modalSmall align-t inline-block" id="yLabel"></div>
                                     <div class="inline-block">
                                         <div class="relative hoverChildVisible">
@@ -385,7 +389,7 @@
                 },
 
                 trendPopulation(raw) {
-                    return Math.round(raw)
+                    return app.format.commafy(Math.round(raw))
                 },
                 
                 // for an array of stops, format intersection labels such that the repeating street comes second
@@ -418,6 +422,10 @@
                     })
 
                     return array.map((d,i) => outputFn(d, formattedArray[i]))
+                },
+
+                commafy: function(number){
+                    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                 }
 
             },

@@ -331,6 +331,9 @@ body[mode='focus'] #general {
     display:none !important;
 }
 
+.justify {
+    text-align: justify;
+}
 .listEntry {
     border-top: 1px solid var(--inactive);
     background: var(--inactiveWeak);
@@ -358,7 +361,6 @@ body[mode='focus'] #general {
 .graph {
     width:400px;
     border-color: var(--inactive);
-    border-left: 2px solid var(--inactive);
 }
 
 .xaxis {
@@ -371,8 +373,12 @@ body[mode='focus'] #general {
     transform:translateX(-50%);
 }
 
+.yaxis {
+    border-left: 2px solid var(--inactive);
+}
+
 .timeLine {
-    border-left: 1px solid var(--inactive);
+    border-left: 1px dotted var(--inactive);
 }
 
 .transformCenterX {
@@ -382,6 +388,16 @@ path {
     fill:none;
     stroke-width:1.5;
     stroke: var(--inactiveStrong);
+}
+
+.stackedPath {
+    /* fill:white; */
+    stroke:white;
+}
+
+.stackedPath:hover {
+    fill:blue;
+    /* opacity:0.1; */
 }
 
 .routePath {
@@ -415,7 +431,7 @@ svg:hover .routePath:hover + .routePath {
 .hoverLine {
     border-left:3px solid var(--inactive);
     margin-left:-3px;
-    opacity:0.25;
+    opacity:0.75;
 
 }
 

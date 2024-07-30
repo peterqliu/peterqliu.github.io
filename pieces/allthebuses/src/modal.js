@@ -199,7 +199,7 @@ const modal = {
             const data = Object.keys(routeSet).sort()
                 .map(route=>({route, ...routeSet[route]}), ({route})=>route);
 
-            console.log(data)
+            // console.log(data)
             const r = {
                 append: 'section',
                 attr: {class: d=> `route listEntry`},
@@ -349,40 +349,39 @@ const modal = {
 
             const l = {
                 append: 'div',
-                attr: {class:'inline-block hoverChildVisible'},
+                attr: {class:'inline-block hoverChildVisible relative'},
                 children: [
-                    {
-                        append:'div',
-                        attr: {class:'relative cursor-crosshair'}
-                    },
+                    // {
+                    //     append:'div',
+                    //     attr: {class:'relative cursor-crosshair'}
+                    // },
                     {
                         append:'div',
                         attr: {class:'modalSmall align-t absolute mr3', id:'yLabelMax'},
                         style:{ transform:'translate(-110%, -50%)'},
-                        text: 'xxx'
+                        // text: '100%'
                     },
                     {
                         append:'div',
                         attr: {class:'modalSmall bottom absolute mr3', id:'yLabelMin'},
                         style:{ transform:'translate(-110%, -50%)'},
-                        // text: 'xxx'
                     },
                     {
                         append:'div',
-                        attr:{class:'absolute h-full hoverLine none events-none'}
+                        attr:{class:'absolute h-full hoverLine none events-none z5'}
                     },
 
                     {
                         append:'div',
-                        attr:{class:'relative'},
+                        attr:{class:'relative cursor-crosshair'},
                         children: [
                             {
                                 append:'div',
-                                attr:{class:'timeLines'}
+                                attr:{class:'timeLines z-neg1'}
                             },
                             {
                                 append: 'svg',
-                                attr:{class:'graph align-t h180', preserveAspectRatio:'xMinYMin meet'},
+                                attr:{class:'graph yaxis align-t h180 z5', preserveAspectRatio:'xMinYMin meet'},
                                 children: [
                                     {
                                         append:'path',
@@ -407,82 +406,13 @@ const modal = {
                     },
                     {
                         append:'div',
-                        attr:{class:'xaxis modalSmall relative events-none pt6 h12'},
+                        attr:{class:'xaxis modalSmall relative events-none pt6 h12 mb12'},
                         children:[{append:'div'}]
                     }
                 ]
             }
 
             d3UI(container, l);
-            return;
-            const graphContainer = container.append('div')
-                .attr('class', 'inline-block')
-
-            const graph = graphContainer
-                .append('div')
-                .attr('class', 'relative hoverChildVisible cursor-crosshair');
-            // ylabel
-            graph.append('div')
-                .attr('class', 'modalSmall align-t absolute mr3')
-                .attr('id', 'yLabelMax')
-                .style('transform', 'translate(-110%, -50%)')
-                .text('xxx')
-
-            graph.append('div')
-                .attr('class', 'modalSmall bottom absolute mr3')
-                .attr('id', 'yLabelMin')
-                .style('transform', 'translate(-110%, 50%)')
-                // .text('xxx')
-
-            const graphNotation = graph
-                .append('div')
-                .attr('class', 'events-none absolute modalSmall z5 graphNotation none bg-lighten75 px6 py3');
-
-            graphNotation
-                .selectAll('span')
-                .data(['OB highlight mr3', 'IB highlight mr3', 'dashedUnderline', 'block date'])
-                .enter()
-                .append('span')
-                .attr('class', d=>d)
-                .attr('id', (d,i)=> i===2 ? 'percent' : '')            
-
-            graph
-                .append('div')
-                .attr('class', 'absolute h-full hoverLine none events-none')
-                // .style('margin-left', )
-
-            graph
-                .append('div')
-                .attr('class', 'timeLines')
-
-            const svg = graph
-                .append('svg')
-                .attr('class', 'graph align-t h180')
-                .attr('preserveAspectRatio',  'xMinYMin meet')
-
-            svg
-                .selectAll('path')
-                .data([['IB', 'capacity'], ['OB', 'riding'], ['dashedUnderline', 'fraction']])
-                .enter()
-                .append('path')
-                .attr('class', d=>d[0])
-                .attr('id', d=>d[1])
-
-            graphContainer
-                .append('div')
-                .attr('class', 'xaxis modalSmall relative events-none pt6 h12')
-                .append('div')
-                // .attr('class', 'mt6 h12')
-                // .selectAll('span')
-                // .data([
-                //     'yesterday fl inline-block bg-white', 
-                //     'midnight opacity25 inline-block bg-white absolute', 
-                //     'today fr inline-block bg-white'
-                // ])
-                // .enter()
-                // .append('span')
-                // .attr('class', d=>d)
-
         },
 
         update: function() {
@@ -502,7 +432,7 @@ const modal = {
                 
                 this.updateTimeAxis();
                 this.updateUtilization({capacity, riding, HHMM});
-                this.updateUtilizationDelta({capacity, riding, HHMM})
+                // this.updateUtilizationDelta({capacity, riding, HHMM})
                 this.updateOccupancy({occupancy, HHMM})
                 // this.updateBlend({blend:routeBlend, riding, HHMM})
 
@@ -510,7 +440,6 @@ const modal = {
         },
 
         updateTimeAxis: function() {
-
 
             // x axis labels
             const today = app.utils.getCurrent(undefined, {weekday: 'short'});
@@ -542,27 +471,9 @@ const modal = {
             d3UI(d3.selectAll('.timeLines'), {
                 append:'div',
                 data: [timeData], 
-                attr:{class:`absolute h-full z0 timeLine border-l transformCenterX`},
+                attr:{class:`absolute h-full timeLine border-l transformCenterX`},
                 style:{'margin-left': d=>d.p}
             })
-
-            // axis.selectAll('span')
-            //     .data(timeData)
-            //     .enter()
-            //     .append('span')
-            //     .attr('class', 'absolute transformCenterX bg-white')
-            //     .text(d=>d.d)
-            //     .style('margin-left', d=>d.p)
-
-            // d3.selectAll('.timeLines')
-            //     .selectAll('.timeLine')
-            //     .data(timeData)
-            //     .enter()
-            //     .append('div')
-            //     .attr('class', (d,i) =>`absolute h-full z0 timeLine border-l transformCenterX`)
-            //     .style('margin-left', d=>d.p)
-            //     .style('')
-
 
         },
 
@@ -585,9 +496,8 @@ const modal = {
                 // const {riding} = route;
                 const fraction = route.riding
                     .map((r,i)=> riding[i] ? r/riding[i] : 0);
-                // console.log(route.riding, riding)
                 const meetsThreshold = fraction.find(f=>f>0.1);
-                // console.log(r.riding, tooSmall)
+
                 if (meetsThreshold) eligibleRoutes.push({...route, fraction})
                 else {
                     console.log('ts')
@@ -794,28 +704,80 @@ const modal = {
             const occupancyProportions = occupancy.map((array,aI)=>array.map(n=>n/occupancySums[aI]));
             const occupation = d3.select('#occupancy');
 
-            crossCutNestedArray(occupancyProportions).slice(0,4)
-                .forEach((plot,index)=>{
-                    occupation.select('.graph')
-                        .append('path')
-                        .datum(plot)
-                        .attr('d', d3.line()
-                            .x((d,i) => width * i/plot.length)
-                            .y(d => height * (1 - d))
-                        )
-                        .attr('class', 'IB')
-                        .style('stroke-width', 0.25*index+1)
-                })
 
+            let tempAccumulator = new Array(occupancy.length).fill(0);
+
+            // stacked plots
+            const plots = crossCutNestedArray(occupancyProportions)
+                .map((plot,index)=>{
+                    tempAccumulator = plot.map((p,pI)=>p+tempAccumulator[pI]);
+                    return tempAccumulator
+                })
+                .slice(0,3)
+                .reverse();
+
+
+            const stackedColors = new Array(plots.length+1).fill(1)
+                .map((p,pI) => d3.interpolateRgb(c.color.IB, "white")((pI)/(plots.length*2)));
+
+
+
+
+            const graph = occupation.select('.graph');
+            var hoveredIndex;
+
+            graph
+                .append('rect')
+                .attr('width', 999)
+                .attr('height', 999)
+                .attr('fill', c.color.IB)
+
+            graph
+                .selectAll('.stackedPath')
+                .data(plots)
+                .enter()
+                .append('path')
+                .datum(plot=>[-10,...plot, plot[plot.length-1], -10])
+                .attr('d', d3.line()
+                    .x((d,i) => width * (i-1)/plots[1].length)
+                    .y(d => height * (1 - d))
+                )
+                .style('fill', (d,i)=>stackedColors[i+1])
+                .attr('class', 'stackedPath')
+                .on('mousemove', (d,i)=>hoveredIndex = i+1)
+            
 
             modal.trendTab.bindHoverFunctionality(occupation, widthFraction => {
+
+                if (!document.querySelector('path:hover')) hoveredIndex = 0;
                 const index = Math.round(occupancy.length * widthFraction);
 
+                const plotIndex = 6-3-hoveredIndex;
+                const percentage = occupancyProportions[index][plotIndex]
                 return {
+                    '.IB': [Math.round(percentage*100), '% of fleet was ', c.occupancy.descriptor[hoveredIndex].toLowerCase()].join(''),
                     '.date': HHMM[index],
                 }
             })
 
+            occupation.select('.xaxis')
+                .classed('xaxis', false)
+            occupation.select('.yaxis')
+                .classed('yaxis', false)
+
+            d3UI(occupation, 
+                {
+                    append: 'div',
+                    klass: 'legend justify mb3 mt6',
+                    children:[{
+                        append:'span',
+                        data:[stackedColors],
+                        style: {background:d=>d},
+                        klass: 'px6 mr6 color-white  inline-block',
+                        text: (d,i)=>c.occupancy.descriptor[i]
+                    }]
+                }
+            )
         },
         
         bindHoverFunctionality: function(element, cb) {

@@ -1,0 +1,449 @@
+
+:root {
+    --IB: rgba(170, 51, 69, 1);
+    --OB: rgba(65, 166, 178, 1);
+    --road: rgb(215, 210, 193);
+    --dark: hsl(48deg,17.4%,65%);
+    --inactive: hsl(48deg,17.4%,85%);
+    --inactiveStrong: hsl(48deg,17.4%,60%);
+    --inactiveWeak: hsl(50, 100%, 99%);
+    --inactiveTranslucent: hsla(48deg,30%,75%, 0.25);
+}
+
+body { 
+    /* margin:0; 
+    padding:0;  */
+    font-family: 'Open Sans', Verdana, sans-serif;
+    overflow:hidden;
+}
+
+#map, #overlay { 
+    position:absolute; 
+    top:0; 
+    bottom:0; 
+    width:100%; 
+    background:#B8C8D3;
+}
+/*#controls { position:absolute; top:0; left:0; }*/
+
+#back {
+    z-index: 99;
+    cursor:pointer;
+    display:none;
+    transition:transform 0.1s;
+    transform-origin: center;
+}
+body[mode="focus"] #back {
+    display:block;
+}
+#back:hover {
+    transform:scale(1.25);
+    opacity:1;
+}
+canvas {
+    cursor:auto;
+}
+.mapboxgl-map {
+    font-family: inherit
+}
+
+.mapboxgl-popup {
+    z-index: 99;
+}
+
+.mapboxgl-popup-content {
+    padding:20px;
+    /* font-size:1.25em; */
+    border-radius: 5px;   
+    color:#bbb;
+    box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
+    pointer-events: none;
+    transition:transform 0.1s;
+}
+
+.header {
+    font-weight:100;
+    font-size:3em;
+    color:#666;
+    line-height: 1.25em;    
+}
+
+.title {
+    font-weight:100;
+    font-size:2em;
+    color:#666;
+    line-height: 1.25em;
+}
+
+.subtitle {
+    font-weight:100;
+    font-size:1.5em;
+    color:#666;
+    line-height: 1.5em;   
+}
+
+.body {
+    font-size:1.25em;
+    color: #bbb;
+}
+path.IB,
+.IB.highlight {
+    color: var(--IB);
+    stroke: var(--IB);
+
+}        
+
+.IB.bgHighlight {
+    background: var(--IB);
+    color:white;
+    padding:2px 5px;
+    font-size:0.9em;
+    border-radius:2px;
+}
+
+.OB.bgHighlight {
+    background: var(--OB);
+    color:white;
+    padding:2px 5px;
+    font-size:0.9em;
+    border-radius:2px;
+}
+
+
+.IB.directionText:after {
+    content: 'Inbound'
+}    
+
+path.OB,
+.OB.highlight {
+    color: var(--OB);
+    stroke: var(--OB);
+}
+
+.OB.directionText:after {
+    content: 'Outbound'
+}      
+
+#loader {
+    z-index: 99;
+    width:100%;
+    height:100%;
+    /*display: none;*/
+    backdrop-filter: blur(10px);
+    position: absolute;
+    pointer-events: none;
+    transition:opacity 0.25s;
+}
+
+#spinner {
+    z-index: 99;
+    width:10vh;
+    height:10vh;
+    margin-left:50vw;
+    margin-top:50vh;
+    background: #aa3345;
+    animation-duration: 1.2s;
+    animation-iteration-count: infinite;
+    transform-origin: center;
+    fill-opacity:0.8;
+    border-radius: 50%;
+    border-top-right-radius: 0%;
+    position:absolute;
+    animation-name: spinner;
+
+}
+
+#modal {
+    position:absolute;
+    /* bottom:0;
+    right:0; */
+    background:white;
+    box-shadow: 0 2px 8px rgba(186, 180, 157, 1);
+    border-radius:10px;
+    z-index: 90;
+    max-height:96vh;
+    overflow:hidden;
+}
+
+.modalSmall {
+    /* font-size: 0.5em; */
+    color: var(--inactiveStrong);
+    line-height: 1.25em;
+}
+
+.strong {
+    color: var(--inactiveStrong);
+}
+
+.dark {
+    color: var(--dark);
+}
+.bar {
+    height: 4px;
+    width: 100%;
+    border-radius: 2px;
+    overflow: visible;
+    opacity:0.8;
+    margin:5px 0px;
+    background: #eee;
+    position:relative;
+}
+
+#inboundBar {
+    background:var(--IB);
+    text-align: right;
+    width: 40%;
+    height: 100%;
+}
+
+.direction {
+    position:relative;
+}
+
+.directionBar {
+    background-color: var(--inactiveTranslucent);
+    border-radius:4.5px;
+    height:9px;
+}
+
+.directionLabel *:first-child:before {
+    content:'← ';
+}
+
+.directionLabel *:last-child:after {
+    content:' →'
+}
+
+.barExtent {
+    width: calc(100% - 9px);
+    padding-right:9px;
+}
+.stopHash {
+    width:1px;
+    height:4px;
+    border-radius:2px;
+    background:#ccc;
+    /* display:inline; */
+    position:absolute;
+}
+
+
+/* marker styling is applied to an :after pseudoselector, where its styling transforms also apply.
+this lets us stack on translation transforms to the element proper, without adding a nested element */
+
+.marker:after {
+    display: inline-block;
+    content:'.';
+    font-size:0em;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border-top-right-radius: 0px;
+}
+
+.ib.marker:after {
+    background: var(--IB);
+}
+
+.ob.marker:after {
+    background: var(--OB);
+}
+
+.barExtent .marker {
+    width:calc(100% - 9px);
+}
+
+.left.marker:after {
+    transform: rotate(45deg);
+}
+
+.right.marker:after {
+    transform: rotate(45deg);
+}
+
+.down.marker:after {
+    transform: translateY(-50%) rotate(135deg)
+}
+.big.marker:after {
+    width: 22px;
+    height: 22px;
+}
+
+#routeBuses .marker {
+    position:absolute;
+    left:14px;
+    top:0;
+}
+
+.animateTransform {
+    transition:transform 3s;
+}
+
+/* .routeStop .subtitle{
+    margin:0px 25px;
+} */
+
+#routeTrack {
+    background: var(--inactive);
+    left: 21px;
+    top: calc(29px - 4px);
+    opacity: 0.3;
+    bottom: calc(29px - 4px);
+    width: 8px;
+}
+
+.routeStop:first-child:before {
+    top:calc(50% - 5px);
+    border-radius: 5px;
+}
+
+.routeStop:last-child:before {
+    top:0;
+    border-radius: 0 0 5px 5px;
+    height: calc(50% + 5px);
+}
+
+
+.quiet {
+    opacity:0.6;
+}
+
+@-webkit-keyframes spinner {
+    0% {
+        transform: translateX(-50%) translateY(-50%) rotate(0deg);
+    }
+    50% {
+        /* transform: scale(0.8) translateX(-50%) translateY(-50%) rotate(450deg) ; */
+    }
+    100% {
+        transform: translateX(-50%) translateY(-50%) rotate(720deg) ;
+    }
+}
+
+#routeFocus {
+    display:none !important;
+}
+body[mode='focus'] #routeFocus {
+    display:flex !important;
+}
+
+body[mode='focus'] #general {
+    display:none !important;
+}
+
+.justify {
+    text-align: justify;
+}
+.listEntry {
+    border-top: 1px solid var(--inactive);
+    background: var(--inactiveWeak);
+    padding: 16px 20px;
+    cursor: pointer;
+    position: relative;
+}
+
+.listEntry:hover {
+    background:white;
+}
+
+.listEntry .notation {
+    position: absolute;
+    top: -24%;
+    transform: translateY(25%);
+    right: 20px;
+    text-align: right;
+    background: var(--inactiveWeak)
+}
+
+.listEntry:first-of-type {
+    border:none;
+}
+.graph {
+    width:400px;
+    border-color: var(--inactive);
+}
+
+.xaxis {
+    border-top: 2px solid var(--inactive);
+}
+
+.xaxis .midnight {
+    content:'🌙';
+    filter:brightness(0);
+    transform:translateX(-50%);
+}
+
+.yaxis {
+    border-left: 2px solid var(--inactive);
+}
+
+.timeLine {
+    border-left: 1px dotted var(--inactive);
+}
+
+.transformCenterX {
+    transform:translateX(-50%);
+}
+path {
+    fill:none;
+    stroke-width:1.5;
+    stroke: var(--inactiveStrong);
+}
+
+.stackedPath {
+    /* fill:white; */
+    stroke:white;
+}
+
+.stackedPath:hover {
+    fill:blue;
+    /* opacity:0.1; */
+}
+
+.routePath {
+    stroke-width:0.5;
+    stroke:var(--OB);
+    stroke-opacity:0.5;
+}
+
+svg:hover .routePath {
+    fill:white;
+    stroke:var(--inactive);
+
+}
+
+svg:hover .routePath:hover{
+    fill:var(--OB);
+}
+
+svg:hover .routePath:hover,
+svg:hover .routePath:hover + .routePath {
+    stroke-width:0;
+}
+
+.hoverChildVisible:hover .graphNotation,
+.hoverChildVisible:hover .hoverLine {
+    display: block !important;
+    bottom:1;
+    left:1;
+}
+
+.hoverLine {
+    border-left:3px solid var(--inactive);
+    margin-left:-3px;
+    opacity:0.75;
+
+}
+
+#blendBar {
+    background:var(--OB);
+}
+
+#blendBar > div:nth-child(odd) {
+    background:rgba(255,255,255,0.2)
+}
+
+.dashedUnderline {
+    border-bottom:1px dashed;
+    stroke-dasharray:3,2;
+}

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Display a map on a webpage</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js"></script>
+<script src="./sessionData.js"></script>
+<script src="./images.js"></script>
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="./express-ml.js"></script>
+<script src="constants.js"></script>
+<script src="geomData.js"></script>
+
+<style>
+    body { margin: 0; padding: 0; font-family:sans-serif }
+    #map { position: absolute; top: 0; bottom: 0; width:calc(100% - 350px) }
+    #panel { position: absolute; top: 0; bottom: 0; width: 350px; right:0; overflow:scroll}
+
+    .wfull {
+        width:100%;
+    }
+    .portrait {
+        width:50px;
+        height:50px;
+        border-radius:50%;
+        /* display:inline-block;
+        object-fit: cover; */
+        transition:transform 0.1s;
+        margin-right:10px;
+    }
+
+    .inlineBlock {
+        display:inline-block;
+    }
+    .p10 {
+        padding:10px;
+    }
+
+    .m20 {
+        margin:20px;
+    }
+    
+    .mt10 {
+        margin-top:10px;
+    }
+    /* .portrait:hover {
+        transform:scale(1.5);
+        transform-origin: center center;
+    } */
+
+    .partyCount {
+        color:white;
+        margin-right:5px;
+        border-radius:5px;
+        padding: 2px 5px;
+        display: inline-block;
+        margin-bottom:5px;
+    }
+
+    .marker img {
+        width:50px;
+        height:50px;
+        border-radius:50%;
+        object-fit: cover;
+    }
+
+    #detailPanel {
+        position:fixed;
+        z-index: 99;
+        bottom:0px;
+        left:0px;
+        background:white;
+        border-radius:10px;
+        padding:20px;
+        max-width: 50%;
+        padding-bottom:10px;
+    }
+    .mapboxgl-popup-content {
+        padding:10px;
+        pointer-events:none;
+    }
+
+    .zoomed {
+        display:none;
+    }
+
+    .repEntry {
+        margin-bottom:10px;
+    }
+</style>
+</head>
+<body>
+<div id="map">
+    <img class="zoomed m20" src="zoomout.svg" style="position:absolute; z-index: 99" onclick="setModalFocus(); setMapFocus();"/>
+    <div id="detailPanel" class="zoomed m20">
+        <b id="head" style="font-size:1.5em;"></b>
+        <div id="subhead" style="font-size:1.25em; margin-bottom:6px"></div>
+
+        <div class="content"></div>
+    </div>
+</div>
+<div id="panel">
+    <div class="m20">
+        <input type="range" min="0" max="112" value="0" class="wfull" id="slider">
+        <button class="wfull mt10" onclick="state.vis.playback=true">play/pause</button>
+    </div>
+
+    <div class="m20">
+        <h1 class=""></h1>
+        <div id="sessionDate"></div>
+    </div>
+    <div class="m20" id="dotSummary"></div>
+    <div class="m20" id="dots" style="font-size:0.5em"></div>
+    <div id="mapToggles" style="border-top:1px solid #ccc">
+        <h3 class="m20">Map settings</h3>
+    </div>
+
+</div>
+<script src="app.js"></script>
+
+<script src="map.js"></script>
+
+<script>
+    
+    images = Object.fromEntries(images.map(d=>([d[0].toLowerCase(), [d[1], d[2]]])));
+
+    const state = {
+        activeId:undefined,
+        activeSession: 1,
+        spotHistoryLayers:[],
+        playback: false,
+        lastRender: Date.now(),
+        colorMode: 'fills',
+        popup: new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick:false,
+            offset:15
+        }).addTo(map),
+        vis: {
+
+            set portraits(visibility) {
+                map.setLayoutProperty('portraits', 'visibility', visibility ==='on' ? 'visible' : 'none')
+            },
+
+            set color(mode) {
+                setMapFocus();
+
+                state.colorMode = mode;
+                d3.select('.mapboxgl-popup')
+                    .style('display', mode==='fills' ? 'none' : 'block')
+
+                if (mode==='fills') {
+                    map.setPaintProperty('district-fill', 'fill-opacity', 0.5)
+                        .setLayoutProperty('poles', 'visibility', 'none')
+                        .setPaintProperty('district-lines', 'line-color', '#dedede')
+                        .easeTo({pitch:30})
+                }
+                
+                else {
+                    map.setPaintProperty('district-fill', 'fill-opacity', 0)
+                        .setLayoutProperty('poles', 'visibility', 'visible')
+                        .setPaintProperty('district-lines', 'line-color', '#ccc')
+                        .easeTo({pitch:0})
+
+                }
+                
+            },
+
+            set playback(playing) {
+
+                if (!state.playback) {
+                    state.playback = setInterval(()=>{
+
+                        if (!sessionData[state.activeSession+1]) state.activeSession = 0;
+                        setSession((state.activeSession++));
+                        document.getElementById('slider')
+                            .setAttribute('value', state.activeSession)
+                    }, 1000)
+                }
+
+                else {
+                    clearInterval(state.playback);
+                    state.playback = false;
+                }
+
+            }
+
+
+        }
+    }
+
+    map
+        
+        // .addCircle('poles', {
+        //     filter:['!', ['has', 'point_count']],
+        //     color:'blue',
+        //     'stroke-color':'white',
+        //     'stroke-width':2,
+        //     'stroke-opacity':0.25,
+        //     radius:10
+        // })
+
+   
+    document.getElementById('slider').addEventListener('input', function () {
+        const val = parseFloat(document.getElementById('slider').value)
+        setSession(val);
+        // console.log(Object.values(district_info)[val-1].date);
+
+    }, false);
+
+    // map.on('zoom', e=>{
+    //     const z = map.getZoom();
+    //     if (z>4 && z<8) map.setPitch(Math.sin((z-4)/4)*60)
+        
+    // })
+</script>
+
+</body>
+</html>

@@ -221,7 +221,6 @@ function setSession(num) {
 
     });
 
-    console.log('COUNTS', blacklistedIds)
     Object.entries(exclusiveAtLarges)
         .forEach(([id, parties])=>{
             let dotString = '';
@@ -240,9 +239,7 @@ function setSession(num) {
                 }
             })
         })
-    // console.log('atlarge', blacklistedIds)
-    // console.log('exclusiveatlarge', exclusiveAtLarges)
-    // console.log(polePoints)
+
     const ddsColor = [
         'match', 
         ['get','id'],
@@ -314,8 +311,6 @@ function setModalFocus(ft){
 
     if (!ft) return
 
-    console.log(ft.properties)
-
     const {statename, district, id, startcong, endcong} = (ft.properties)
 
     const districtNotation = parseFloat(district) ? `${sessionInfo[parseFloat(district)-1].congress} district` : 'At large'
@@ -360,5 +355,70 @@ function setModalFocus(ft){
         .append('i')
         .text(r=>r.party)
 
+
+}
+
+function viewStateHistory(state) {
+
+    const periods = stateDistrictPeriods[state];
+
+    const layerHeight = 45000;
+    const layerThickness = 1000;
+
+    periods.forEach(([start,end], index)=>{
+        // console.log(sessionInfo[start-1].y[0],sessionInfo[end-1].y[1]);
+        map.addLayer({
+            id:[state, index].join('-'),
+            type:'fill-extrusion',
+            source:'dists',
+            'source-layer':'districts',
+            filter:['all', ['==', 'startcong', JSON.stringify(start)], ['==', 'statename', state]],
+            paint:{
+                'fill-extrusion-color':'white',
+                'fill-extrusion-opacity':0.5,
+                'fill-extrusion-base':index*layerHeight,
+                'fill-extrusion-height':index*layerHeight+layerThickness,
+
+            }
+
+        })
+    })
+}
+
+function viewSpotHistory(e) {
+
+    state.spotHistoryLayers.forEach(l=>map.removeLayer(l))
+    state.spotHistoryLayers =[];
+    // map.setLayoutProperty('reference-layer', 'visibility', 'visible')
+    const districts = map.queryRenderedFeatures(e.point, {layers: ['reference-layer']})
+        .map(d=>d.properties)
+        .filter(p=>p.district!=='0'); // TODO filter out atlarges for now
+
+    const sorted = districts.sort((a,b)=>parseFloat(a.startcong)-parseFloat(b.startcong))
+
+    console.log(sorted)
+    const layerHeight = 5000;
+    const layerThickness = 1000;
+
+    
+    sorted.forEach((l,i)=>{
+        const layerName = ['dist', i].join('-');
+        state.spotHistoryLayers.push(layerName)
+        map.addLayer({
+            id:layerName,
+            type:'fill-extrusion',
+            source:'dists',
+            'source-layer':'districts',
+            filter: ['==', 'id', l.id],
+            paint:{
+                'fill-extrusion-color':'white',
+                'fill-extrusion-opacity':0.5,
+                'fill-extrusion-base': i*layerHeight,
+                'fill-extrusion-height': i*layerHeight+layerThickness,
+
+            }
+
+        })
+    })
 
 }

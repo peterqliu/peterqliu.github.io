@@ -19,6 +19,19 @@ map.on('load', ()=> {
 
     map
     .addLayer({
+        id:'reference-layer',
+        type: 'fill',
+        source:'dists', 
+        'source-layer': 'districts',
+        // filter:['==', 'nothing', 'by default'],
+        layout:{
+            // visibility: 'none'
+        },
+        paint: {
+            'fill-opacity':0.00000001,
+        }
+    })
+    .addLayer({
         id:'district-fill',
         type: 'fill',
         source:'dists', 
@@ -36,71 +49,71 @@ map.on('load', ()=> {
             // 'fill-color':'steelblue'
 
         }
-        }, 'place-label')
-        .addLayer({
-            id:'native-land',
-            type: 'fill',
-            source:'dists', 
-            'source-layer': 'districts',
-            paint: {
-                'fill-pattern':'crosshatch',
-                'fill-opacity':0.1
-            }
-            }, 'place-label')
-        .addLine('district-lines', {
+    }, 'place-label')
+    .addLayer({
+        id:'native-land',
+        type: 'fill',
+        source:'dists', 
+        'source-layer': 'districts',
+        paint: {
+            'fill-pattern':'crosshatch',
+            'fill-opacity':0.1
+        }
+    }, 'place-label')
+    .addLine('district-lines', {
             source: 'dists',
             'source-layer':'districts',
             color:'#dedede',
             width: {stops:[[0,0.5],[12,3]]},
             // opacity:0.25
-        }, 'place-label')
+    }, 'place-label')
 
 
-        .addLine('atLarge', {
-            source:'dists', 
-            'source-layer': 'districts',
-            filter:['has', 'none'],
-            color: 'blue',
-            width: {stops:[[0,2],[12,6]], base:1.5},
-            // dasharray:[0,3],
-            cap:'round'
-        }, 'place-label')
-        .addLayer({
-            id: 'poles',
-            type: 'symbol',
-            filter:['!', ['has', 'point_count']],
-            source: {
-                type:'geojson',
-                // cluster:true,
-                // clusterRadius:15,
-                data: {
-                    "type": "FeatureCollection",
-                    "features": []
-                }
-            },
-            layout:{
-                'text-field':['get', 'dots'],//'●',
-                'text-size':{stops:[[0,12],[12, 500]], base:2},
-                'text-allow-overlap': true,
-                'text-line-height':0.5,
-                visibility: 'none'
-                // 'text-pitch-alignment': 'map'
-            },
-            paint: {
-                'text-color':'blue',
-                'text-halo-color':'white',
-                'text-halo-width':2,
-                'text-opacity':0.9999
-                // 'circle-radius': {stops:[[0,2],[10, 12]], base:1.5}
+    .addLine('atLarge', {
+        source:'dists', 
+        'source-layer': 'districts',
+        filter:['has', 'none'],
+        color: 'blue',
+        width: {stops:[[0,2],[12,6]], base:1.5},
+        // dasharray:[0,3],
+        cap:'round'
+    }, 'place-label')
+    .addLayer({
+        id: 'poles',
+        type: 'symbol',
+        filter:['!', ['has', 'point_count']],
+        source: {
+            type:'geojson',
+            // cluster:true,
+            // clusterRadius:15,
+            data: {
+                "type": "FeatureCollection",
+                "features": []
             }
-        })
-        .addIcon('portraits', {
-            image:['get', 'icon'],
-            'allow-overlap': true,
-            'ignore-placement':true,
-            visibility: 'none',
-            padding:0
-        })
+        },
+        layout:{
+            'text-field':['get', 'dots'],//'●',
+            'text-size':{stops:[[0,12],[12, 500]], base:2},
+            'text-allow-overlap': true,
+            'text-line-height':0.5,
+            visibility: 'none'
+            // 'text-pitch-alignment': 'map'
+        },
+        paint: {
+            'text-color':'blue',
+            'text-halo-color':'white',
+            'text-halo-width':2,
+            'text-opacity':0.9999
+            // 'circle-radius': {stops:[[0,2],[10, 12]], base:1.5}
+        }
+    })
+    .addIcon('portraits', {
+        image:['get', 'icon'],
+        'allow-overlap': true,
+        'ignore-placement':true,
+        visibility: 'none',
+        padding:0
+    })
         // .addLayer({
         //     id:'district-extrude',
         //     type: 'fill-extrusion',
@@ -124,14 +137,13 @@ map.on('click',  e=>{
 
     if (ft) {
 
-        // if (state.colorMode === 'fills') {
-            setMapFocus(ft)
-        // }
+        setMapFocus(ft)
     
         setModalFocus(ft)
-        
+        // viewStateHistory(ft.properties.statename)
     }
 
+    // viewSpotHistory(e)
 })
 .on('mousemove',  e=>{
 
@@ -203,31 +215,30 @@ function setMapFocus(ft) {
                 // maxZoom: map.getZoom()
             })
             
+            map
+                .addLayer({
+                    id:newHighlightName,
+                    type: 'fill-extrusion',
+                    source:'dists', 
+                    'source-layer': 'districts',
+                    filter:['==', 'id', ft.properties.id ],
+                    paint: {
+                        'fill-extrusion-opacity': isFills ? 0.9 : 0.25,
+                        'fill-extrusion-color':map.getPaintProperty('district-fill', 'fill-color'),
+                        'fill-extrusion-height':0
+                    }
+                },'place-label')
 
-                map
-                    .addLayer({
-                        id:newHighlightName,
-                        type: 'fill-extrusion',
-                        source:'dists', 
-                        'source-layer': 'districts',
-                        filter:['==', 'id', ft.properties.id ],
-                        paint: {
-                            'fill-extrusion-opacity': isFills ? 0.9 : 0.25,
-                            'fill-extrusion-color':map.getPaintProperty('district-fill', 'fill-color'),
-                            'fill-extrusion-height':0
-                        }
-                    },'place-label')
-
-                    .setPaintProperty(
-                        newHighlightName, 
-                        'fill-extrusion-base',
-                        isFills ? {stops:[[0,68000],[14,6800]]} : 0
-                    )
-                    .setPaintProperty(
-                        newHighlightName, 
-                        'fill-extrusion-height',
-                        isFills ? {stops:[[0,70000*2],[14,7000*1]]}: 1
-                    )
+                .setPaintProperty(
+                    newHighlightName, 
+                    'fill-extrusion-base',
+                    isFills ? {stops:[[0,68000],[14,6800]]} : 0
+                )
+                .setPaintProperty(
+                    newHighlightName, 
+                    'fill-extrusion-height',
+                    isFills ? {stops:[[0,70000*2],[14,7000*1]]}: 1
+                )
 
             
         }

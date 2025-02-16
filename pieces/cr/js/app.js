@@ -3,7 +3,7 @@ import { RenderPass } from '../jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../jsm/postprocessing/UnrealBloomPass.js';
 import { OrbitControls } from '../jsm/controls/OrbitControls.js';
 import {skyMaterial, mat} from './material.js'
-import * as THREE from '../../build/three.module.js';
+import * as THREE from '../build/three.module.js';
 // import * as ium from "https://cdn.skypack.dev/three-instanced-uniforms-mesh@0.45.0"
 import { OBJLoader } from '../jsm/loaders/OBJLoader.js';
 

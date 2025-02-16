@@ -1,6 +1,6 @@
 import { LineMaterial } from '../jsm/lines/LineMaterial.js';
 import {state} from './state.js'
-import * as THREE from '../../build/three.module.js';
+// import * as THREE from '../../build/three.module.js';
 import {starfieldVertex, starfieldFragment} from './shaders/starfield.js';
 import {blocks, noiseExpression, defineProgress} from './shaders/blocks.js';
 

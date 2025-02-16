@@ -1576,7 +1576,7 @@ h2 .dark > a[href^='#'] {
   font-family:'icon';
     src:url('/web/20160423022541im_/https://www.mapbox.com/base/latest/icon.eot?v=24');
     src:url('/web/20160423022541im_/https://www.mapbox.com/base/latest/icon.eot?v=24#iefix') format('embedded-opentype'),
-        url('/web/20160423022541im_/https://www.mapbox.com/base/latest/icon.woff?v=24') format('woff');
+        url('./icon.woff?v=24') format('woff');
   font-weight:normal;
   font-style:normal;
   }

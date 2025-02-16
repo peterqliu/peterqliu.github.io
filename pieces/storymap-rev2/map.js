@@ -1,4 +1,4 @@
-mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHJqdG92OTBkNTg0M3BsNDY0d3NudWcifQ.0z4ov_viFE-yBMSijQpOhQ';
+mapboxgl.accessToken = 'pk.eyJ1IjoibmRyYy1tYXBwaW5nIiwiYSI6ImNtNzNxZ3VzeDAyNWYya3E4d3RwZjN6NDYifQ.6XaCKDxfdFRU4sK57cVQ_g';
 
 const map = new ExpressML(mapboxgl).Map({
     style:'mapbox://styles/peterqliu/cm3va5r50000r01sl52u7a6va',

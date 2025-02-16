@@ -7,7 +7,7 @@
     <script src='https://www.mapbox.com/labs/gl-snippets/util/utilities.js'></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css' rel='stylesheet' />
-    <link href='https://peterqliu.github.io/assets/base.css' rel='stylesheet' />
+    <link href='../../../assets/base.css' rel='stylesheet' />
     <script src='https://unpkg.com/cheap-ruler@2.5.0/cheap-ruler.js'></script>
     <script src="../../credentials.js"></script>
 
@@ -323,26 +323,27 @@
             })
         },
         queryFoursquare: function(cb){
+            const {startingPosition, query} = state;
+            var [lng, lat] = startingPosition;
+            var queryURL =`https://peterqliu-foursquareapi.web.val.run/?ll=${lat},${lng}&search=${query}`// 'https://api.foursquare.com/v2/venues/search?query='+state.query+'&limit=50&radius=50000&intent=browse&ll='+[coords[1], coords[0]]+'&client_id=MZDCFZGD22TREAJNG54DXPIBJXQPLQKAB54FPOQD0QKUPKWP&client_secret=1LJRQTLGZ31HL5YSKJCZNGJYOESNOOBBJDDWXA4VU5JTPZ2D&v=20171111';
 
-            var coords = state.startingPosition;
-            var queryURL = 'https://api.foursquare.com/v2/venues/search?query='+state.query+'&limit=50&radius=50000&intent=browse&ll='+[coords[1], coords[0]]+'&client_id=MZDCFZGD22TREAJNG54DXPIBJXQPLQKAB54FPOQD0QKUPKWP&client_secret=1LJRQTLGZ31HL5YSKJCZNGJYOESNOOBBJDDWXA4VU5JTPZ2D&v=20171111';
 
-
-            d3.json(queryURL, function (err, resp){
-                var venues = resp.response.venues;
+            d3.json(queryURL, function (err, venues){
+                // var venues = resp.response.venues;
 
                 var geojson = venues.map(function(venue){
+                    console.log(venue);
+                    const {address, name, lngLat, category} = venue;
 
                     var properties = {
-                        'name': venue.name,
-                        'url': venue.url,
-                        'address': venue.location.address
+                        name,
+                        address
                     }
 
-                    if (venue.categories[0]) {
-                        properties.icon = venue.categories[0].icon.prefix;
+                    if (category) {
+                        properties.icon = category.icon.prefix;
                     }
-                    return turf.point([venue.location.lng, venue.location.lat], properties)     
+                    return turf.point([lngLat[0], lngLat[1]], properties)     
                 })
 
                 state.locations.physical = turf.featureCollection(geojson);
@@ -380,6 +381,7 @@
                 state.updateSidebar('venue', resp);
             })
         },
+
         drawDirections: function(endpoints){
 
             //draw line to map

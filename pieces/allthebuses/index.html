@@ -17,16 +17,16 @@
         <div id='map'>
             <div id='modal' class="top right mr18 mt18">
                 <div id='general' class="flex flex--column" style="max-height: 96vh;">
-                    <div class="header px30 pt30 pb12">
+                    <div class="header px30 pt30 pb24">
                         Muni, this moment
                     </div>
                     <div class="px30 color-gray grid body txt-uppercas border-b border--gray-lighter cursor-pointer">
-                        <div class="tab w-1/3 align-l pb12 opacity50">Vehicles</div>
+                        <div class="tab w-1/3 align-l pb12 ">Vehicles</div>
                         <div class="tab w-1/3 align-center pb12 opacity50">Routes</div>
-                        <div class="tab w-1/3 align-r pb12">24h Trends</div>
+                        <div class="tab w-1/3 align-r pb12 opacity50">24h Trends</div>
                     </div>
                     <div class="flex-child-grow overflow-scroll">
-                        <div class="tabView overflow" style="display:none">
+                        <div class="tabView overflow">
                             <div id='' class="border-b border--gray-lighter">
                                 <div class='listEntry modalSmall'>
                                     <span class='left ob marker'></span>
@@ -48,13 +48,13 @@
                         </div>
 
                         <div id='routeList' class="tabView" style="display:none"></div>    
-                        <div class="tabView" id="trend" style="display:non">
+                        <div class="tabView" id="trend" style="display:none">
                             <div class="listEntry px30">
 
                                 <!-- UTILIZATION -->
-                                <span class="subtitle">Capacity utilization</span>
+                                <span class="subtitle pb12">Capacity utilization</span>
                                 <!-- <span class="fr modalSmall txt-underline utilization percentToggle">Show percentage</span> -->
-                                <div class="body"><span class="OB highlight">Ridership (est)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
+                                <div class="body pt3"><span class="OB highlight">Ridership (est)</span> / <span class="IB highlight">total capacity</span> = <span class="dashedUnderline">usage ratio (%)</span></div>
                                 <div class="relative mt12 mb12" id="utilization">
 
                                 </div>
@@ -67,7 +67,7 @@
                             <!-- OCCUPANCY -->
                             <div class="listEntry px30">
                                 <div class="subtitle">Occupancy distribution</div>
-                                <div class="body">Vehicle fullness, across the system</div>
+                                <div class="body pt3">Vehicle fullness, across the system</div>
                                 <div class="relative mt12" id="occupancy">
                                 </div>
 

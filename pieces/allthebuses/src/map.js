@@ -347,15 +347,18 @@ const animateDash = () => {
 
 const extantRouteGeometry = () => {
 
+	const {pathData} = c;
 	let extantRoutes = [];
 	s.buses.forEach(({dir:{id}})=>{
 		if (!extantRoutes.includes(id)) extantRoutes.push(id)
 	})
 
 	extantRoutes = extantRoutes
+		.filter(variant=>pathData[variant])
 		.map(variant=>{
 			const [route, direction] = variant.split('_');
-			return turf.lineString(c.pathData[variant], {direction: direction ==='0' ? 'OB':'IB', line:route, var:variant})
+			// console.log(variant,c.pathData[variant])
+			return turf.lineString(pathData[variant], {direction: direction ==='0' ? 'OB':'IB', line:route, var:variant})
 		})
 		.map((line, lineIndex)=>{
 			let offset = turf.lineOffset(line, 0.0015).geometry.coordinates;

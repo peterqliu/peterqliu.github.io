@@ -179,10 +179,12 @@ const modal = {
                         routeSet[name].lineVars[lineVar] = {dirNameShort, direction, buses: [], OB:[], IB:[], data: c.routeData[line][id]}
                     };
 
-                    const pathPoints = routeSet[name].lineVars[lineVar].data.path.geometry.coordinates;
-                    const busProgress = ruler.pointOnLine(pathPoints, lngLat).t;
-                    routeSet[name][direction].title =dirNameShort;
-                    routeSet[name][direction].buses.push({busProgress, linkedVehicleIds, vehiclePosition,direction})
+                    if (routeSet[name].lineVars[lineVar].data){
+                        const pathPoints = routeSet[name].lineVars[lineVar].data.path.geometry.coordinates;
+                        const busProgress = ruler.pointOnLine(pathPoints, lngLat).t;
+                        routeSet[name][direction].title =dirNameShort;
+                        routeSet[name][direction].buses.push({busProgress, linkedVehicleIds, vehiclePosition,direction})
+                    }
                 })
 
 
@@ -500,7 +502,6 @@ const modal = {
 
                 if (meetsThreshold) eligibleRoutes.push({...route, fraction})
                 else {
-                    console.log('ts')
                     tooSmall.riding = tooSmall.riding.map((r,rI)=> r+(route.riding[rI]||0)),
                     tooSmall.fraction = tooSmall.fraction.map((f,fI)=> f+(fraction[fI]||0))
 
@@ -768,7 +769,7 @@ const modal = {
             d3UI(occupation, 
                 {
                     append: 'div',
-                    klass: 'legend justify mb3 mt6',
+                    klass: 'legend justify mb3 mt12',
                     children:[{
                         append:'span',
                         data:[stackedColors],

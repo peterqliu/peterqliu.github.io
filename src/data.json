@@ -57,17 +57,18 @@
 						"Analyzing three strategies of increasing aggressiveness (SDS, SSP4, STPS), we studied both percentage and volume of stranded production, as well as projected effects on local employment."
 					]
 				},
+
 				{
-					"name":"Landgrab",
-					"tagline": "Earth bumps, on demand",
-					"url": "landgrab/#-112.418898,-112.521208,36.420777,36.341725",
+					"name":"Red Bull Heavy Water",
+					"tagline": "real waves, real time",
+					"url": "redbull",
 					"blurb": [
-						"Mapbox's focus in augmented reality fueled interest in immersive 3D experiences. We wanted to leverage our existing data and mapping stack for this emergent use case.",
-						"Several pieces fell into place to make this possible: our satellite team found a <a target='_blank' href='https://blog.mapbox.com/global-elevation-data-6689f1d0ba65'>nimble way</a> to deliver global elevation data via png's, and we began experimenting with Three.js for complex shape rendering. These enabled us to build a fully interactive <a target='_blank' href=''>3D map of the world</a>, a lá Google Earth.",
-						"To support developers building 3D worlds, we built a quick tool to inspect, select, and download the imagery and terrain information for a desired land tract."
-					]
-				},
-			
+						"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. In addition to a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
+						"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
+						],
+					"press": "Technology & Sport Collide at Red Bull Heavy Water (Red Bull)",
+					"pressUrl": "https://www.redbull.com/us-en/red-bull-heavy-water-tracking-technology-spoondrift-mapbox"
+				},				
 				{
 					"name": "Census population inspector",
 					"tagline": "all you need is TIGER (data)",

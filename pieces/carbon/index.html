@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Carbon Mitigation: Production and Economic Effects</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<link href="https://api.mapbox.com/mapbox-assembly/v1.0.1/assembly.min.css" rel="stylesheet">
+
+<style>
+
+	body { margin: 0; padding: 0; font-family:sans-serif;background:#c8d2da;}
+	#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+	#modal {
+		background:white;
+		padding:20px;
+		margin:10px;
+		border-radius:5px;
+		width:25vw;
+		min-width: 350px;
+		z-index: 100;
+		max-width:500px;
+	}
+
+	#countyModal {
+		left:0;
+		top:0;
+		position:absolute;
+		z-index: 99;
+		width:100%;
+	}
+
+	label {
+		margin-right:10px;
+	}
+
+	#map:hover .mapboxgl-popup {
+		display:flex;
+	}
+	.mapboxgl-popup {
+		pointer-events: none;
+		display:none;
+	}
+	
+	.mapboxgl-popup-content {
+		pointer-events: none;
+		padding: 10px;
+		line-height: 1.25em;
+	}
+
+	body[mode="graph"] #modal,
+	body[mode="map"] #mark,
+
+	#countyModal{
+		display:none;
+	}
+
+	body[mode="graph"] #countyModal,
+	body[mode="graph"] #mark {
+		display:block;
+	}
+
+	canvas {
+		cursor:pointer;
+	}
+	.toggle-group {
+		background:#eee;
+		width:100%;
+	}
+
+	#countyModal .toggle {
+		display:inline-block;
+		white-space: nowrap;
+	}
+
+	input:checked+.toggle {
+		background:#507fa1;
+	}
+	label {
+		margin:0;
+	}
+
+	#colorRamp {
+		height:6px;
+		border-radius:3px;
+		background-image: linear-gradient(to right, #ffd84d , #dd2727);
+		opacity:0.75;
+	}
+
+	#scenario.toggle-container {
+		width:33%!important;
+	}
+
+	.quiet {
+		color:#aaa;
+	}
+
+	p{
+		margin-top:5px
+	}
+</style>
+</head>
+<body>
+	<div id='mark' style='position:absolute; z-index: 99; color:#44647e; transform:translateX(-100%) translateY(0%)'></div>
+	<div id='countyModal' class='px24 py24'>
+		<div id='county' style='float:right'>
+			<div id='statistic' style='text-align:right'></div>
+		</div>
+		<button 
+			onclick='state.view = "map"; updateVis("view"); tooltip.remove()' 
+			style='display:block; background:#507fa1; color:white; padding:5px'>
+			Back
+		</button>
+		<div class='left bottom fixed px24 py24'>
+			<div class='txt-h1' id='countyLabel'></div>
+			<!-- <div class='txt-h3' id='stateLabel'></div> -->
+			<div id='explainer' class='' style='color:#507fa1'>
+				Combined annual oil and gas production, in million barrels of oil equivalent per year.
+			</div>
+		</div>
+	</div>
+	<div id='modal' class='absolute top px12 py12' style='margin-left: 50%; transform: translate(-50%);'>
+		<div class='prose'>
+			<small style='float:left' class='absolute'>1%</small>
+			<small style='float:right'>100%</small>
+			<small style='margin-left:50%; transform:translateX(-50%); text-align: center;' class='txt-nowrap inline-block'>Percentage Stranded</small>
+		</div>
+		<div id='colorRamp'></div>
+	</div>
+	<div id='modal' class='absolute bottom left'>
+
+		<div id='national'>
+			<div class='txt-h5 mb6'>Level</div>
+			<div id='level' class='toggle-group mb18'></div>
+
+			<div class='txt-h5 mb6'>Product</div>
+			<div id='product' class='toggle-group mb18'></div>
+			<div class='txt-h5 mb6'>Visualize</div>
+			<div id='visualize' class='toggle-group mb18'></div>
+			<div class='txt-h5 mb6'>Emissions scenario</div>
+			<div id='scenario' class='toggle-group' level='County'></div>
+		</div>
+
+	</div>
+	<div id="map"></div>
+
+<script src='https://unpkg.com/@turf/turf@6.3.0/turf.min.js'></script>
+
+<script src='map.js'></script>
+<script src='chart.js'></script>
+
+<script>
+
+
+    var constants = {
+
+    	barGraphAngle: 30,
+    	colors: {
+    		baseline: '#fdfcdc',
+    		STPS: '#fed9b7',
+    		SSP4:'#f07167',
+    		SDS: '#0081a7'
+    	},
+    	toggles: ['level', 'product', 'scenario', 'visualize', 'statistic'],
+
+    	levels: ['County', 'State'],
+    	products: ['Oil', 'Gas'], 
+    	scenarios: ['SDS', 'SSP4', 'STPS'],
+    	visualizes: ['% Stranded', '% and Volume'],
+    	layerModes: [
+    		['counties', 'counties-offshore', 'stat-label'],
+    		['stranded-volume-circle', 'stat-label'],
+    		['states'],
+    		['states-volume-circle']
+    	],
+    	circleRadiusCoefficient: {
+    		Oil: 1,
+    		Gas: 0.1
+    	},
+    	statistics: ['production', 'expenditure', 'tax', 'jobs'],
+    	countyStats: {
+    		production: 'Gross production',
+    		expenditure: 'Private expenditure',
+    		tax: 'Tax revenue',
+    		jobs: 'Jobs'
+    	},
+
+    	explainers:{
+			production: "Combined annual oil and gas production, in million barrels of oil equivalent per year.",
+			expenditure: "Combined capital expenditure (capex) and operating expenses (opex) per year.",
+			tax: "Combined local, state, and federal tax revenue per year",
+			jobs: "Estimated jobs both directly and indirectly supported by oil and gas production per year. Note that all jobs directly or indirectly supported by private expenditures and tax revenue may not necessarily be located in the county."
+    	},
+    	chart: {
+    		altitude: 1500000
+    	},
+    	decades: ['2020-29', '2030-39', '2040-49'],
+
+    	graphRows: {
+    		County: ['baseline', 'STPS', 'SSP4', 'SDS'],
+    		State: ['baseline', 'STPS', 'SSP4', 'SDS']
+    	}
+
+    }
+
+    var state = {
+    	level: 'County',
+    	product: 'Oil',
+    	scenario: 'SDS',
+    	visualize: '% Stranded',
+    	statistic:'production',
+    	view: 'map',
+
+   		econData:{}
+    }
+
+    d3.json('stateData.json', (e,r)=>{
+    	state.econData.State = processStateData(r);
+    })
+
+    constants.toggles.forEach(category=> {
+		
+    	const categoryOptions = constants[category+'s'];
+    	const options = 
+
+			d3.select(`#${category}`)
+				.selectAll('button')
+				.data(categoryOptions)
+				.enter()
+				.append('label')
+				.attr('class', 'toggle-container w-1/' +categoryOptions.length)
+
+
+			options
+				.append('input')
+				.attr('type', 'radio')
+				.attr('id', d=>d)
+				.attr('name', category)
+				.attr('value', d=>d)
+				.attr('class', 'toggle-1')
+				.attr('checked', (d,i)=>i===0 ? 'checked': undefined)
+				.on('click', d=> {
+
+					state[category] = d;
+					updateVis(category)
+
+					d3.select('#explainer')
+						.text(constants.explainers[state.statistic])
+
+				})
+
+			options
+				.append('div')
+				.attr('class', category ==='statistic' ? 'toggle' : 'toggle')
+				.text(d=>constants.countyStats[d] || d)
+
+    })
+
+
+
+
+
+</script>
+
+</body>
+</html>

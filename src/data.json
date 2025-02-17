@@ -67,17 +67,7 @@
 						"To support developers building 3D worlds, we built a quick tool to inspect, select, and download the imagery and terrain information for a desired land tract."
 					]
 				},
-				// {
-				// 	"name":"Red Bull Heavy Water",
-				// 	"tagline": "real waves, real time",
-				// 	"url": "redbull",
-				// 	"blurb": [
-				// 		"Red Bull holds a competitive paddleboarding race each year, and came to us for some kind of visual race tracker. In addition to a cool sport, there was some great tech behind the scenes: GPS trackers linked through iridium satellites, ocean telemetry that provided speed and height of waves throughout the bay.",
-				// 		"After collecting live race data on the day of, we built this replay interface to show how the race went. Also fortuitous was the new Mapbox heatmap functionality, which made for a compelling visualization of the water conditions."
-				// 		],
-				// 	"press": "Technology & Sport Collide at Red Bull Heavy Water (Red Bull)",
-				// 	"pressUrl": "https://www.redbull.com/us-en/red-bull-heavy-water-tracking-technology-spoondrift-mapbox"
-				// },				
+			
 				{
 					"name": "Census population inspector",
 					"tagline": "all you need is TIGER (data)",

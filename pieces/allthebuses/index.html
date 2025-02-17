@@ -17,7 +17,7 @@
         <div id='map'>
             <div id='modal' class="top right mr18 mt18">
                 <div id='general' class="flex flex--column" style="max-height: 96vh;">
-                    <div class="header px30 pt30 pb24">
+                    <div class="header px30 pt30 pb18">
                         Muni, this moment
                     </div>
                     <div class="px30 color-gray grid body txt-uppercas border-b border--gray-lighter cursor-pointer">
@@ -109,7 +109,8 @@
          
                 <div id='routeFocus' class="flex flex--column" style="max-height: 96vh">
                     <div class='px30 py30  border-b border--gray-lighter'>
-                        <div class="body cursor-pointer" onclick='app.setState("mode", "inactive"); app._map.fitBounds(c.fullBounds, {duration:500})'>< Back</div>
+                        <div class="body dark cursor-pointer mb12 color-black bg-darken5 inline-block px6 py6" 
+                        onclick='app.setState("mode", "inactive"); app._map.fitBounds(c.fullBounds, {duration:500})'>Back</div>
                         <div class='header wmax360' id="routeName"></div>
                         <div class='subtitle'>
                             <span id="directionText" class="directionText highlight"></span> to

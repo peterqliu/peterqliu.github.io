@@ -4,12 +4,13 @@
     <meta charset='utf-8' />
     <title>Earthquake</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <link href='../../assets/base.css' rel='stylesheet' />
     <script src='quickselect.js'></script>
     <script src='odometer.js'></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.19.1/mapbox-gl.js'></script>
     <link href='odometer.css' rel='stylesheet'></link>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.19.1/mapbox-gl.css' rel='stylesheet' />
+    <script src="../credentials.js"></script>
     <style>
         body { margin:0; padding:0; background:#191a1a;}
         #map { position:absolute; top:0; bottom:0; right:0; left:360px; }
@@ -125,7 +126,7 @@
 
 <script>
 
-mapboxgl.accessToken = 'pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A';
+mapboxgl.accessToken = config.p;
 var ne = new mapboxgl.LngLat(-30, 90);
 var sw = new mapboxgl.LngLat(330, -90);
 var llb = new mapboxgl.LngLatBounds(sw, ne);
@@ -255,9 +256,8 @@ map.on('load', function(err, resp){
     entry
         .attr('style', function(d){
             var coords = d.geometry.coordinates[0]+','+d.geometry.coordinates[1]+',7'
-            return 'background-image:url(https://api.mapbox.com/v4/mapbox.satellite/'+coords+'/360x80@2x.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A)'
+            return 'background-image:url(https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/'+coords+'/360x120?access_token=' + config.p + ')'
         })
-
     entry
         .append('span')
         .attr('class', 'darkback small code pin-topleft')
@@ -465,7 +465,7 @@ function restoreView() {
             entry
                 .attr('style', function(d){
                     var coords = d.geometry.coordinates[0]+','+d.geometry.coordinates[1]+',7'
-                    return 'background-image:url(https://api.mapbox.com/v4/mapbox.satellite/'+coords+'/360x80@2x.png?access_token=pk.eyJ1IjoicGV0ZXJxbGl1IiwiYSI6ImNqdHE0cXByZDAzaWY0NHBldG9yd3Jld28ifQ.8dISItctShjFnmnVeAgW2A)'
+                    return 'background-image:url(https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/'+coords+'/360x120?access_token=' + config.p + ')'
                 })
 
             entry

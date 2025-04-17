@@ -1,4 +1,5 @@
-mapboxgl.accessToken = 'pk.eyJ1IjoiYnJlYWt0aHJvdWdoLW1hcHMiLCJhIjoiY2t0MXhjcjh6MGZrdzJubzJpbXJ6ODczMiJ9.5rvh7Oj4MJOraoG2FcSrxw';
+mapboxgl.accessToken = config.token;
+
 var map = new mapboxgl.Map({
     container: 'map', // container id
     style: 'mapbox://styles/peterqliu/cla8sc3n9001d14n702jxjp6l', // style URL

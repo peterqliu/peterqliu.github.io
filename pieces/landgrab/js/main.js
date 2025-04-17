@@ -396,7 +396,7 @@ function getSatelliteImage(){
 	var imgDimensions = canBeDoubled ? [state.output.columns*2, state.output.rows*2] :[state.output.columns, state.output.rows];
 	var bumpZoom = canBeDoubled ? 2 : 1
 
-	var url = `https://api.mapbox.com/v4/mapbox.satellite/${state.center},${state.zoom+bumpZoom}/${imgDimensions.join('x')}@2x.png?access_token=${state.token}`
+	var url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v8/static/${state.center},${state.zoom+bumpZoom},0/${imgDimensions.join('x')}@2x?access_token=${state.token}`
 
 	var texture = new THREE.TextureLoader()
 		.load(
